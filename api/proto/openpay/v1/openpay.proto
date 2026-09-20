@@ -1,0 +1,38 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+import "proto/openpay/v1/ping.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "OpenPay API"
+    version: "v1.0.0"
+    description: "OpenPay is a opensource payment service"
+  }
+  tags: [
+    {
+      name: "Ping"
+      description: "Health check endpoints"
+    }
+  ]
+};
+
+service OpenPay {
+    
+    // Ping is a simple GET request that returns a Pong message.
+    rpc Ping (PingRequest) returns (PingResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/ping"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Ping"
+            summary: "Ping the server"
+            description: "Check if the server is alive."
+        };
+    }
+}
+

@@ -1,0 +1,29 @@
+LogConfig: true
+Logger:
+  AppName: openpay
+  Build: dev
+  Level: debug
+ConfigReader:
+  Name: ""
+  Format: ""
+  Consul:
+    Address: ""
+    Token: ""
+    Path: ""
+  Zookeeper:
+    Address: ""
+    Path: ""
+    Username: ""
+    Password: ""
+AppNames:
+- HTTP_SERVER
+- GRPC_SERVER
+Server:
+  GRPCPort: 8086
+  HTTPPort: 8085
+Repository:
+  Name : memory
+Service: {}
+Debug:
+  Enabled: true
+  EnablePprof: true

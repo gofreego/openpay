@@ -1,0 +1,21 @@
+syntax = "proto3";
+package v1;
+
+import "validate/validate.proto";
+
+option go_package = "./openpay_v1";
+
+// PingRequest is the request message for the Ping RPC method.
+message PingRequest {
+    // Message must be non-empty and between 1-100 characters
+    string message = 1 [(validate.rules).string = {
+        min_len: 1,
+        max_len: 100,
+        pattern: "^[a-zA-Z0-9\\s\\-_.,!?]+$"
+    }];
+}
+
+// PingResponse is the response message for the Ping RPC method.
+message PingResponse {
+    string message = 1;
+}
