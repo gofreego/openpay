@@ -47,6 +47,20 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "x-user-id",
+            "description": "ID of the authenticated user",
+            "in": "header",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "x-user-perms",
+            "description": "Comma-separated permissions of the authenticated user",
+            "in": "header",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [

@@ -26,10 +26,14 @@ var File_proto_openpay_v1_openpay_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1bproto/openpay/v1/ping.proto2\x87\x01\n" +
-	"\aOpenPay\x12|\n" +
-	"\x04Ping\x12\x0f.v1.PingRequest\x1a\x10.v1.PingResponse\"Q\x92A6\n" +
-	"\x04Ping\x12\x0fPing the server\x1a\x1dCheck if the server is alive.\x82\xd3\xe4\x93\x02\x12\x12\x10/openpay/v1/pingBq\x92A`\x12>\n" +
+	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1bproto/openpay/v1/ping.proto2\x82\x02\n" +
+	"\aOpenPay\x12\xf6\x01\n" +
+	"\x04Ping\x12\x0f.v1.PingRequest\x1a\x10.v1.PingResponse\"\xca\x01\x92A\xae\x01\n" +
+	"\x04Ping\x12\x0fPing the server\x1a\x1dCheck if the server is alive.rv\n" +
+	"+\n" +
+	"\tx-user-id\x12\x1cID of the authenticated user\x18\x01\n" +
+	"G\n" +
+	"\fx-user-perms\x125Comma-separated permissions of the authenticated user\x18\x01\x82\xd3\xe4\x93\x02\x12\x12\x10/openpay/v1/pingBq\x92A`\x12>\n" +
 	"\vOpenPay API\x12'OpenPay is a opensource payment service2\x06v1.0.0j\x1e\n" +
 	"\x04Ping\x12\x16Health check endpointsZ\f./openpay_v1b\x06proto3"
 

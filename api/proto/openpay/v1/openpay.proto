@@ -32,6 +32,22 @@ service OpenPay {
             tags: "Ping"
             summary: "Ping the server"
             description: "Check if the server is alive."
+            parameters: {
+                headers: [
+                    {
+                        name: "x-user-id"
+                        description: "ID of the authenticated user"
+                        type: STRING
+                        required: false
+                    },
+                    {
+                        name: "x-user-perms"
+                        description: "Comma-separated permissions of the authenticated user"
+                        type: STRING
+                        required: false
+                    }
+                ]
+            }
         };
     }
 }
