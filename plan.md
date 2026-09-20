@@ -20,7 +20,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 
 | Phase | Name | Status |
 |------:|------|--------|
-| 0 | Foundations & Platform Primitives | ☐ Not started |
+| 0 | Foundations & Platform Primitives | ◐ In progress — data layer done |
 | 1 | Products & Catalog | ☐ Not started |
 | 2 | Ledger Core | ☐ Not started |
 | 3 | Wallets | ☐ Not started |
@@ -572,16 +572,21 @@ submit, and above a configurable threshold, maker-checker approval by a second o
 **Goal:** the plumbing every later phase assumes. No business logic. Ends with a
 Postgres-backed service that can safely run multi-table transactions.
 
-- [ ] Add Postgres repository implementation (`internal/repository/postgres`) alongside
-      `memory`; wire selection by `Repository.Name` in the factory
-- [ ] Set up SQL migrations using `goutils/databases/migrations/sql` + the `sql-migrator`
+- [x] Postgres repository (`internal/repository/postgresql`) as the **only**
+      implementation. The in-memory repository was removed rather than given a no-op
+      `WithTx`: a repository that accepts money movement and cannot roll back is a
+      trap, and "works locally, corrupts in prod" is the failure it would produce
+- [x] Set up SQL migrations using `goutils/databases/migrations/sql` + the `sql-migrator`
       target already in the Makefile; establish naming/versioning convention
-- [ ] **`UnitOfWork` / `TxManager`** — `WithTx(ctx, fn)` carrying `*sql.Tx` on context;
-      all repositories participate. Add a test proving rollback works across two tables
-- [ ] `Amount` value object (int64 minor units + currency), arithmetic with
+      (`resources/migrations/NNNNNN_name.{up,down}.sql`, golang-migrate underneath)
+- [x] **`UnitOfWork` / `TxManager`** — `WithTx(ctx, fn)` carrying `*sql.Tx` on context;
+      all repositories participate. Tests prove commit, multi-table rollback, rollback
+      on panic, and that a nested `WithTx` joins the outer transaction
+- [x] `Amount` value object (int64 minor units + currency), arithmetic with
       currency-mismatch guard, allocation/rounding helper for fee & tax splits
-- [ ] ID strategy: internal `bigserial` PKs + public prefixed ULIDs
-      (`pay_01H…`, `wlt_01H…`) exposed over the API; never leak sequential ids
+- [x] ID strategy: internal `bigserial` PKs + public prefixed ids (`pay_…`, `wlt_…`)
+      exposed over the API; never leak sequential ids. UUIDv7 bodies, so ids sort
+      chronologically and index inserts stay append-heavy
 - [ ] Error taxonomy on top of `goutils/customerrors` → gRPC codes → HTTP; stable
       machine-readable `error_code` strings in every API error
 - [ ] Idempotency middleware + `idempotency_keys` table (request fingerprint, cached
@@ -593,7 +598,8 @@ Postgres-backed service that can safely run multi-table transactions.
 - [ ] Transactional **outbox** table + drainer worker (publish via `goutils/eventqueue`)
 - [ ] Background job runner (a third app alongside HTTP/GRPC in `AppNames`) for
       workers: outbox drainer, pollers, sweepers
-- [ ] Docker Compose for local dev: Postgres, Redis, Kafka
+- [x] Docker Compose for local dev: Postgres (Redis/Kafka added when something needs
+      them — the outbox drainer is the first candidate)
 
 **Exit criteria:** a trivial entity can be created through the API, inside a
 transaction, idempotently, with an outbox event published and consumed.
