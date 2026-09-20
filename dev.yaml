@@ -18,6 +18,7 @@ ConfigReader:
 AppNames:
 - HTTP_SERVER
 - GRPC_SERVER
+- WORKER
 Server:
   GRPCPort: 8086
   HTTPPort: 8085
@@ -35,6 +36,12 @@ Repository:
         SSLMode: disable
       replica: []
 Service: {}
+Worker:
+  Outbox:
+    Interval: 5s
+    BatchSize: 100
+  IdempotencySweepInterval: 1h
+  IdempotencySweepBatch: 1000
 Debug:
   Enabled: true
   EnablePprof: true

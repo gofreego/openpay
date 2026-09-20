@@ -592,8 +592,13 @@ Postgres-backed service that can safely run multi-table transactions.
       `goutils/customerrors`, whose `code` field means an HTTP status in some places
       and a private 1001-style constant in others. Internal errors keep their detail
       in logs and send a generic message on the wire
-- [ ] Idempotency middleware + `idempotency_keys` table (request fingerprint, cached
-      response, in-flight lock)
+- [x] `idempotency_keys` table and store: atomic claim via
+      `INSERT … ON CONFLICT DO NOTHING RETURNING`, so concurrent duplicates cannot both
+      win; response recorded in the same transaction as the work, so a stored response
+      always implies the work committed; release on failure so retries re-run; expiry
+      sweep that also frees keys abandoned by a crashed process
+- [ ] Idempotency **interceptor** wiring it to endpoints — lands with Phase 1's first
+      mutating endpoint. Building it against no consumer would be unverifiable
 - [x] Request context (`internal/appcontext`): actor (`x-user-id`), permissions,
       request id, idempotency key — populated once at each edge, read everywhere.
       Identity is mirrored into the goutils logger context so every log line carries
@@ -603,9 +608,15 @@ Postgres-backed service that can safely run multi-table transactions.
       header matcher and error handler
 - [ ] Observability baseline: structured logs with request/trace id, Prometheus metrics
       endpoint, health & readiness probes
-- [ ] Transactional **outbox** table + drainer worker (publish via `goutils/eventqueue`)
-- [ ] Background job runner (a third app alongside HTTP/GRPC in `AppNames`) for
-      workers: outbox drainer, pollers, sweepers
+- [x] Transactional **outbox** table + drainer worker. Events are written in the same
+      transaction as the change they describe; the drainer claims batches with
+      `FOR UPDATE SKIP LOCKED` so several can run without double-publishing, records
+      per-event failures instead of stranding a batch, and drains a backlog without
+      waiting on its ticker. Publishing is behind a `Publisher` interface with a log
+      implementation; swap in `goutils/eventqueue` when something consumes
+- [x] Background job runner (`WORKER` in `AppNames`) hosting the outbox drainer and
+      the idempotency expiry sweeper; later the payment poller, hold sweeper and
+      ledger invariant checker
 - [x] Docker Compose for local dev: Postgres (Redis/Kafka added when something needs
       them — the outbox drainer is the first candidate)
 

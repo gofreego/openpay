@@ -1,0 +1,17 @@
+# Migrations for the integration-test database. Kept separate from
+# migrator.yaml because the tests TRUNCATE the tables they exercise, which must
+# never happen to a development database.
+Repository:
+  Name: Postgres
+  Postgres:
+    primary:
+      Host: localhost
+      Port: 5432
+      Username: openpay
+      Password: openpay
+      DBName: openpay_test
+      SSLMode: disable
+    replica: []
+Migrator:
+  Action: up
+  Path: ./resources/migrations

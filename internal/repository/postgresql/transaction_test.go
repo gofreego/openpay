@@ -12,15 +12,16 @@ import (
 )
 
 // These tests need a real PostgreSQL, because the behaviour under test *is*
-// PostgreSQL's. Start one with `docker compose up -d postgres`, then:
+// PostgreSQL's — row locking, SKIP LOCKED, unique constraints under contention.
 //
-//	OPENPAY_TEST_POSTGRES=1 go test ./internal/repository/postgresql/...
+//	make test-integration
 //
-// Defaults match docker-compose.yml; override with OPENPAY_TEST_PG_* if needed.
+// They run against openpay_test, never the development database, because they
+// TRUNCATE the tables they exercise. Override with OPENPAY_TEST_PG_* if needed.
 func testRepository(t *testing.T) *Repository {
 	t.Helper()
 	if os.Getenv("OPENPAY_TEST_POSTGRES") == "" {
-		t.Skip("set OPENPAY_TEST_POSTGRES=1 (and run docker compose up -d postgres) to run transaction tests")
+		t.Skip("integration test: run `make test-integration` (needs docker compose up -d postgres)")
 	}
 
 	env := func(key, fallback string) string {
@@ -38,7 +39,7 @@ func testRepository(t *testing.T) *Repository {
 				Port:     5432,
 				Username: env("OPENPAY_TEST_PG_USER", "openpay"),
 				Password: env("OPENPAY_TEST_PG_PASSWORD", "openpay"),
-				DBName:   env("OPENPAY_TEST_PG_DBNAME", "openpay"),
+				DBName:   env("OPENPAY_TEST_PG_DBNAME", "openpay_test"),
 				SSLMode:  "disable",
 			},
 		},

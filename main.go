@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofreego/openpay/cmd/grpc_server"
 	"github.com/gofreego/openpay/cmd/http_server"
+	"github.com/gofreego/openpay/cmd/worker"
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/constants"
 
@@ -37,6 +38,8 @@ func main() {
 			apps = append(apps, http_server.NewHTTPServer(conf))
 		case constants.GRPC_SERVER:
 			apps = append(apps, grpc_server.NewGRPCServer(conf))
+		case constants.WORKER:
+			apps = append(apps, worker.NewWorker(conf))
 		default:
 			logger.Panic(ctx, "invalid application name provided `%s`", appName)
 		}

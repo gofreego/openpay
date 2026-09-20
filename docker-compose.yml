@@ -10,6 +10,9 @@ services:
       - "5432:5432"
     volumes:
       - openpay-pgdata:/var/lib/postgresql/data
+      # Runs only on first initialisation of the volume. To pick up changes
+      # here afterwards: docker compose down -v && docker compose up -d
+      - ./resources/docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U openpay -d openpay"]
       interval: 5s

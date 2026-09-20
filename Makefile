@@ -6,6 +6,22 @@ run:
 	go run main.go
 test:
 	go test -v ./...
+
+# Integration tests need a real Postgres: they exercise row locking, SKIP
+# LOCKED and unique constraints under contention, none of which a fake can
+# check. They run against openpay_test and TRUNCATE as they go, so they must
+# never be pointed at a database anyone cares about.
+test-integration:
+	docker compose up -d postgres
+	@until docker compose exec -T postgres pg_isready -U openpay -d openpay_test >/dev/null 2>&1; do sleep 1; done
+	@# sql-migrator waits for a signal after finishing ("press ctrl+c to exit"),
+	@# so run it in the background and stop it once the migration is applied.
+	@sql-migrator ./migrator.test.yaml & MIG=$$!; sleep 5; kill $$MIG 2>/dev/null || true
+	OPENPAY_TEST_POSTGRES=1 go test -race ./...
+
+migrate:
+	@sql-migrator ./migrator.yaml & MIG=$$!; sleep 5; kill $$MIG 2>/dev/null || true
+
 clean:
 	rm -f application
 
