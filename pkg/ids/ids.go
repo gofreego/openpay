@@ -33,6 +33,7 @@ const (
 	Payout            Prefix = "pot"
 	Idempotency       Prefix = "idk"
 	OutboxEvent       Prefix = "evt"
+	Request           Prefix = "req"
 )
 
 const separator = "_"

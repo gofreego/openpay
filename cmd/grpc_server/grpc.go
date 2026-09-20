@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/configs"
+	"github.com/gofreego/openpay/internal/middleware"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 
@@ -43,8 +44,14 @@ func (a *GRPCServer) Run(ctx context.Context) error {
 
 	service := service.NewService(ctx, &a.cfg.Service, repository)
 
-	// Create a new gRPC server
-	a.server = grpc.NewServer()
+	// Create a new gRPC server. Interceptors run in order, so the caller is on
+	// context before anything can fail and want to log it.
+	a.server = grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			middleware.CallerUnaryInterceptor(),
+			middleware.ErrorUnaryInterceptor(),
+		),
+	)
 
 	openpay_v1.RegisterOpenPayServer(a.server, service)
 

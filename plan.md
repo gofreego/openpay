@@ -587,12 +587,20 @@ Postgres-backed service that can safely run multi-table transactions.
 - [x] ID strategy: internal `bigserial` PKs + public prefixed ids (`pay_…`, `wlt_…`)
       exposed over the API; never leak sequential ids. UUIDv7 bodies, so ids sort
       chronologically and index inserts stay append-heavy
-- [ ] Error taxonomy on top of `goutils/customerrors` → gRPC codes → HTTP; stable
-      machine-readable `error_code` strings in every API error
+- [x] Error taxonomy (`pkg/apperrors`) → gRPC codes → HTTP; stable machine-readable
+      `code` strings in every API error. Built standalone rather than on
+      `goutils/customerrors`, whose `code` field means an HTTP status in some places
+      and a private 1001-style constant in others. Internal errors keep their detail
+      in logs and send a generic message on the wire
 - [ ] Idempotency middleware + `idempotency_keys` table (request fingerprint, cached
       response, in-flight lock)
-- [ ] Request context: `product_id`, actor (`x-user-id`), permissions, request id,
-      trace id — populated once in an interceptor, read everywhere
+- [x] Request context (`internal/appcontext`): actor (`x-user-id`), permissions,
+      request id, idempotency key — populated once at each edge, read everywhere.
+      Identity is mirrored into the goutils logger context so every log line carries
+      it. `product_id` joins it in Phase 1 with the auth work.
+      Note both edges need wiring: the HTTP path registers the service in-process, so
+      gRPC interceptors never run on it and grpc-gateway needs its own middleware,
+      header matcher and error handler
 - [ ] Observability baseline: structured logs with request/trace id, Prometheus metrics
       endpoint, health & readiness probes
 - [ ] Transactional **outbox** table + drainer worker (publish via `goutils/eventqueue`)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/configs"
+	"github.com/gofreego/openpay/internal/middleware"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 
@@ -46,7 +47,13 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 
 	service := service.NewService(ctx, &a.cfg.Service, repository.GetInstance(ctx, &a.cfg.Repository))
 
-	mux := runtime.NewServeMux()
+	// The service is registered in-process below, which bypasses gRPC
+	// interceptors — so the gateway needs its own copies of the same concerns.
+	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(middleware.IncomingHeaderMatcher),
+		runtime.WithMiddlewares(middleware.CallerMiddleware()),
+		runtime.WithErrorHandler(middleware.ErrorHandler),
+	)
 
 	api.RegisterSwaggerHandler(ctx, mux, "/openpay/v1/swagger", "./api/docs/proto", "/openpay/v1/openpay.swagger.json")
 	err := openpay_v1.RegisterOpenPayHandlerServer(ctx, mux, service)

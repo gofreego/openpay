@@ -94,6 +94,7 @@ func TestPrefixesAreDistinct(t *testing.T) {
 		Customer, Product, ServiceCredential, WalletType, Wallet,
 		LedgerAccount, LedgerJournal, LedgerHold, Payment, PaymentAttempt,
 		Order, Refund, Dispute, Settlement, Payout, Idempotency, OutboxEvent,
+		Request,
 	}
 	seen := make(map[Prefix]struct{}, len(all))
 	for _, p := range all {
