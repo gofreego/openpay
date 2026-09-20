@@ -22,7 +22,18 @@ Server:
   GRPCPort: 8086
   HTTPPort: 8085
 Repository:
-  Name : memory
+  PostgreSQL:
+    # `postgresql`, `primary` and `replica` are lowercase because those goutils
+    # fields carry no yaml tags; Host/Port/etc. do, so they stay capitalised.
+    postgresql:
+      primary:
+        Host: localhost
+        Port: 5432
+        Username: openpay
+        Password: openpay
+        DBName: openpay
+        SSLMode: disable
+      replica: []
 Service: {}
 Debug:
   Enabled: true

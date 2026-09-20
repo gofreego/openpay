@@ -1,0 +1,16 @@
+# Note the mixed casing: fields with yaml tags in goutils (Host, Port, ...) are
+# capitalised, while `primary`/`replica` have no tags and so decode lowercase.
+Repository:
+  Name: Postgres
+  Postgres:
+    primary:
+      Host: localhost
+      Port: 5432
+      Username: openpay
+      Password: openpay
+      DBName: openpay
+      SSLMode: disable
+    replica: []
+Migrator:
+  Action: up
+  Path: ./resources/migrations
