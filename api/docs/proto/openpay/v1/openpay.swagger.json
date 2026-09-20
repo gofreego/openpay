@@ -47,20 +47,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          },
-          {
-            "name": "x-user-id",
-            "description": "ID of the authenticated user",
-            "in": "header",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "x-user-perms",
-            "description": "Comma-separated permissions of the authenticated user",
-            "in": "header",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -107,5 +93,25 @@
       },
       "description": "PingResponse is the response message for the Ping RPC method."
     }
-  }
+  },
+  "securityDefinitions": {
+    "UserId": {
+      "type": "apiKey",
+      "description": "ID of the authenticated user",
+      "name": "x-user-id",
+      "in": "header"
+    },
+    "UserPerms": {
+      "type": "apiKey",
+      "description": "Comma-separated permissions of the authenticated user",
+      "name": "x-user-perms",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "UserId": [],
+      "UserPerms": []
+    }
+  ]
 }

@@ -19,6 +19,36 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
       description: "Health check endpoints"
     }
   ]
+  security_definitions: {
+    security: {
+      key: "UserId"
+      value: {
+        type: TYPE_API_KEY
+        in: IN_HEADER
+        name: "x-user-id"
+        description: "ID of the authenticated user"
+      }
+    }
+    security: {
+      key: "UserPerms"
+      value: {
+        type: TYPE_API_KEY
+        in: IN_HEADER
+        name: "x-user-perms"
+        description: "Comma-separated permissions of the authenticated user"
+      }
+    }
+  }
+  security: {
+    security_requirement: {
+      key: "UserId"
+      value: {}
+    }
+    security_requirement: {
+      key: "UserPerms"
+      value: {}
+    }
+  }
 };
 
 service OpenPay {
@@ -32,22 +62,6 @@ service OpenPay {
             tags: "Ping"
             summary: "Ping the server"
             description: "Check if the server is alive."
-            parameters: {
-                headers: [
-                    {
-                        name: "x-user-id"
-                        description: "ID of the authenticated user"
-                        type: STRING
-                        required: false
-                    },
-                    {
-                        name: "x-user-perms"
-                        description: "Comma-separated permissions of the authenticated user"
-                        type: STRING
-                        required: false
-                    }
-                ]
-            }
         };
     }
 }
