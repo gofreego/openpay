@@ -137,12 +137,12 @@ func TestWithCallerEnrichesLoggerContext(t *testing.T) {
 // set fields like URI. Populating the caller must not wipe them.
 func TestWithCallerPreservesExistingLoggerFields(t *testing.T) {
 	base := context.WithValue(context.Background(), logger.RequestContextKey,
-		logger.RequestContext{URI: "/openpay/v1/ping", Method: "GET", IP: "10.0.0.1"})
+		logger.RequestContext{URI: "/openpay/v1/products", Method: "GET", IP: "10.0.0.1"})
 
 	ctx := WithCaller(base, Caller{UserID: "ops_9", RequestID: "req_x"})
 
 	rc := ctx.Value(logger.RequestContextKey).(logger.RequestContext)
-	if rc.URI != "/openpay/v1/ping" || rc.Method != "GET" || rc.IP != "10.0.0.1" {
+	if rc.URI != "/openpay/v1/products" || rc.Method != "GET" || rc.IP != "10.0.0.1" {
 		t.Errorf("existing logger fields were clobbered: %+v", rc)
 	}
 	if rc.UserID != "ops_9" {

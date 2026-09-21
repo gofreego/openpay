@@ -7,8 +7,20 @@
   },
   "tags": [
     {
-      "name": "Ping",
-      "description": "Health check endpoints"
+      "name": "Products",
+      "description": "Product registration and configuration"
+    },
+    {
+      "name": "Credentials",
+      "description": "Service credentials a product's backend authenticates with"
+    },
+    {
+      "name": "WalletTypes",
+      "description": "What a balance of a given type is allowed to do"
+    },
+    {
+      "name": "Customers",
+      "description": "People, identified platform-wide by their OpenAuth user id"
     },
     {
       "name": "OpenPay"
@@ -195,39 +207,6 @@
         ],
         "tags": [
           "Customers"
-        ]
-      }
-    },
-    "/openpay/v1/ping": {
-      "get": {
-        "summary": "Ping the server",
-        "description": "Check if the server is alive.",
-        "operationId": "OpenPay_Ping",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1PingResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "message",
-            "description": "Message must be non-empty and between 1-100 characters",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Ping"
         ]
       }
     },
@@ -797,15 +776,6 @@
           }
         }
       }
-    },
-    "v1PingResponse": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string"
-        }
-      },
-      "description": "PingResponse is the response message for the Ping RPC method."
     },
     "v1Product": {
       "type": "object",

@@ -5,7 +5,6 @@ option go_package = "./openpay_v1";
 
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
-import "proto/openpay/v1/ping.proto";
 import "proto/openpay/v1/product.proto";
 import "proto/openpay/v1/wallet_type.proto";
 import "proto/openpay/v1/customer.proto";
@@ -19,8 +18,20 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   }
   tags: [
     {
-      name: "Ping"
-      description: "Health check endpoints"
+      name: "Products"
+      description: "Product registration and configuration"
+    },
+    {
+      name: "Credentials"
+      description: "Service credentials a product's backend authenticates with"
+    },
+    {
+      name: "WalletTypes"
+      description: "What a balance of a given type is allowed to do"
+    },
+    {
+      name: "Customers"
+      description: "People, identified platform-wide by their OpenAuth user id"
     }
   ]
   security_definitions: {
@@ -55,19 +66,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   }
 };
 
+// Liveness and readiness are served outside this API, at /healthz and /readyz.
+// They are deliberately not RPCs: probes should not sit in the versioned,
+// publicly routed surface of a payments API.
 service OpenPay {
-    
-    // Ping is a simple GET request that returns a Pong message.
-    rpc Ping (PingRequest) returns (PingResponse) {
-        option (google.api.http) = {
-            get: "/openpay/v1/ping"
-        };
-        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            tags: "Ping"
-            summary: "Ping the server"
-            description: "Check if the server is alive."
-        };
-    }
 
     // ---- Catalog: products ----
     // Operator-only. Products are created by central ops, not by the product

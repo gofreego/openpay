@@ -19,7 +19,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OpenPay_Ping_FullMethodName                    = "/v1.OpenPay/Ping"
 	OpenPay_CreateProduct_FullMethodName           = "/v1.OpenPay/CreateProduct"
 	OpenPay_GetProduct_FullMethodName              = "/v1.OpenPay/GetProduct"
 	OpenPay_ListProducts_FullMethodName            = "/v1.OpenPay/ListProducts"
@@ -38,9 +37,11 @@ const (
 // OpenPayClient is the client API for OpenPay service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Liveness and readiness are served outside this API, at /healthz and /readyz.
+// They are deliberately not RPCs: probes should not sit in the versioned,
+// publicly routed surface of a payments API.
 type OpenPayClient interface {
-	// Ping is a simple GET request that returns a Pong message.
-	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*CreateProductResponse, error)
 	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error)
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error)
@@ -62,16 +63,6 @@ type openPayClient struct {
 
 func NewOpenPayClient(cc grpc.ClientConnInterface) OpenPayClient {
 	return &openPayClient{cc}
-}
-
-func (c *openPayClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, OpenPay_Ping_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *openPayClient) CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*CreateProductResponse, error) {
@@ -207,9 +198,11 @@ func (c *openPayClient) GetCustomer(ctx context.Context, in *GetCustomerRequest,
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
+//
+// Liveness and readiness are served outside this API, at /healthz and /readyz.
+// They are deliberately not RPCs: probes should not sit in the versioned,
+// publicly routed surface of a payments API.
 type OpenPayServer interface {
-	// Ping is a simple GET request that returns a Pong message.
-	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	CreateProduct(context.Context, *CreateProductRequest) (*CreateProductResponse, error)
 	GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error)
 	ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error)
@@ -233,9 +226,6 @@ type OpenPayServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOpenPayServer struct{}
 
-func (UnimplementedOpenPayServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
-}
 func (UnimplementedOpenPayServer) CreateProduct(context.Context, *CreateProductRequest) (*CreateProductResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateProduct not implemented")
 }
@@ -294,24 +284,6 @@ func RegisterOpenPayServer(s grpc.ServiceRegistrar, srv OpenPayServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&OpenPay_ServiceDesc, srv)
-}
-
-func _OpenPay_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OpenPayServer).Ping(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OpenPay_Ping_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OpenPayServer).Ping(ctx, req.(*PingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _OpenPay_CreateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -555,10 +527,6 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "v1.OpenPay",
 	HandlerType: (*OpenPayServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Ping",
-			Handler:    _OpenPay_Ping_Handler,
-		},
 		{
 			MethodName: "CreateProduct",
 			Handler:    _OpenPay_CreateProduct_Handler,

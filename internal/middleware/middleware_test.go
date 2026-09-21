@@ -41,7 +41,7 @@ func TestCallerUnaryInterceptorPopulatesContext(t *testing.T) {
 		return "ok", nil
 	}
 
-	if _, err := CallerUnaryInterceptor(headerAuthenticator{})(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/Ping"}, handler); err != nil {
+	if _, err := CallerUnaryInterceptor(headerAuthenticator{})(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/GetProduct"}, handler); err != nil {
 		t.Fatalf("interceptor returned error: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func TestErrorUnaryInterceptorNormalizesErrors(t *testing.T) {
 			handler := func(ctx context.Context, req any) (any, error) { return nil, tc.err }
 
 			_, err := ErrorUnaryInterceptor()(context.Background(), nil,
-				&grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/Ping"}, handler)
+				&grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/GetProduct"}, handler)
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -152,7 +152,7 @@ func TestCallerMiddlewarePopulatesContextAndEchoesRequestID(t *testing.T) {
 		seen, _ = appcontext.CallerFrom(r.Context())
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/ping", nil)
+	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/products", nil)
 	req.Header.Set(appcontext.HeaderUserID, "ops_42")
 	req.Header.Set(appcontext.HeaderUserPerms, "payments:read")
 	rec := httptest.NewRecorder()
@@ -172,7 +172,7 @@ func TestCallerMiddlewarePopulatesContextAndEchoesRequestID(t *testing.T) {
 
 func TestErrorHandlerRendersStableCode(t *testing.T) {
 	ctx := appcontext.WithCaller(context.Background(), appcontext.Caller{RequestID: "req_1"})
-	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/ping", nil)
+	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/products", nil)
 	rec := httptest.NewRecorder()
 
 	ErrorHandler(ctx, runtime.NewServeMux(), &runtime.JSONPb{}, rec, req,
@@ -198,7 +198,7 @@ func TestErrorHandlerRendersStableCode(t *testing.T) {
 }
 
 func TestErrorHandlerHidesInternalDetail(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/ping", nil)
+	req := httptest.NewRequest(http.MethodGet, "/openpay/v1/products", nil)
 	rec := httptest.NewRecorder()
 
 	ErrorHandler(context.Background(), runtime.NewServeMux(), &runtime.JSONPb{}, rec, req,
