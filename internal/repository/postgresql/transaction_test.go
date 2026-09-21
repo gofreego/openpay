@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"os"
+	"sync"
 	"testing"
 
-	sqlutils "github.com/gofreego/goutils/databases/connections/sql"
 	"github.com/gofreego/goutils/databases/connections/pgsql"
+	sqlutils "github.com/gofreego/goutils/databases/connections/sql"
 )
 
 // These tests need a real PostgreSQL, because the behaviour under test *is*
@@ -18,38 +19,52 @@ import (
 //
 // They run against openpay_test, never the development database, because they
 // TRUNCATE the tables they exercise. Override with OPENPAY_TEST_PG_* if needed.
+var (
+	sharedRepo     *Repository
+	sharedRepoErr  error
+	sharedRepoOnce sync.Once
+)
+
+// testRepository returns one repository shared by every test in the package.
+//
+// Deliberately shared: each NewRepository opens its own pool of up to 20
+// connections, so a pool per test exhausts PostgreSQL's connection limit once
+// the package has a few dozen of them — and the failure looks like a flaky
+// database rather than a test-harness problem.
 func testRepository(t *testing.T) *Repository {
 	t.Helper()
 	if os.Getenv("OPENPAY_TEST_POSTGRES") == "" {
 		t.Skip("integration test: run `make test-integration` (needs docker compose up -d postgres)")
 	}
 
-	env := func(key, fallback string) string {
-		if v := os.Getenv(key); v != "" {
-			return v
+	sharedRepoOnce.Do(func() {
+		env := func(key, fallback string) string {
+			if v := os.Getenv(key); v != "" {
+				return v
+			}
+			return fallback
 		}
-		return fallback
-	}
 
-	cfg := &sqlutils.Config{
-		Name: sqlutils.Postgres,
-		Postgresql: sqlutils.PostgresqlConfig{
-			Primary: pgsql.Config{
-				Host:     env("OPENPAY_TEST_PG_HOST", "localhost"),
-				Port:     5432,
-				Username: env("OPENPAY_TEST_PG_USER", "openpay"),
-				Password: env("OPENPAY_TEST_PG_PASSWORD", "openpay"),
-				DBName:   env("OPENPAY_TEST_PG_DBNAME", "openpay_test"),
-				SSLMode:  "disable",
+		cfg := &sqlutils.Config{
+			Name: sqlutils.Postgres,
+			Postgresql: sqlutils.PostgresqlConfig{
+				Primary: pgsql.Config{
+					Host:     env("OPENPAY_TEST_PG_HOST", "localhost"),
+					Port:     5432,
+					Username: env("OPENPAY_TEST_PG_USER", "openpay"),
+					Password: env("OPENPAY_TEST_PG_PASSWORD", "openpay"),
+					DBName:   env("OPENPAY_TEST_PG_DBNAME", "openpay_test"),
+					SSLMode:  "disable",
+				},
 			},
-		},
-	}
+		}
+		sharedRepo, sharedRepoErr = NewRepository(context.Background(), cfg)
+	})
 
-	repo, err := NewRepository(context.Background(), cfg)
-	if err != nil {
-		t.Fatalf("connect to test postgres: %v", err)
+	if sharedRepoErr != nil {
+		t.Fatalf("connect to test postgres: %v", sharedRepoErr)
 	}
-	return repo
+	return sharedRepo
 }
 
 // setupTables creates two throwaway tables so the tests can prove that a

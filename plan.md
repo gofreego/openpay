@@ -22,7 +22,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4, where payments consume them) |
-| 2 | Ledger Core | ☐ Not started |
+| 2 | Ledger Core | ◐ Posting engine, accounts and balances done; holds, chart bootstrap, statements and the invariant checker next |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
@@ -720,7 +720,7 @@ operator without the right permission is rejected.
 **Goal:** the accounting engine, fully tested, with no payment concepts in it at all.
 This is the most important phase in the project. Do not rush it.
 
-- [ ] Tables:
+- [x] Tables:
       - `ledger_accounts` (code UNIQUE, `product_id` NULLable for platform accounts,
         type, currency, owner, allow_negative, status)
       - `ledger_journals` (external_id UNIQUE, `product_id` NULLable, kind,
@@ -729,7 +729,10 @@ This is the most important phase in the project. Do not rush it.
         balance_after) — immutable
       - `ledger_balances` (account_id PK, raw_balance, held, version)
       - `ledger_holds` (account_id, amount, status, expires_at, external_id UNIQUE)
-- [ ] Posting engine `Post(ctx, journal)`:
+- [x] Posting engine `PostJournal(ctx, journal)`. Append-only is enforced by
+      database triggers rejecting UPDATE and DELETE on journals and postings, so it
+      holds against a console session or a well-meant 3am fix, not only against our
+      own code:
       - validates postings sum to zero **per currency**
       - validates every account is active and currency-matched
       - locks `ledger_balances` rows `FOR UPDATE` **in ascending account_id order**
