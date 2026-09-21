@@ -30,6 +30,26 @@ type Repository interface {
 	ProductRepository
 	CredentialRepository
 	AuditRepository
+	CustomerRepository
+	WalletTypeRepository
+}
+
+type CustomerRepository interface {
+	// UpsertCustomer creates a customer or returns the existing one for the
+	// same external_ref, resolving through a merge if the record found is a
+	// tombstone.
+	UpsertCustomer(ctx context.Context, customer *dao.Customer) error
+	GetCustomerByExternalRef(ctx context.Context, externalRef string) (*dao.Customer, error)
+	GetCustomerByPublicID(ctx context.Context, publicID string) (*dao.Customer, error)
+}
+
+type WalletTypeRepository interface {
+	CreateWalletType(ctx context.Context, walletType *dao.WalletType) error
+	GetWalletTypeByPublicID(ctx context.Context, publicID string) (*dao.WalletType, error)
+	// ListWalletTypes returns a product's own types plus the platform-scoped
+	// ones, since both are spendable within that product.
+	ListWalletTypes(ctx context.Context, productID int64) ([]*dao.WalletType, error)
+	UpdateWalletType(ctx context.Context, walletType *dao.WalletType) error
 }
 
 type ProductRepository interface {

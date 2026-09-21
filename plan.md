@@ -687,7 +687,9 @@ to OpenPay.
       `MAIN` (fundable, closed-loop) and `BONUS` (grantable, expiring, non-withdrawable)
 - [ ] `fee_policies` table (D12): mode `ABSORBED | DEDUCTED | PASSED_ON` keyed by
       `(product_id, purpose)` with a platform default row; resolution is a lookup with a
-      documented precedence, not a rules engine
+      documented precedence, not a rules engine.
+      **Deferred to Phase 4**, where payments first consume it — config with no
+      consumer cannot be verified, and `ABSORBED` is the launch default anyway (Q2)
 - [ ] `PASSED_ON` is compliance-gated the same way `withdrawable` is (surcharging
       restrictions) — elevated permission plus a recorded approval
 - [ ] `customers` carries **no `product_id`** — one row per person, platform-wide, keyed
