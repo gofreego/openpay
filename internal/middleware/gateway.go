@@ -36,18 +36,24 @@ func IncomingHeaderMatcher(key string) (string, bool) {
 	return runtime.DefaultHeaderMatcher(key)
 }
 
-// CallerMiddleware populates the caller for requests arriving over HTTP.
+// CallerMiddleware authenticates and populates the caller for requests arriving
+// over HTTP.
 //
 // It reads the raw headers rather than gRPC metadata because gateway
 // middlewares run before the request is annotated, and it echoes the request id
 // back so a caller can quote it in a support ticket.
-func CallerMiddleware() runtime.Middleware {
+func CallerMiddleware(authenticator Authenticator) runtime.Middleware {
 	return func(next runtime.HandlerFunc) runtime.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-			caller := appcontext.CallerFromValues(r.Header.Get)
+			caller, err := authenticator.Authenticate(r.Context(), r.Header.Get)
 			w.Header().Set(appcontext.HeaderRequestID, caller.RequestID)
 
 			ctx := appcontext.WithCaller(r.Context(), caller)
+			if err != nil {
+				ErrorHandler(ctx, nil, nil, w, r, err)
+				return
+			}
+
 			annotateSpan(ctx, caller)
 			next(w, r.WithContext(ctx), pathParams)
 		}

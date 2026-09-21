@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/gofreego/openpay/api/openpay_v1"
+	"github.com/gofreego/openpay/internal/auth"
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/middleware"
 	"github.com/gofreego/openpay/internal/repository"
@@ -41,9 +42,9 @@ func (a *GRPCServer) Run(ctx context.Context) error {
 		logger.Panic(ctx, "grpc port is not provided")
 	}
 
-	repository := repository.GetInstance(ctx, &a.cfg.Repository)
+	repo := repository.GetInstance(ctx, &a.cfg.Repository)
 
-	service := service.NewService(ctx, &a.cfg.Service, repository)
+	service := service.NewService(ctx, &a.cfg.Service, repo)
 
 	// Create a new gRPC server. Interceptors run in order, so the caller is on
 	// context before anything can fail and want to log it.
@@ -52,7 +53,7 @@ func (a *GRPCServer) Run(ctx context.Context) error {
 		// it and their logs carry the trace id.
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
-			middleware.CallerUnaryInterceptor(),
+			middleware.CallerUnaryInterceptor(auth.New(repo)),
 			middleware.ErrorUnaryInterceptor(),
 		),
 	)

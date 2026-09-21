@@ -18,6 +18,15 @@ import (
 	"github.com/gofreego/openpay/pkg/apperrors"
 )
 
+// headerAuthenticator resolves a caller from headers alone, with no credential
+// lookup. Service-credential authentication is covered in the auth package.
+type headerAuthenticator struct{ err error }
+
+func (h headerAuthenticator) Authenticate(_ context.Context, get func(string) string) (appcontext.Caller, error) {
+	caller := appcontext.CallerFromValues(get)
+	return caller, h.err
+}
+
 func TestCallerUnaryInterceptorPopulatesContext(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.New(map[string]string{
 		appcontext.HeaderUserID:         "ops_42",
@@ -32,7 +41,7 @@ func TestCallerUnaryInterceptorPopulatesContext(t *testing.T) {
 		return "ok", nil
 	}
 
-	if _, err := CallerUnaryInterceptor()(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/Ping"}, handler); err != nil {
+	if _, err := CallerUnaryInterceptor(headerAuthenticator{})(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/Ping"}, handler); err != nil {
 		t.Fatalf("interceptor returned error: %v", err)
 	}
 
@@ -57,7 +66,7 @@ func TestCallerUnaryInterceptorWithoutMetadata(t *testing.T) {
 		return nil, nil
 	}
 
-	if _, err := CallerUnaryInterceptor()(context.Background(), nil, &grpc.UnaryServerInfo{}, handler); err != nil {
+	if _, err := CallerUnaryInterceptor(headerAuthenticator{})(context.Background(), nil, &grpc.UnaryServerInfo{}, handler); err != nil {
 		t.Fatalf("interceptor returned error: %v", err)
 	}
 	if seen.RequestID == "" {
@@ -148,7 +157,7 @@ func TestCallerMiddlewarePopulatesContextAndEchoesRequestID(t *testing.T) {
 	req.Header.Set(appcontext.HeaderUserPerms, "payments:read")
 	rec := httptest.NewRecorder()
 
-	CallerMiddleware()(next)(rec, req, nil)
+	CallerMiddleware(headerAuthenticator{})(next)(rec, req, nil)
 
 	if seen.UserID != "ops_42" {
 		t.Errorf("UserID = %q, want ops_42", seen.UserID)

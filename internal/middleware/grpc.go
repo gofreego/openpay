@@ -19,16 +19,32 @@ import (
 	"github.com/gofreego/goutils/logger"
 )
 
-// CallerUnaryInterceptor populates the caller on context for gRPC requests.
-func CallerUnaryInterceptor() grpc.UnaryServerInterceptor {
+// Authenticator resolves a caller from request headers.
+type Authenticator interface {
+	Authenticate(ctx context.Context, get func(key string) string) (appcontext.Caller, error)
+}
+
+// CallerUnaryInterceptor authenticates and populates the caller for gRPC
+// requests.
+func CallerUnaryInterceptor(authenticator Authenticator) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		md, _ := metadata.FromIncomingContext(ctx)
-		caller := appcontext.CallerFromValues(func(key string) string {
+		get := func(key string) string {
 			if values := md.Get(key); len(values) > 0 {
 				return values[0]
 			}
 			return ""
-		})
+		}
+
+		caller, err := authenticator.Authenticate(ctx, get)
+		if err != nil {
+			// Still attach what was resolved, so the rejection is logged with a
+			// request id rather than anonymously.
+			ctx = appcontext.WithCaller(ctx, caller)
+			logger.Warn(ctx, "%s authentication failed: %v", info.FullMethod, err)
+			return nil, err
+		}
+
 		ctx = appcontext.WithCaller(ctx, caller)
 		annotateSpan(ctx, caller)
 		return handler(ctx, req)

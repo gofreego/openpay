@@ -6,6 +6,7 @@ option go_package = "./openpay_v1";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 import "proto/openpay/v1/ping.proto";
+import "proto/openpay/v1/product.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -62,6 +63,56 @@ service OpenPay {
             tags: "Ping"
             summary: "Ping the server"
             description: "Check if the server is alive."
+        };
+    }
+
+    // ---- Catalog: products ----
+    // Operator-only. Products are created by central ops, not by the product
+    // backends themselves.
+
+    rpc CreateProduct (CreateProductRequest) returns (CreateProductResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/products"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "Create a product"
+            description: "Registers a product. The code is immutable once set because ledger account codes embed it. Requires the openpay:products:write permission and an Idempotency-Key header."
+        };
+    }
+
+    rpc GetProduct (GetProductRequest) returns (GetProductResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/products/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "Get a product"
+            description: "Requires the openpay:products:read permission."
+        };
+    }
+
+    rpc ListProducts (ListProductsRequest) returns (ListProductsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/products"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "List products"
+            description: "Requires the openpay:products:read permission."
+        };
+    }
+
+    rpc UpdateProduct (UpdateProductRequest) returns (UpdateProductResponse) {
+        option (google.api.http) = {
+            patch: "/openpay/v1/products/{id}"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "Update a product"
+            description: "Changes name and status only. Code and currency are immutable. Requires the openpay:products:write permission."
         };
     }
 }

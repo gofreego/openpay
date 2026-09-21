@@ -1,0 +1,77 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+enum ProductStatus {
+  PRODUCT_STATUS_UNSPECIFIED = 0;
+  PRODUCT_STATUS_ACTIVE = 1;
+  // Suspended stops new activity. Products are never deleted: money has moved
+  // against them and the ledger must stay interpretable.
+  PRODUCT_STATUS_SUSPENDED = 2;
+}
+
+// Product is one of our own apps. It is the scoping dimension for wallets,
+// orders and revenue.
+message Product {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  ProductStatus status = 4;
+  string default_currency = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message CreateProductRequest {
+  // Immutable once set: it appears inside ledger account codes such as
+  // income:zshala:product_sales, so changing it would orphan them.
+  string code = 1 [(validate.rules).string = {
+    pattern: "^[a-z][a-z0-9_]{1,30}$"
+  }];
+
+  string name = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
+
+  // INR only for v1. Also immutable: a product with balances behind it cannot
+  // change currency without making its own history unreadable.
+  string default_currency = 3 [(validate.rules).string = {in: ["INR"]}];
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
+
+message GetProductRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message ListProductsRequest {
+  int32 limit = 1 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  int32 offset = 2 [(validate.rules).int32 = {gte: 0}];
+  // Matches code or name, case-insensitively.
+  string search = 3 [(validate.rules).string = {max_len: 100}];
+  ProductStatus status = 4;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  // Size of the whole filtered set, not of this page.
+  int64 total = 2;
+}
+
+message UpdateProductRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  string name = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
+  ProductStatus status = 3 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+}
+
+message UpdateProductResponse {
+  Product product = 1;
+}

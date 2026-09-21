@@ -19,7 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OpenPay_Ping_FullMethodName = "/v1.OpenPay/Ping"
+	OpenPay_Ping_FullMethodName          = "/v1.OpenPay/Ping"
+	OpenPay_CreateProduct_FullMethodName = "/v1.OpenPay/CreateProduct"
+	OpenPay_GetProduct_FullMethodName    = "/v1.OpenPay/GetProduct"
+	OpenPay_ListProducts_FullMethodName  = "/v1.OpenPay/ListProducts"
+	OpenPay_UpdateProduct_FullMethodName = "/v1.OpenPay/UpdateProduct"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -28,6 +32,10 @@ const (
 type OpenPayClient interface {
 	// Ping is a simple GET request that returns a Pong message.
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*CreateProductResponse, error)
+	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error)
+	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error)
+	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*UpdateProductResponse, error)
 }
 
 type openPayClient struct {
@@ -48,12 +56,56 @@ func (c *openPayClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.
 	return out, nil
 }
 
+func (c *openPayClient) CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*CreateProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateProductResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProductResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProductsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*UpdateProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateProductResponse)
+	err := c.cc.Invoke(ctx, OpenPay_UpdateProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
 type OpenPayServer interface {
 	// Ping is a simple GET request that returns a Pong message.
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	CreateProduct(context.Context, *CreateProductRequest) (*CreateProductResponse, error)
+	GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error)
+	ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error)
+	UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -66,6 +118,18 @@ type UnimplementedOpenPayServer struct{}
 
 func (UnimplementedOpenPayServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+}
+func (UnimplementedOpenPayServer) CreateProduct(context.Context, *CreateProductRequest) (*CreateProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateProduct not implemented")
+}
+func (UnimplementedOpenPayServer) GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProduct not implemented")
+}
+func (UnimplementedOpenPayServer) ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListProducts not implemented")
+}
+func (UnimplementedOpenPayServer) UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProduct not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -106,6 +170,78 @@ func _OpenPay_Ping_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CreateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateProduct(ctx, req.(*CreateProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetProduct(ctx, req.(*GetProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListProducts(ctx, req.(*ListProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_UpdateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).UpdateProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_UpdateProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).UpdateProduct(ctx, req.(*UpdateProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,6 +252,22 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _OpenPay_Ping_Handler,
+		},
+		{
+			MethodName: "CreateProduct",
+			Handler:    _OpenPay_CreateProduct_Handler,
+		},
+		{
+			MethodName: "GetProduct",
+			Handler:    _OpenPay_GetProduct_Handler,
+		},
+		{
+			MethodName: "ListProducts",
+			Handler:    _OpenPay_ListProducts_Handler,
+		},
+		{
+			MethodName: "UpdateProduct",
+			Handler:    _OpenPay_UpdateProduct_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

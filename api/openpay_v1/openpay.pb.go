@@ -26,10 +26,19 @@ var File_proto_openpay_v1_openpay_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1bproto/openpay/v1/ping.proto2\x87\x01\n" +
+	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1bproto/openpay/v1/ping.proto\x1a\x1eproto/openpay/v1/product.proto2\x94\b\n" +
 	"\aOpenPay\x12|\n" +
 	"\x04Ping\x12\x0f.v1.PingRequest\x1a\x10.v1.PingResponse\"Q\x92A6\n" +
-	"\x04Ping\x12\x0fPing the server\x1a\x1dCheck if the server is alive.\x82\xd3\xe4\x93\x02\x12\x12\x10/openpay/v1/pingB\xa3\x02\x92A\x91\x02\x12>\n" +
+	"\x04Ping\x12\x0fPing the server\x1a\x1dCheck if the server is alive.\x82\xd3\xe4\x93\x02\x12\x12\x10/openpay/v1/ping\x12\xb1\x02\n" +
+	"\rCreateProduct\x12\x18.v1.CreateProductRequest\x1a\x19.v1.CreateProductResponse\"\xea\x01\x92A\xc7\x01\n" +
+	"\bProducts\x12\x10Create a product\x1a\xa8\x01Registers a product. The code is immutable once set because ledger account codes embed it. Requires the openpay:products:write permission and an Idempotency-Key header.\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/openpay/v1/products\x12\xaa\x01\n" +
+	"\n" +
+	"GetProduct\x12\x15.v1.GetProductRequest\x1a\x16.v1.GetProductResponse\"m\x92AI\n" +
+	"\bProducts\x12\rGet a product\x1a.Requires the openpay:products:read permission.\x82\xd3\xe4\x93\x02\x1b\x12\x19/openpay/v1/products/{id}\x12\xab\x01\n" +
+	"\fListProducts\x12\x17.v1.ListProductsRequest\x1a\x18.v1.ListProductsResponse\"h\x92AI\n" +
+	"\bProducts\x12\rList products\x1a.Requires the openpay:products:read permission.\x82\xd3\xe4\x93\x02\x16\x12\x14/openpay/v1/products\x12\xfb\x01\n" +
+	"\rUpdateProduct\x12\x18.v1.UpdateProductRequest\x1a\x19.v1.UpdateProductResponse\"\xb4\x01\x92A\x8c\x01\n" +
+	"\bProducts\x12\x10Update a product\x1anChanges name and status only. Code and currency are immutable. Requires the openpay:products:write permission.\x82\xd3\xe4\x93\x02\x1e:\x01*2\x19/openpay/v1/products/{id}B\xa3\x02\x92A\x91\x02\x12>\n" +
 	"\vOpenPay API\x12'OpenPay is a opensource payment service2\x06v1.0.0Z\x91\x01\n" +
 	"7\n" +
 	"\x06UserId\x12-\b\x02\x12\x1cID of the authenticated user\x1a\tx-user-id \x02\n" +
@@ -43,14 +52,30 @@ const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\x04Ping\x12\x16Health check endpointsZ\f./openpay_v1b\x06proto3"
 
 var file_proto_openpay_v1_openpay_proto_goTypes = []any{
-	(*PingRequest)(nil),  // 0: v1.PingRequest
-	(*PingResponse)(nil), // 1: v1.PingResponse
+	(*PingRequest)(nil),           // 0: v1.PingRequest
+	(*CreateProductRequest)(nil),  // 1: v1.CreateProductRequest
+	(*GetProductRequest)(nil),     // 2: v1.GetProductRequest
+	(*ListProductsRequest)(nil),   // 3: v1.ListProductsRequest
+	(*UpdateProductRequest)(nil),  // 4: v1.UpdateProductRequest
+	(*PingResponse)(nil),          // 5: v1.PingResponse
+	(*CreateProductResponse)(nil), // 6: v1.CreateProductResponse
+	(*GetProductResponse)(nil),    // 7: v1.GetProductResponse
+	(*ListProductsResponse)(nil),  // 8: v1.ListProductsResponse
+	(*UpdateProductResponse)(nil), // 9: v1.UpdateProductResponse
 }
 var file_proto_openpay_v1_openpay_proto_depIdxs = []int32{
 	0, // 0: v1.OpenPay.Ping:input_type -> v1.PingRequest
-	1, // 1: v1.OpenPay.Ping:output_type -> v1.PingResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	1, // 1: v1.OpenPay.CreateProduct:input_type -> v1.CreateProductRequest
+	2, // 2: v1.OpenPay.GetProduct:input_type -> v1.GetProductRequest
+	3, // 3: v1.OpenPay.ListProducts:input_type -> v1.ListProductsRequest
+	4, // 4: v1.OpenPay.UpdateProduct:input_type -> v1.UpdateProductRequest
+	5, // 5: v1.OpenPay.Ping:output_type -> v1.PingResponse
+	6, // 6: v1.OpenPay.CreateProduct:output_type -> v1.CreateProductResponse
+	7, // 7: v1.OpenPay.GetProduct:output_type -> v1.GetProductResponse
+	8, // 8: v1.OpenPay.ListProducts:output_type -> v1.ListProductsResponse
+	9, // 9: v1.OpenPay.UpdateProduct:output_type -> v1.UpdateProductResponse
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -62,6 +87,7 @@ func file_proto_openpay_v1_openpay_proto_init() {
 		return
 	}
 	file_proto_openpay_v1_ping_proto_init()
+	file_proto_openpay_v1_product_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

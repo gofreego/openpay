@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gofreego/openpay/api/openpay_v1"
+	"github.com/gofreego/openpay/internal/auth"
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/health"
 	"github.com/gofreego/openpay/internal/middleware"
@@ -55,7 +56,7 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 	// interceptors — so the gateway needs its own copies of the same concerns.
 	mux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(middleware.IncomingHeaderMatcher),
-		runtime.WithMiddlewares(middleware.CallerMiddleware()),
+		runtime.WithMiddlewares(middleware.CallerMiddleware(auth.New(repo))),
 		runtime.WithErrorHandler(middleware.ErrorHandler),
 	)
 

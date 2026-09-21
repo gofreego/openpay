@@ -22,14 +22,46 @@ const (
 	HeaderUserPerms      = "x-user-perms"
 	HeaderRequestID      = "x-request-id"
 	HeaderIdempotencyKey = "idempotency-key"
+
+	// HeaderAuthorization carries a service credential as
+	// "Bearer <key_id>.<secret>" when a product backend is the caller.
+	HeaderAuthorization = "authorization"
 )
 
 type contextKey int
 
 const callerKey contextKey = iota
 
+// Kind distinguishes who is calling, because the two are authenticated
+// differently and allowed to do different things.
+type Kind string
+
+const (
+	// KindAnonymous is an unauthenticated caller. Only public endpoints accept
+	// one; everything else must fail closed.
+	KindAnonymous Kind = "anonymous"
+	// KindOperator is a person in the admin console, authenticated by OpenAuth
+	// upstream and identified by x-user-id.
+	KindOperator Kind = "operator"
+	// KindService is a product's backend, authenticated by a service credential
+	// and bound to exactly one product.
+	KindService Kind = "service"
+)
+
 // Caller is the authenticated identity behind a request.
 type Caller struct {
+	// Kind is how this caller authenticated.
+	Kind Kind
+
+	// ProductID and ProductCode are set for KindService only, from the
+	// credential used. They are never taken from the request body: a caller
+	// naming its own product could name someone else's.
+	ProductID   int64
+	ProductCode string
+
+	// CredentialID is the service credential's public id, for the audit trail.
+	CredentialID string
+
 	// UserID is the operator acting, from x-user-id. Empty for calls made by a
 	// product's backend with a service credential rather than by a person.
 	UserID string
@@ -50,6 +82,9 @@ func (c Caller) HasPermission(p string) bool {
 	return slices.Contains(c.Permissions, p)
 }
 
+func (c Caller) IsOperator() bool { return c.Kind == KindOperator }
+func (c Caller) IsService() bool  { return c.Kind == KindService }
+
 // CallerFromValues builds a Caller from a lookup function, so the gRPC
 // interceptor and the HTTP gateway middleware parse identity identically
 // despite reading from metadata and headers respectively.
@@ -61,8 +96,16 @@ func CallerFromValues(get func(key string) string) Caller {
 	if requestID == "" {
 		requestID = ids.New(ids.Request)
 	}
+
+	userID := strings.TrimSpace(get(HeaderUserID))
+	kind := KindAnonymous
+	if userID != "" {
+		kind = KindOperator
+	}
+
 	return Caller{
-		UserID:         strings.TrimSpace(get(HeaderUserID)),
+		Kind:           kind,
+		UserID:         userID,
 		Permissions:    parsePermissions(get(HeaderUserPerms)),
 		RequestID:      requestID,
 		IdempotencyKey: strings.TrimSpace(get(HeaderIdempotencyKey)),
