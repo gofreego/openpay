@@ -644,8 +644,15 @@ to OpenPay.
 - [ ] Two distinct auth paths, both resolved in one interceptor:
       - **Operator** (admin console) — trust `x-user-id` / `x-user-perms` injected by
         opengate; map permissions to RPC-level checks
-      - **Service** (a product's backend calling us) — `key_id` + secret hashed with
-        argon2id, resolving to a `product_id`; rotation and revocation
+      - **Service** (a product's backend calling us) — `key_id` + hashed secret,
+        resolving to a `product_id`; rotation and revocation.
+        **Hashed with SHA-256, not argon2id** (as this plan originally said): a slow
+        KDF exists to resist brute force against low-entropy *passwords*, but these
+        secrets are 32 bytes from `crypto/rand`, so brute force is infeasible at any
+        hash speed. argon2id measured ~25ms, paid on *every* authenticated call rather
+        than once at login — latency and memory churn for no added security, and the
+        usual fix (caching verified credentials) trades it for a revocation-invalidation
+        bug. The stored digest is algorithm-tagged so this can change without a migration
 - [ ] **Operator product scope** (U-D6): resolve `x-user-perms` into an effective
       product set — all products for central ops, a named set for product ops — and
       apply it as a repository-layer filter on every read. Both auth paths therefore
