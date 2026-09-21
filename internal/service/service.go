@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/models/dao"
+	"github.com/gofreego/openpay/internal/models/filter"
 )
 
 type Config struct {
@@ -26,6 +27,40 @@ type Repository interface {
 
 	IdempotencyRepository
 	OutboxRepository
+	ProductRepository
+	CredentialRepository
+	AuditRepository
+}
+
+type ProductRepository interface {
+	CreateProduct(ctx context.Context, product *dao.Product) error
+	GetProductByPublicID(ctx context.Context, publicID string) (*dao.Product, error)
+	GetProductByCode(ctx context.Context, code string) (*dao.Product, error)
+	ListProducts(ctx context.Context, f *filter.Product) ([]*dao.Product, int64, error)
+	UpdateProduct(ctx context.Context, product *dao.Product) error
+}
+
+type CredentialRepository interface {
+	CreateCredential(ctx context.Context, credential *dao.ServiceCredential) error
+
+	// GetCredentialByKeyID loads a credential and the product it belongs to.
+	// Both are needed on every authenticated call: a credential for an inactive
+	// product must not authenticate.
+	GetCredentialByKeyID(ctx context.Context, keyID string) (*dao.ServiceCredential, *dao.Product, error)
+
+	ListCredentials(ctx context.Context, productID int64) ([]*dao.ServiceCredential, error)
+	RevokeCredential(ctx context.Context, publicID string) error
+
+	// TouchCredentialUsed records that a credential was used. It is best-effort
+	// and deliberately outside the caller's transaction: it answers "is this
+	// still in use?" before revoking, and must never fail a payment.
+	TouchCredentialUsed(ctx context.Context, id int64) error
+}
+
+type AuditRepository interface {
+	// RecordAudit appends an audit entry. Call it inside the transaction that
+	// makes the change, so an action and its record commit together.
+	RecordAudit(ctx context.Context, entry *dao.AuditEntry) error
 }
 
 // IdempotencyRepository backs retry-safe mutations (plan.md D4).
