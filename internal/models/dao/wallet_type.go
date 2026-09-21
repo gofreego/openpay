@@ -40,7 +40,11 @@ type WalletType struct {
 
 	// ProductID is nil for platform-scoped types.
 	ProductID *int64
-	Scope     WalletScope
+	// ProductPublicID is the product's public id, read alongside the type so
+	// the API can name the owning product without a second lookup. Nil for
+	// platform-scoped types.
+	ProductPublicID *string
+	Scope           WalletScope
 
 	Code     string
 	Name     string

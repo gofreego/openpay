@@ -19,11 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OpenPay_Ping_FullMethodName          = "/v1.OpenPay/Ping"
-	OpenPay_CreateProduct_FullMethodName = "/v1.OpenPay/CreateProduct"
-	OpenPay_GetProduct_FullMethodName    = "/v1.OpenPay/GetProduct"
-	OpenPay_ListProducts_FullMethodName  = "/v1.OpenPay/ListProducts"
-	OpenPay_UpdateProduct_FullMethodName = "/v1.OpenPay/UpdateProduct"
+	OpenPay_Ping_FullMethodName                    = "/v1.OpenPay/Ping"
+	OpenPay_CreateProduct_FullMethodName           = "/v1.OpenPay/CreateProduct"
+	OpenPay_GetProduct_FullMethodName              = "/v1.OpenPay/GetProduct"
+	OpenPay_ListProducts_FullMethodName            = "/v1.OpenPay/ListProducts"
+	OpenPay_UpdateProduct_FullMethodName           = "/v1.OpenPay/UpdateProduct"
+	OpenPay_CreateServiceCredential_FullMethodName = "/v1.OpenPay/CreateServiceCredential"
+	OpenPay_ListServiceCredentials_FullMethodName  = "/v1.OpenPay/ListServiceCredentials"
+	OpenPay_RevokeServiceCredential_FullMethodName = "/v1.OpenPay/RevokeServiceCredential"
+	OpenPay_CreateWalletType_FullMethodName        = "/v1.OpenPay/CreateWalletType"
+	OpenPay_GetWalletType_FullMethodName           = "/v1.OpenPay/GetWalletType"
+	OpenPay_ListWalletTypes_FullMethodName         = "/v1.OpenPay/ListWalletTypes"
+	OpenPay_UpdateWalletType_FullMethodName        = "/v1.OpenPay/UpdateWalletType"
+	OpenPay_UpsertCustomer_FullMethodName          = "/v1.OpenPay/UpsertCustomer"
+	OpenPay_GetCustomer_FullMethodName             = "/v1.OpenPay/GetCustomer"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -36,6 +45,15 @@ type OpenPayClient interface {
 	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error)
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error)
 	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*UpdateProductResponse, error)
+	CreateServiceCredential(ctx context.Context, in *CreateServiceCredentialRequest, opts ...grpc.CallOption) (*CreateServiceCredentialResponse, error)
+	ListServiceCredentials(ctx context.Context, in *ListServiceCredentialsRequest, opts ...grpc.CallOption) (*ListServiceCredentialsResponse, error)
+	RevokeServiceCredential(ctx context.Context, in *RevokeServiceCredentialRequest, opts ...grpc.CallOption) (*RevokeServiceCredentialResponse, error)
+	CreateWalletType(ctx context.Context, in *CreateWalletTypeRequest, opts ...grpc.CallOption) (*CreateWalletTypeResponse, error)
+	GetWalletType(ctx context.Context, in *GetWalletTypeRequest, opts ...grpc.CallOption) (*GetWalletTypeResponse, error)
+	ListWalletTypes(ctx context.Context, in *ListWalletTypesRequest, opts ...grpc.CallOption) (*ListWalletTypesResponse, error)
+	UpdateWalletType(ctx context.Context, in *UpdateWalletTypeRequest, opts ...grpc.CallOption) (*UpdateWalletTypeResponse, error)
+	UpsertCustomer(ctx context.Context, in *UpsertCustomerRequest, opts ...grpc.CallOption) (*UpsertCustomerResponse, error)
+	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error)
 }
 
 type openPayClient struct {
@@ -96,6 +114,96 @@ func (c *openPayClient) UpdateProduct(ctx context.Context, in *UpdateProductRequ
 	return out, nil
 }
 
+func (c *openPayClient) CreateServiceCredential(ctx context.Context, in *CreateServiceCredentialRequest, opts ...grpc.CallOption) (*CreateServiceCredentialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateServiceCredentialResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateServiceCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListServiceCredentials(ctx context.Context, in *ListServiceCredentialsRequest, opts ...grpc.CallOption) (*ListServiceCredentialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServiceCredentialsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListServiceCredentials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) RevokeServiceCredential(ctx context.Context, in *RevokeServiceCredentialRequest, opts ...grpc.CallOption) (*RevokeServiceCredentialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeServiceCredentialResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RevokeServiceCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) CreateWalletType(ctx context.Context, in *CreateWalletTypeRequest, opts ...grpc.CallOption) (*CreateWalletTypeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateWalletTypeResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateWalletType_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetWalletType(ctx context.Context, in *GetWalletTypeRequest, opts ...grpc.CallOption) (*GetWalletTypeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWalletTypeResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetWalletType_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListWalletTypes(ctx context.Context, in *ListWalletTypesRequest, opts ...grpc.CallOption) (*ListWalletTypesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWalletTypesResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListWalletTypes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) UpdateWalletType(ctx context.Context, in *UpdateWalletTypeRequest, opts ...grpc.CallOption) (*UpdateWalletTypeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateWalletTypeResponse)
+	err := c.cc.Invoke(ctx, OpenPay_UpdateWalletType_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) UpsertCustomer(ctx context.Context, in *UpsertCustomerRequest, opts ...grpc.CallOption) (*UpsertCustomerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertCustomerResponse)
+	err := c.cc.Invoke(ctx, OpenPay_UpsertCustomer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCustomerResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetCustomer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -106,6 +214,15 @@ type OpenPayServer interface {
 	GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error)
 	ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error)
 	UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error)
+	CreateServiceCredential(context.Context, *CreateServiceCredentialRequest) (*CreateServiceCredentialResponse, error)
+	ListServiceCredentials(context.Context, *ListServiceCredentialsRequest) (*ListServiceCredentialsResponse, error)
+	RevokeServiceCredential(context.Context, *RevokeServiceCredentialRequest) (*RevokeServiceCredentialResponse, error)
+	CreateWalletType(context.Context, *CreateWalletTypeRequest) (*CreateWalletTypeResponse, error)
+	GetWalletType(context.Context, *GetWalletTypeRequest) (*GetWalletTypeResponse, error)
+	ListWalletTypes(context.Context, *ListWalletTypesRequest) (*ListWalletTypesResponse, error)
+	UpdateWalletType(context.Context, *UpdateWalletTypeRequest) (*UpdateWalletTypeResponse, error)
+	UpsertCustomer(context.Context, *UpsertCustomerRequest) (*UpsertCustomerResponse, error)
+	GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -130,6 +247,33 @@ func (UnimplementedOpenPayServer) ListProducts(context.Context, *ListProductsReq
 }
 func (UnimplementedOpenPayServer) UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateProduct not implemented")
+}
+func (UnimplementedOpenPayServer) CreateServiceCredential(context.Context, *CreateServiceCredentialRequest) (*CreateServiceCredentialResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateServiceCredential not implemented")
+}
+func (UnimplementedOpenPayServer) ListServiceCredentials(context.Context, *ListServiceCredentialsRequest) (*ListServiceCredentialsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListServiceCredentials not implemented")
+}
+func (UnimplementedOpenPayServer) RevokeServiceCredential(context.Context, *RevokeServiceCredentialRequest) (*RevokeServiceCredentialResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeServiceCredential not implemented")
+}
+func (UnimplementedOpenPayServer) CreateWalletType(context.Context, *CreateWalletTypeRequest) (*CreateWalletTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWalletType not implemented")
+}
+func (UnimplementedOpenPayServer) GetWalletType(context.Context, *GetWalletTypeRequest) (*GetWalletTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWalletType not implemented")
+}
+func (UnimplementedOpenPayServer) ListWalletTypes(context.Context, *ListWalletTypesRequest) (*ListWalletTypesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWalletTypes not implemented")
+}
+func (UnimplementedOpenPayServer) UpdateWalletType(context.Context, *UpdateWalletTypeRequest) (*UpdateWalletTypeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWalletType not implemented")
+}
+func (UnimplementedOpenPayServer) UpsertCustomer(context.Context, *UpsertCustomerRequest) (*UpsertCustomerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertCustomer not implemented")
+}
+func (UnimplementedOpenPayServer) GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCustomer not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -242,6 +386,168 @@ func _OpenPay_UpdateProduct_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CreateServiceCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateServiceCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateServiceCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateServiceCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateServiceCredential(ctx, req.(*CreateServiceCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListServiceCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServiceCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListServiceCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListServiceCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListServiceCredentials(ctx, req.(*ListServiceCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_RevokeServiceCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeServiceCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RevokeServiceCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RevokeServiceCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RevokeServiceCredential(ctx, req.(*RevokeServiceCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_CreateWalletType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWalletTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateWalletType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateWalletType_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateWalletType(ctx, req.(*CreateWalletTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetWalletType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWalletTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetWalletType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetWalletType_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetWalletType(ctx, req.(*GetWalletTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListWalletTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWalletTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListWalletTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListWalletTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListWalletTypes(ctx, req.(*ListWalletTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_UpdateWalletType_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWalletTypeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).UpdateWalletType(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_UpdateWalletType_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).UpdateWalletType(ctx, req.(*UpdateWalletTypeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_UpsertCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertCustomerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).UpsertCustomer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_UpsertCustomer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).UpsertCustomer(ctx, req.(*UpsertCustomerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCustomerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetCustomer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetCustomer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetCustomer(ctx, req.(*GetCustomerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -268,6 +574,42 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateProduct",
 			Handler:    _OpenPay_UpdateProduct_Handler,
+		},
+		{
+			MethodName: "CreateServiceCredential",
+			Handler:    _OpenPay_CreateServiceCredential_Handler,
+		},
+		{
+			MethodName: "ListServiceCredentials",
+			Handler:    _OpenPay_ListServiceCredentials_Handler,
+		},
+		{
+			MethodName: "RevokeServiceCredential",
+			Handler:    _OpenPay_RevokeServiceCredential_Handler,
+		},
+		{
+			MethodName: "CreateWalletType",
+			Handler:    _OpenPay_CreateWalletType_Handler,
+		},
+		{
+			MethodName: "GetWalletType",
+			Handler:    _OpenPay_GetWalletType_Handler,
+		},
+		{
+			MethodName: "ListWalletTypes",
+			Handler:    _OpenPay_ListWalletTypes_Handler,
+		},
+		{
+			MethodName: "UpdateWalletType",
+			Handler:    _OpenPay_UpdateWalletType_Handler,
+		},
+		{
+			MethodName: "UpsertCustomer",
+			Handler:    _OpenPay_UpsertCustomer_Handler,
+		},
+		{
+			MethodName: "GetCustomer",
+			Handler:    _OpenPay_GetCustomer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

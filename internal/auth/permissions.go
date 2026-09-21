@@ -14,6 +14,16 @@ const (
 	PermProductsRead     = "openpay:products:read"
 	PermProductsWrite    = "openpay:products:write"
 	PermCredentialsWrite = "openpay:credentials:write"
+
+	PermWalletTypesRead  = "openpay:wallet_types:read"
+	PermWalletTypesWrite = "openpay:wallet_types:write"
+	// PermWalletTypesApproveWithdrawal is separate from configuring a wallet
+	// type on purpose. Enabling withdrawal moves the company from closed-loop
+	// into prepaid-instrument territory (plan.md D10, Q1), so it is a distinct
+	// decision that a distinct person signs off on.
+	PermWalletTypesApproveWithdrawal = "openpay:wallet_types:approve_withdrawal"
+
+	PermCustomersRead = "openpay:customers:read"
 )
 
 // RequireOperator asserts the caller is an operator holding permission.

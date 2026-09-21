@@ -9,11 +9,18 @@ import (
 	"github.com/gofreego/openpay/pkg/apperrors"
 )
 
-const walletTypeColumns = `id, public_id, product_id, scope, code, name, currency,
-	fundable, grantable, withdrawable, transferable, refundable_to_source, allow_negative,
-	expiry_policy, expiry_days, max_balance, max_txn_amount, daily_load_limit, status,
-	withdrawable_approved_by, withdrawable_approved_at, withdrawable_approval_ref,
-	created_at, updated_at`
+// walletTypeColumns reads the owning product's public id through a LEFT JOIN
+// (left, because platform-scoped types have no product), so the API can name
+// the product without a second query.
+const walletTypeColumns = `wt.id, wt.public_id, wt.product_id, p.public_id, wt.scope,
+	wt.code, wt.name, wt.currency,
+	wt.fundable, wt.grantable, wt.withdrawable, wt.transferable, wt.refundable_to_source,
+	wt.allow_negative, wt.expiry_policy, wt.expiry_days,
+	wt.max_balance, wt.max_txn_amount, wt.daily_load_limit, wt.status,
+	wt.withdrawable_approved_by, wt.withdrawable_approved_at, wt.withdrawable_approval_ref,
+	wt.created_at, wt.updated_at`
+
+const walletTypeFrom = ` FROM wallet_types wt LEFT JOIN products p ON p.id = wt.product_id`
 
 func (r *Repository) CreateWalletType(ctx context.Context, walletType *dao.WalletType) error {
 	const query = `
@@ -53,7 +60,7 @@ func (r *Repository) CreateWalletType(ctx context.Context, walletType *dao.Walle
 }
 
 func (r *Repository) GetWalletTypeByPublicID(ctx context.Context, publicID string) (*dao.WalletType, error) {
-	const query = `SELECT ` + walletTypeColumns + ` FROM wallet_types WHERE public_id = $1`
+	const query = `SELECT ` + walletTypeColumns + walletTypeFrom + ` WHERE wt.public_id = $1`
 
 	walletType, err := scanWalletType(r.executor(ctx).QueryRowContext(ctx, query, publicID))
 	if err != nil {
@@ -69,10 +76,9 @@ func (r *Repository) GetWalletTypeByPublicID(ctx context.Context, publicID strin
 // platform-scoped ones, because both are spendable within that product and a
 // caller asking "what wallets can this customer have here?" needs both.
 func (r *Repository) ListWalletTypes(ctx context.Context, productID int64) ([]*dao.WalletType, error) {
-	const query = `SELECT ` + walletTypeColumns + `
-		FROM wallet_types
-		WHERE product_id = $1 OR product_id IS NULL
-		ORDER BY product_id NULLS LAST, code`
+	const query = `SELECT ` + walletTypeColumns + walletTypeFrom + `
+		WHERE wt.product_id = $1 OR wt.product_id IS NULL
+		ORDER BY wt.product_id NULLS LAST, wt.code`
 
 	rows, err := r.executor(ctx).QueryContext(ctx, query, productID)
 	if err != nil {
@@ -106,11 +112,12 @@ func (r *Repository) UpdateWalletType(ctx context.Context, walletType *dao.Walle
 		UPDATE wallet_types
 		SET name = $1, status = $2, max_balance = $3, max_txn_amount = $4, daily_load_limit = $5
 		WHERE public_id = $6
-		RETURNING ` + walletTypeColumns
+		RETURNING id`
 
-	updated, err := scanWalletType(r.executor(ctx).QueryRowContext(ctx, query,
+	var id int64
+	err := r.executor(ctx).QueryRowContext(ctx, query,
 		walletType.Name, walletType.Status, walletType.MaxBalance,
-		walletType.MaxTxnAmount, walletType.DailyLoadLimit, walletType.PublicID))
+		walletType.MaxTxnAmount, walletType.DailyLoadLimit, walletType.PublicID).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return apperrors.New(apperrors.NotFound, "wallet type %q not found", walletType.PublicID)
@@ -118,6 +125,12 @@ func (r *Repository) UpdateWalletType(ctx context.Context, walletType *dao.Walle
 		return apperrors.Wrap(err, apperrors.Internal, "failed to update wallet type")
 	}
 
+	// Re-read through the join so the caller gets the full row, including the
+	// capabilities the update deliberately left alone.
+	updated, err := r.GetWalletTypeByPublicID(ctx, walletType.PublicID)
+	if err != nil {
+		return err
+	}
 	*walletType = *updated
 	return nil
 }
@@ -125,7 +138,7 @@ func (r *Repository) UpdateWalletType(ctx context.Context, walletType *dao.Walle
 func scanWalletType(row rowScanner) (*dao.WalletType, error) {
 	var w dao.WalletType
 	err := row.Scan(
-		&w.ID, &w.PublicID, &w.ProductID, &w.Scope, &w.Code, &w.Name, &w.Currency,
+		&w.ID, &w.PublicID, &w.ProductID, &w.ProductPublicID, &w.Scope, &w.Code, &w.Name, &w.Currency,
 		&w.Fundable, &w.Grantable, &w.Withdrawable, &w.Transferable,
 		&w.RefundableToSource, &w.AllowNegative,
 		&w.ExpiryPolicy, &w.ExpiryDays, &w.MaxBalance, &w.MaxTxnAmount, &w.DailyLoadLimit,

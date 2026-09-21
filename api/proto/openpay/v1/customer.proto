@@ -1,0 +1,53 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+enum CustomerStatus {
+  CUSTOMER_STATUS_UNSPECIFIED = 0;
+  CUSTOMER_STATUS_ACTIVE = 1;
+  CUSTOMER_STATUS_BLOCKED = 2;
+  // A duplicate that now resolves to another record. Lookups follow it, so an
+  // id stored before a merge keeps working.
+  CUSTOMER_STATUS_MERGED = 3;
+}
+
+// Customer is a person, not a per-product record: every product identifies
+// people by the same OpenAuth user id, so one customer covers them everywhere.
+message Customer {
+  string id = 1;
+  // The OpenAuth user id.
+  string external_ref = 2;
+  CustomerStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// UpsertCustomerRequest registers a person, or returns the existing record.
+// Called by a product's backend the first time one of its users transacts.
+message UpsertCustomerRequest {
+  string external_ref = 1 [(validate.rules).string = {min_len: 1, max_len: 200}];
+}
+
+message UpsertCustomerResponse {
+  Customer customer = 1;
+  // False when the customer already existed, which lets a caller tell a first
+  // registration from a repeat without a second lookup.
+  bool created = 2;
+}
+
+message GetCustomerRequest {
+  // Either the OpenPay customer id or the OpenAuth external ref.
+  oneof identifier {
+    option (validate.required) = true;
+    string id = 1 [(validate.rules).string = {min_len: 1}];
+    string external_ref = 2 [(validate.rules).string = {min_len: 1}];
+  }
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+}

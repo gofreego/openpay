@@ -11,11 +11,18 @@ import (
 
 func upsertCustomer(t *testing.T, repo *Repository, externalRef string) *dao.Customer {
 	t.Helper()
+	customer, _ := upsertCustomerCreated(t, repo, externalRef)
+	return customer
+}
+
+func upsertCustomerCreated(t *testing.T, repo *Repository, externalRef string) (*dao.Customer, bool) {
+	t.Helper()
 	customer := &dao.Customer{PublicID: ids.New(ids.Customer), ExternalRef: externalRef}
-	if err := repo.UpsertCustomer(context.Background(), customer); err != nil {
+	created, err := repo.UpsertCustomer(context.Background(), customer)
+	if err != nil {
 		t.Fatalf("upsert customer %q: %v", externalRef, err)
 	}
-	return customer
+	return customer, created
 }
 
 // merge turns loser into a tombstone pointing at survivor. Balance transfer is
@@ -35,8 +42,8 @@ func TestUpsertCustomerIsIdempotent(t *testing.T) {
 	repo := testRepository(t)
 	truncateWallets(t, repo)
 
-	first := upsertCustomer(t, repo, "openauth_user_1")
-	second := upsertCustomer(t, repo, "openauth_user_1")
+	first, createdFirst := upsertCustomerCreated(t, repo, "openauth_user_1")
+	second, createdSecond := upsertCustomerCreated(t, repo, "openauth_user_1")
 
 	if first.ID != second.ID {
 		t.Errorf("same external_ref produced two customers: %d and %d", first.ID, second.ID)
@@ -46,6 +53,18 @@ func TestUpsertCustomerIsIdempotent(t *testing.T) {
 	}
 	if second.Status != dao.CustomerActive {
 		t.Errorf("status = %q, want active", second.Status)
+	}
+	if !createdFirst {
+		t.Error("the first upsert should report created")
+	}
+	if createdSecond {
+		t.Error("the second upsert should report the customer already existed")
+	}
+
+	// A repeat lookup must not count as a change: updated_at means "last time
+	// they changed", not "last time anyone asked".
+	if !second.UpdatedAt.Equal(first.UpdatedAt) {
+		t.Errorf("updated_at moved on a repeat upsert: %v then %v", first.UpdatedAt, second.UpdatedAt)
 	}
 }
 

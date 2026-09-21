@@ -19,35 +19,37 @@ const customerColumns = `id, public_id, external_ref, status, merged_into_custom
 const mergeHops = 8
 
 // UpsertCustomer creates a customer or returns the existing one for the same
-// external_ref.
+// external_ref, reporting which happened.
 //
-// ON CONFLICT DO UPDATE rather than DO NOTHING, because DO NOTHING returns no
-// row on conflict and would need a second query. The update is a no-op write of
-// the value already there, which is enough to make RETURNING produce the row.
-func (r *Repository) UpsertCustomer(ctx context.Context, customer *dao.Customer) error {
-	const query = `
+// ON CONFLICT DO NOTHING, then a lookup — not DO UPDATE. A no-op update would
+// return the row in one round trip, but it still fires the updated_at trigger,
+// so every repeat lookup would bump the timestamp and updated_at would come to
+// mean "last time anyone asked about this person" rather than "last time they
+// changed". Every transacting user passes through here, so that is also a write
+// on a read-shaped path.
+func (r *Repository) UpsertCustomer(ctx context.Context, customer *dao.Customer) (created bool, err error) {
+	const insert = `
 		INSERT INTO customers (public_id, external_ref, status)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (external_ref) DO UPDATE SET external_ref = EXCLUDED.external_ref
+		ON CONFLICT (external_ref) DO NOTHING
 		RETURNING ` + customerColumns
 
-	existing, err := scanCustomer(r.executor(ctx).QueryRowContext(ctx, query,
+	inserted, err := scanCustomer(r.executor(ctx).QueryRowContext(ctx, insert,
 		customer.PublicID, customer.ExternalRef, dao.CustomerActive))
+	if err == nil {
+		*customer = *inserted
+		return true, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return false, apperrors.Wrap(err, apperrors.Internal, "failed to create customer")
+	}
+
+	existing, err := r.GetCustomerByExternalRef(ctx, customer.ExternalRef)
 	if err != nil {
-		return apperrors.Wrap(err, apperrors.Internal, "failed to upsert customer")
+		return false, err
 	}
-
 	*customer = *existing
-
-	// A merged record is a tombstone; the caller wants whoever it points at.
-	if customer.IsMerged() {
-		survivor, err := r.resolveMerge(ctx, customer)
-		if err != nil {
-			return err
-		}
-		*customer = *survivor
-	}
-	return nil
+	return false, nil
 }
 
 // GetCustomerByExternalRef looks a person up by their OpenAuth user id,

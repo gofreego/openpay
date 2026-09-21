@@ -7,6 +7,9 @@ import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 import "proto/openpay/v1/ping.proto";
 import "proto/openpay/v1/product.proto";
+import "proto/openpay/v1/wallet_type.proto";
+import "proto/openpay/v1/customer.proto";
+import "proto/openpay/v1/credential.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -113,6 +116,119 @@ service OpenPay {
             tags: "Products"
             summary: "Update a product"
             description: "Changes name and status only. Code and currency are immutable. Requires the openpay:products:write permission."
+        };
+    }
+
+    // ---- Catalog: service credentials ----
+    // Operator-only. The secret is returned exactly once, at creation.
+
+    rpc CreateServiceCredential (CreateServiceCredentialRequest) returns (CreateServiceCredentialResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/credentials"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Credentials"
+            summary: "Issue a service credential"
+            description: "Returns the secret in clear text exactly once; it is stored only as a hash and cannot be recovered. Requires the openpay:credentials:write permission."
+        };
+    }
+
+    rpc ListServiceCredentials (ListServiceCredentialsRequest) returns (ListServiceCredentialsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/credentials"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Credentials"
+            summary: "List a product's service credentials"
+            description: "Never returns secrets. Requires the openpay:credentials:write permission."
+        };
+    }
+
+    rpc RevokeServiceCredential (RevokeServiceCredentialRequest) returns (RevokeServiceCredentialResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/credentials/{id}/revoke"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Credentials"
+            summary: "Revoke a service credential"
+            description: "Takes effect immediately. Revoking an already-revoked credential succeeds. Requires the openpay:credentials:write permission."
+        };
+    }
+
+    // ---- Catalog: wallet types ----
+    // Operator-only. A wallet type is the configuration a balance behaves by.
+
+    rpc CreateWalletType (CreateWalletTypeRequest) returns (CreateWalletTypeResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/wallet-types"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "WalletTypes"
+            summary: "Create a wallet type"
+            description: "Requires the openpay:wallet_types:write permission. Enabling withdrawable additionally requires openpay:wallet_types:approve_withdrawal and an approval reference, because it moves the balance from closed-loop into prepaid-instrument territory."
+        };
+    }
+
+    rpc GetWalletType (GetWalletTypeRequest) returns (GetWalletTypeResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/wallet-types/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "WalletTypes"
+            summary: "Get a wallet type"
+            description: "Requires the openpay:wallet_types:read permission."
+        };
+    }
+
+    rpc ListWalletTypes (ListWalletTypesRequest) returns (ListWalletTypesResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/wallet-types"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "WalletTypes"
+            summary: "List a product's wallet types"
+            description: "Includes platform-scoped types, which are spendable in every product. Requires the openpay:wallet_types:read permission."
+        };
+    }
+
+    rpc UpdateWalletType (UpdateWalletTypeRequest) returns (UpdateWalletTypeResponse) {
+        option (google.api.http) = {
+            patch: "/openpay/v1/wallet-types/{id}"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "WalletTypes"
+            summary: "Update a wallet type"
+            description: "Changes name, status and limits only. Currency, scope and every capability are immutable once the type exists, because balances are already held under those rules."
+        };
+    }
+
+    // ---- Customers ----
+    // A customer is a person, platform-wide, keyed by their OpenAuth user id.
+
+    rpc UpsertCustomer (UpsertCustomerRequest) returns (UpsertCustomerResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/customers"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Customers"
+            summary: "Register a customer"
+            description: "Called by a product's backend with a service credential. Idempotent on external_ref, and resolves through a merge if the person's record was merged into another."
+        };
+    }
+
+    rpc GetCustomer (GetCustomerRequest) returns (GetCustomerResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/customers/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Customers"
+            summary: "Get a customer"
+            description: "Accepts an OpenPay customer id or an OpenAuth external ref. Callable by a product backend or by an operator holding openpay:customers:read."
         };
     }
 }

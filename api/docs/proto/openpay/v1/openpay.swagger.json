@@ -21,6 +21,183 @@
     "application/json"
   ],
   "paths": {
+    "/openpay/v1/credentials": {
+      "get": {
+        "summary": "List a product's service credentials",
+        "description": "Never returns secrets. Requires the openpay:credentials:write permission.",
+        "operationId": "OpenPay_ListServiceCredentials",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListServiceCredentialsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Credentials"
+        ]
+      },
+      "post": {
+        "summary": "Issue a service credential",
+        "description": "Returns the secret in clear text exactly once; it is stored only as a hash and cannot be recovered. Requires the openpay:credentials:write permission.",
+        "operationId": "OpenPay_CreateServiceCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateServiceCredentialResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateServiceCredentialRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Credentials"
+        ]
+      }
+    },
+    "/openpay/v1/credentials/{id}/revoke": {
+      "post": {
+        "summary": "Revoke a service credential",
+        "description": "Takes effect immediately. Revoking an already-revoked credential succeeds. Requires the openpay:credentials:write permission.",
+        "operationId": "OpenPay_RevokeServiceCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeServiceCredentialResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayRevokeServiceCredentialBody"
+            }
+          }
+        ],
+        "tags": [
+          "Credentials"
+        ]
+      }
+    },
+    "/openpay/v1/customers": {
+      "post": {
+        "summary": "Register a customer",
+        "description": "Called by a product's backend with a service credential. Idempotent on external_ref, and resolves through a merge if the person's record was merged into another.",
+        "operationId": "OpenPay_UpsertCustomer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertCustomerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "UpsertCustomerRequest registers a person, or returns the existing record.\nCalled by a product's backend the first time one of its users transacts.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertCustomerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/openpay/v1/customers/{id}": {
+      "get": {
+        "summary": "Get a customer",
+        "description": "Accepts an OpenPay customer id or an OpenAuth external ref. Callable by a product backend or by an operator holding openpay:customers:read.",
+        "operationId": "OpenPay_GetCustomer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetCustomerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "externalRef",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
     "/openpay/v1/ping": {
       "get": {
         "summary": "Ping the server",
@@ -215,9 +392,147 @@
           "Products"
         ]
       }
+    },
+    "/openpay/v1/wallet-types": {
+      "get": {
+        "summary": "List a product's wallet types",
+        "description": "Includes platform-scoped types, which are spendable in every product. Requires the openpay:wallet_types:read permission.",
+        "operationId": "OpenPay_ListWalletTypes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWalletTypesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "description": "The product whose wallet types to list. Platform-scoped types are always\nincluded, since they are spendable there too.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WalletTypes"
+        ]
+      },
+      "post": {
+        "summary": "Create a wallet type",
+        "description": "Requires the openpay:wallet_types:write permission. Enabling withdrawable additionally requires openpay:wallet_types:approve_withdrawal and an approval reference, because it moves the balance from closed-loop into prepaid-instrument territory.",
+        "operationId": "OpenPay_CreateWalletType",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateWalletTypeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateWalletTypeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WalletTypes"
+        ]
+      }
+    },
+    "/openpay/v1/wallet-types/{id}": {
+      "get": {
+        "summary": "Get a wallet type",
+        "description": "Requires the openpay:wallet_types:read permission.",
+        "operationId": "OpenPay_GetWalletType",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWalletTypeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WalletTypes"
+        ]
+      },
+      "patch": {
+        "summary": "Update a wallet type",
+        "description": "Changes name, status and limits only. Currency, scope and every capability are immutable once the type exists, because balances are already held under those rules.",
+        "operationId": "OpenPay_UpdateWalletType",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWalletTypeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayUpdateWalletTypeBody"
+            }
+          }
+        ],
+        "tags": [
+          "WalletTypes"
+        ]
+      }
     }
   },
   "definitions": {
+    "OpenPayRevokeServiceCredentialBody": {
+      "type": "object"
+    },
     "OpenPayUpdateProductBody": {
       "type": "object",
       "properties": {
@@ -228,6 +543,21 @@
           "$ref": "#/definitions/v1ProductStatus"
         }
       }
+    },
+    "OpenPayUpdateWalletTypeBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1WalletTypeStatus"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1WalletLimits"
+        }
+      },
+      "description": "UpdateWalletTypeRequest carries only what stays safe to change once wallets\nexist. Currency, scope and capabilities are absent on purpose: a balance\nalready held under one set of rules must not have them rewritten underneath\nit."
     },
     "protobufAny": {
       "type": "object",
@@ -281,11 +611,149 @@
         }
       }
     },
+    "v1CreateServiceCredentialRequest": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateServiceCredentialResponse": {
+      "type": "object",
+      "properties": {
+        "credential": {
+          "$ref": "#/definitions/v1ServiceCredential"
+        },
+        "secret": {
+          "type": "string",
+          "description": "The secret, in clear text, returned exactly once. It is stored only as a\nhash, so it cannot be recovered later — if it is lost, issue a new\ncredential and revoke this one.\n\nPresent the credential to OpenPay as: Authorization: Bearer \u003ckey_id\u003e.\u003csecret\u003e"
+        }
+      }
+    },
+    "v1CreateWalletTypeRequest": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Leave empty to create a platform-scoped type spendable everywhere."
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "capabilities": {
+          "$ref": "#/definitions/v1WalletCapabilities"
+        },
+        "expiryPolicy": {
+          "$ref": "#/definitions/v1ExpiryPolicy"
+        },
+        "expiryDays": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Required when expiry_policy is not NONE, and rejected when it is."
+        },
+        "limits": {
+          "$ref": "#/definitions/v1WalletLimits"
+        },
+        "withdrawalApprovalRef": {
+          "type": "string",
+          "description": "Required when capabilities.withdrawable is set: the compliance sign-off\nthis configuration rests on."
+        }
+      }
+    },
+    "v1CreateWalletTypeResponse": {
+      "type": "object",
+      "properties": {
+        "walletType": {
+          "$ref": "#/definitions/v1WalletType"
+        }
+      }
+    },
+    "v1CredentialStatus": {
+      "type": "string",
+      "enum": [
+        "CREDENTIAL_STATUS_UNSPECIFIED",
+        "CREDENTIAL_STATUS_ACTIVE",
+        "CREDENTIAL_STATUS_REVOKED"
+      ],
+      "default": "CREDENTIAL_STATUS_UNSPECIFIED"
+    },
+    "v1Customer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "externalRef": {
+          "type": "string",
+          "description": "The OpenAuth user id."
+        },
+        "status": {
+          "$ref": "#/definitions/v1CustomerStatus"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Customer is a person, not a per-product record: every product identifies\npeople by the same OpenAuth user id, so one customer covers them everywhere."
+    },
+    "v1CustomerStatus": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER_STATUS_UNSPECIFIED",
+        "CUSTOMER_STATUS_ACTIVE",
+        "CUSTOMER_STATUS_BLOCKED",
+        "CUSTOMER_STATUS_MERGED"
+      ],
+      "default": "CUSTOMER_STATUS_UNSPECIFIED",
+      "description": " - CUSTOMER_STATUS_MERGED: A duplicate that now resolves to another record. Lookups follow it, so an\nid stored before a merge keeps working."
+    },
+    "v1ExpiryPolicy": {
+      "type": "string",
+      "enum": [
+        "EXPIRY_POLICY_UNSPECIFIED",
+        "EXPIRY_POLICY_NONE",
+        "EXPIRY_POLICY_FIXED",
+        "EXPIRY_POLICY_ROLLING"
+      ],
+      "default": "EXPIRY_POLICY_UNSPECIFIED",
+      "description": " - EXPIRY_POLICY_FIXED: Expires a fixed period after the balance was credited.\n - EXPIRY_POLICY_ROLLING: Pushes expiry out on every use."
+    },
+    "v1GetCustomerResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
     "v1GetProductResponse": {
       "type": "object",
       "properties": {
         "product": {
           "$ref": "#/definitions/v1Product"
+        }
+      }
+    },
+    "v1GetWalletTypeResponse": {
+      "type": "object",
+      "properties": {
+        "walletType": {
+          "$ref": "#/definitions/v1WalletType"
         }
       }
     },
@@ -303,6 +771,30 @@
           "type": "string",
           "format": "int64",
           "description": "Size of the whole filtered set, not of this page."
+        }
+      }
+    },
+    "v1ListServiceCredentialsResponse": {
+      "type": "object",
+      "properties": {
+        "credentials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ServiceCredential"
+          }
+        }
+      }
+    },
+    "v1ListWalletTypesResponse": {
+      "type": "object",
+      "properties": {
+        "walletTypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WalletType"
+          }
         }
       }
     },
@@ -354,6 +846,49 @@
       "default": "PRODUCT_STATUS_UNSPECIFIED",
       "description": " - PRODUCT_STATUS_SUSPENDED: Suspended stops new activity. Products are never deleted: money has moved\nagainst them and the ledger must stay interpretable."
     },
+    "v1RevokeServiceCredentialResponse": {
+      "type": "object",
+      "properties": {
+        "credential": {
+          "$ref": "#/definitions/v1ServiceCredential"
+        }
+      }
+    },
+    "v1ServiceCredential": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "keyId": {
+          "type": "string",
+          "description": "The public half, safe to display and to log."
+        },
+        "status": {
+          "$ref": "#/definitions/v1CredentialStatus"
+        },
+        "lastUsedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Answers \"is anyone still using this key?\" before revoking it."
+        },
+        "revokedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "ServiceCredential is how a product's backend authenticates. It never carries\nthe secret: that exists only in the response to CreateServiceCredential."
+    },
     "v1UpdateProductResponse": {
       "type": "object",
       "properties": {
@@ -361,6 +896,170 @@
           "$ref": "#/definitions/v1Product"
         }
       }
+    },
+    "v1UpdateWalletTypeResponse": {
+      "type": "object",
+      "properties": {
+        "walletType": {
+          "$ref": "#/definitions/v1WalletType"
+        }
+      }
+    },
+    "v1UpsertCustomerRequest": {
+      "type": "object",
+      "properties": {
+        "externalRef": {
+          "type": "string"
+        }
+      },
+      "description": "UpsertCustomerRequest registers a person, or returns the existing record.\nCalled by a product's backend the first time one of its users transacts."
+    },
+    "v1UpsertCustomerResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False when the customer already existed, which lets a caller tell a first\nregistration from a repeat without a second lookup."
+        }
+      }
+    },
+    "v1WalletCapabilities": {
+      "type": "object",
+      "properties": {
+        "fundable": {
+          "type": "boolean",
+          "description": "May be topped up with real money."
+        },
+        "grantable": {
+          "type": "boolean",
+          "description": "May be credited without payment, as a promotion."
+        },
+        "withdrawable": {
+          "type": "boolean",
+          "description": "May be cashed out to a bank. Requires an approval reference: enabling this\nmoves the company from closed-loop into prepaid-instrument territory."
+        },
+        "transferable": {
+          "type": "boolean",
+          "description": "May be transferred to another customer."
+        },
+        "refundableToSource": {
+          "type": "boolean",
+          "description": "Refunds may be routed here."
+        },
+        "allowNegative": {
+          "type": "boolean",
+          "description": "May go negative. Off unless a product genuinely needs overdraft."
+        }
+      },
+      "description": "WalletCapabilities is what a balance of this type is allowed to do.\n\nfundable and grantable are deliberately separate. Money a customer paid for\nis a real liability; a promotional coin we issued is funded from marketing\nspend, expires, and should never be cashable. Mixing them in one balance\npermanently loses the answer to \"how much real customer money do we hold?\"."
+    },
+    "v1WalletLimits": {
+      "type": "object",
+      "properties": {
+        "maxBalance": {
+          "type": "string",
+          "format": "int64"
+        },
+        "maxTxnAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "dailyLoadLimit": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "WalletLimits are in minor units. Zero means no limit."
+    },
+    "v1WalletScope": {
+      "type": "string",
+      "enum": [
+        "WALLET_SCOPE_UNSPECIFIED",
+        "WALLET_SCOPE_PRODUCT",
+        "WALLET_SCOPE_PLATFORM"
+      ],
+      "default": "WALLET_SCOPE_UNSPECIFIED",
+      "description": " - WALLET_SCOPE_PRODUCT: Confined to one product.\n - WALLET_SCOPE_PLATFORM: Spendable across every product — possible only because this is a\nsingle-tenant estate."
+    },
+    "v1WalletType": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Empty for platform-scoped types."
+        },
+        "scope": {
+          "$ref": "#/definitions/v1WalletScope"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "capabilities": {
+          "$ref": "#/definitions/v1WalletCapabilities"
+        },
+        "expiryPolicy": {
+          "$ref": "#/definitions/v1ExpiryPolicy"
+        },
+        "expiryDays": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limits": {
+          "$ref": "#/definitions/v1WalletLimits"
+        },
+        "status": {
+          "$ref": "#/definitions/v1WalletTypeStatus"
+        },
+        "withdrawalApproval": {
+          "$ref": "#/definitions/v1WithdrawalApproval"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1WalletTypeStatus": {
+      "type": "string",
+      "enum": [
+        "WALLET_TYPE_STATUS_UNSPECIFIED",
+        "WALLET_TYPE_STATUS_ACTIVE",
+        "WALLET_TYPE_STATUS_ARCHIVED"
+      ],
+      "default": "WALLET_TYPE_STATUS_UNSPECIFIED",
+      "description": " - WALLET_TYPE_STATUS_ARCHIVED: Stops new wallets being created. Existing ones keep working: they hold\nreal balances."
+    },
+    "v1WithdrawalApproval": {
+      "type": "object",
+      "properties": {
+        "approvedBy": {
+          "type": "string"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reference": {
+          "type": "string"
+        }
+      },
+      "description": "WithdrawalApproval records who signed off on enabling withdrawal."
     }
   },
   "securityDefinitions": {

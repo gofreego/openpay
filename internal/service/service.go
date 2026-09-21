@@ -37,8 +37,8 @@ type Repository interface {
 type CustomerRepository interface {
 	// UpsertCustomer creates a customer or returns the existing one for the
 	// same external_ref, resolving through a merge if the record found is a
-	// tombstone.
-	UpsertCustomer(ctx context.Context, customer *dao.Customer) error
+	// tombstone. created distinguishes a first registration from a repeat.
+	UpsertCustomer(ctx context.Context, customer *dao.Customer) (created bool, err error)
 	GetCustomerByExternalRef(ctx context.Context, externalRef string) (*dao.Customer, error)
 	GetCustomerByPublicID(ctx context.Context, publicID string) (*dao.Customer, error)
 }

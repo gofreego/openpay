@@ -21,7 +21,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | Phase | Name | Status |
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
-| 1 | Products & Catalog | ◐ Products, auth and audit done; customers, wallet types and fee policies next |
+| 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4, where payments consume them) |
 | 2 | Ledger Core | ☐ Not started |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |

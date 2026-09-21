@@ -1,0 +1,150 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+enum WalletScope {
+  WALLET_SCOPE_UNSPECIFIED = 0;
+  // Confined to one product.
+  WALLET_SCOPE_PRODUCT = 1;
+  // Spendable across every product — possible only because this is a
+  // single-tenant estate.
+  WALLET_SCOPE_PLATFORM = 2;
+}
+
+enum ExpiryPolicy {
+  EXPIRY_POLICY_UNSPECIFIED = 0;
+  EXPIRY_POLICY_NONE = 1;
+  // Expires a fixed period after the balance was credited.
+  EXPIRY_POLICY_FIXED = 2;
+  // Pushes expiry out on every use.
+  EXPIRY_POLICY_ROLLING = 3;
+}
+
+enum WalletTypeStatus {
+  WALLET_TYPE_STATUS_UNSPECIFIED = 0;
+  WALLET_TYPE_STATUS_ACTIVE = 1;
+  // Stops new wallets being created. Existing ones keep working: they hold
+  // real balances.
+  WALLET_TYPE_STATUS_ARCHIVED = 2;
+}
+
+// WalletCapabilities is what a balance of this type is allowed to do.
+//
+// fundable and grantable are deliberately separate. Money a customer paid for
+// is a real liability; a promotional coin we issued is funded from marketing
+// spend, expires, and should never be cashable. Mixing them in one balance
+// permanently loses the answer to "how much real customer money do we hold?".
+message WalletCapabilities {
+  // May be topped up with real money.
+  bool fundable = 1;
+  // May be credited without payment, as a promotion.
+  bool grantable = 2;
+  // May be cashed out to a bank. Requires an approval reference: enabling this
+  // moves the company from closed-loop into prepaid-instrument territory.
+  bool withdrawable = 3;
+  // May be transferred to another customer.
+  bool transferable = 4;
+  // Refunds may be routed here.
+  bool refundable_to_source = 5;
+  // May go negative. Off unless a product genuinely needs overdraft.
+  bool allow_negative = 6;
+}
+
+// WalletLimits are in minor units. Zero means no limit.
+message WalletLimits {
+  int64 max_balance = 1 [(validate.rules).int64 = {gte: 0}];
+  int64 max_txn_amount = 2 [(validate.rules).int64 = {gte: 0}];
+  int64 daily_load_limit = 3 [(validate.rules).int64 = {gte: 0}];
+}
+
+// WithdrawalApproval records who signed off on enabling withdrawal.
+message WithdrawalApproval {
+  string approved_by = 1;
+  google.protobuf.Timestamp approved_at = 2;
+  string reference = 3;
+}
+
+message WalletType {
+  string id = 1;
+  // Empty for platform-scoped types.
+  string product_id = 2;
+  WalletScope scope = 3;
+  string code = 4;
+  string name = 5;
+  string currency = 6;
+  WalletCapabilities capabilities = 7;
+  ExpiryPolicy expiry_policy = 8;
+  int32 expiry_days = 9;
+  WalletLimits limits = 10;
+  WalletTypeStatus status = 11;
+  WithdrawalApproval withdrawal_approval = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message CreateWalletTypeRequest {
+  // Leave empty to create a platform-scoped type spendable everywhere.
+  string product_id = 1;
+
+  string code = 2 [(validate.rules).string = {
+    pattern: "^[A-Z][A-Z0-9_]{1,30}$"
+  }];
+
+  string name = 3 [(validate.rules).string = {min_len: 1, max_len: 100}];
+
+  string currency = 4 [(validate.rules).string = {in: ["INR"]}];
+
+  WalletCapabilities capabilities = 5 [(validate.rules).message = {required: true}];
+
+  ExpiryPolicy expiry_policy = 6 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+
+  // Required when expiry_policy is not NONE, and rejected when it is.
+  int32 expiry_days = 7 [(validate.rules).int32 = {gte: 0, lte: 3650}];
+
+  WalletLimits limits = 8;
+
+  // Required when capabilities.withdrawable is set: the compliance sign-off
+  // this configuration rests on.
+  string withdrawal_approval_ref = 9 [(validate.rules).string = {max_len: 100}];
+}
+
+message CreateWalletTypeResponse {
+  WalletType wallet_type = 1;
+}
+
+message GetWalletTypeRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetWalletTypeResponse {
+  WalletType wallet_type = 1;
+}
+
+message ListWalletTypesRequest {
+  // The product whose wallet types to list. Platform-scoped types are always
+  // included, since they are spendable there too.
+  string product_id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message ListWalletTypesResponse {
+  repeated WalletType wallet_types = 1;
+}
+
+// UpdateWalletTypeRequest carries only what stays safe to change once wallets
+// exist. Currency, scope and capabilities are absent on purpose: a balance
+// already held under one set of rules must not have them rewritten underneath
+// it.
+message UpdateWalletTypeRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  string name = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
+  WalletTypeStatus status = 3 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  WalletLimits limits = 4;
+}
+
+message UpdateWalletTypeResponse {
+  WalletType wallet_type = 1;
+}
