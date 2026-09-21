@@ -20,8 +20,8 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 
 | Phase | Name | Status |
 |------:|------|--------|
-| 0 | Foundations & Platform Primitives | ◐ All but the idempotency interceptor, which needs Phase 1's first mutating endpoint |
-| 1 | Products & Catalog | ☐ Not started |
+| 0 | Foundations & Platform Primitives | ✅ Complete |
+| 1 | Products & Catalog | ◐ Products, auth and audit done; customers, wallet types and fee policies next |
 | 2 | Ledger Core | ☐ Not started |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
@@ -597,8 +597,12 @@ Postgres-backed service that can safely run multi-table transactions.
       win; response recorded in the same transaction as the work, so a stored response
       always implies the work committed; release on failure so retries re-run; expiry
       sweep that also frees keys abandoned by a crashed process
-- [ ] Idempotency **interceptor** wiring it to endpoints — lands with Phase 1's first
-      mutating endpoint. Building it against no consumer would be unverifiable
+- [x] Idempotency wired to mutating endpoints. Not an interceptor in the end: the
+      gateway registers the service in-process, so the service method is the only
+      point both transports pass through — and the recorded response is then
+      identical whichever transport produced it. Fingerprinting uses **deterministic
+      binary proto, never protojson**, which varies its whitespace between calls and
+      would turn every retry into a false conflict
 - [x] Request context (`internal/appcontext`): actor (`x-user-id`), permissions,
       request id, idempotency key — populated once at each edge, read everywhere.
       Identity is mirrored into the goutils logger context so every log line carries

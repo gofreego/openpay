@@ -23,32 +23,32 @@ func (s *Service) CreateProduct(ctx context.Context, req *openpay_v1.CreateProdu
 		return nil, err
 	}
 
-	product := &dao.Product{
-		PublicID:        ids.New(ids.Product),
-		Code:            req.GetCode(),
-		Name:            req.GetName(),
-		Status:          dao.ProductActive,
-		DefaultCurrency: req.GetDefaultCurrency(),
-	}
+	// idempotent owns the transaction, so the product row, its audit entry and
+	// the recorded response all commit together.
+	return idempotent(ctx, s.repo, "CreateProduct", req,
+		func(ctx context.Context) (*openpay_v1.CreateProductResponse, error) {
+			product := &dao.Product{
+				PublicID:        ids.New(ids.Product),
+				Code:            req.GetCode(),
+				Name:            req.GetName(),
+				Status:          dao.ProductActive,
+				DefaultCurrency: req.GetDefaultCurrency(),
+			}
 
-	// The product row and its audit entry commit together or not at all.
-	err := s.repo.WithTx(ctx, func(ctx context.Context) error {
-		if err := s.repo.CreateProduct(ctx, product); err != nil {
-			return err
-		}
-		return s.audit(ctx, auditParams{
-			Action:       "product.created",
-			ResourceType: "product",
-			ResourceID:   product.PublicID,
-			ProductID:    &product.ID,
-			After:        product,
+			if err := s.repo.CreateProduct(ctx, product); err != nil {
+				return nil, err
+			}
+			if err := s.audit(ctx, auditParams{
+				Action:       "product.created",
+				ResourceType: "product",
+				ResourceID:   product.PublicID,
+				ProductID:    &product.ID,
+				After:        product,
+			}); err != nil {
+				return nil, err
+			}
+			return &openpay_v1.CreateProductResponse{Product: toProtoProduct(product)}, nil
 		})
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &openpay_v1.CreateProductResponse{Product: toProtoProduct(product)}, nil
 }
 
 func (s *Service) GetProduct(ctx context.Context, req *openpay_v1.GetProductRequest) (*openpay_v1.GetProductResponse, error) {
@@ -99,36 +99,35 @@ func (s *Service) UpdateProduct(ctx context.Context, req *openpay_v1.UpdateProdu
 		return nil, err
 	}
 
-	updated := &dao.Product{
-		PublicID: req.GetId(),
-		Name:     req.GetName(),
-		Status:   fromProtoProductStatus(req.GetStatus()),
-	}
+	return idempotent(ctx, s.repo, "UpdateProduct", req,
+		func(ctx context.Context) (*openpay_v1.UpdateProductResponse, error) {
+			updated := &dao.Product{
+				PublicID: req.GetId(),
+				Name:     req.GetName(),
+				Status:   fromProtoProductStatus(req.GetStatus()),
+			}
 
-	err := s.repo.WithTx(ctx, func(ctx context.Context) error {
-		// Read the prior state inside the transaction so the audit entry's
-		// before and after describe the same committed change.
-		before, err := s.repo.GetProductByPublicID(ctx, req.GetId())
-		if err != nil {
-			return err
-		}
-		if err := s.repo.UpdateProduct(ctx, updated); err != nil {
-			return err
-		}
-		return s.audit(ctx, auditParams{
-			Action:       "product.updated",
-			ResourceType: "product",
-			ResourceID:   updated.PublicID,
-			ProductID:    &updated.ID,
-			Before:       before,
-			After:        updated,
+			// Read the prior state inside the transaction so the audit entry's
+			// before and after describe the same committed change.
+			before, err := s.repo.GetProductByPublicID(ctx, req.GetId())
+			if err != nil {
+				return nil, err
+			}
+			if err := s.repo.UpdateProduct(ctx, updated); err != nil {
+				return nil, err
+			}
+			if err := s.audit(ctx, auditParams{
+				Action:       "product.updated",
+				ResourceType: "product",
+				ResourceID:   updated.PublicID,
+				ProductID:    &updated.ID,
+				Before:       before,
+				After:        updated,
+			}); err != nil {
+				return nil, err
+			}
+			return &openpay_v1.UpdateProductResponse{Product: toProtoProduct(updated)}, nil
 		})
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &openpay_v1.UpdateProductResponse{Product: toProtoProduct(updated)}, nil
 }
 
 func toProtoProduct(p *dao.Product) *openpay_v1.Product {
