@@ -12,6 +12,7 @@ import (
 	"github.com/gofreego/openpay/internal/service"
 
 	"github.com/gofreego/goutils/logger"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -47,6 +48,9 @@ func (a *GRPCServer) Run(ctx context.Context) error {
 	// Create a new gRPC server. Interceptors run in order, so the caller is on
 	// context before anything can fail and want to log it.
 	a.server = grpc.NewServer(
+		// otelgrpc starts the span, so the interceptors after it can annotate
+		// it and their logs carry the trace id.
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			middleware.CallerUnaryInterceptor(),
 			middleware.ErrorUnaryInterceptor(),

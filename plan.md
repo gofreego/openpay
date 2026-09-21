@@ -20,7 +20,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 
 | Phase | Name | Status |
 |------:|------|--------|
-| 0 | Foundations & Platform Primitives | ◐ In progress — data layer done |
+| 0 | Foundations & Platform Primitives | ◐ All but the idempotency interceptor, which needs Phase 1's first mutating endpoint |
 | 1 | Products & Catalog | ☐ Not started |
 | 2 | Ledger Core | ☐ Not started |
 | 3 | Wallets | ☐ Not started |
@@ -606,8 +606,18 @@ Postgres-backed service that can safely run multi-table transactions.
       Note both edges need wiring: the HTTP path registers the service in-process, so
       gRPC interceptors never run on it and grpc-gateway needs its own middleware,
       header matcher and error handler
-- [ ] Observability baseline: structured logs with request/trace id, Prometheus metrics
-      endpoint, health & readiness probes
+- [x] Observability baseline on **OpenTelemetry** — traces and metrics over OTLP, so
+      the collector decides where data goes and changing backend is config, not code.
+      `otelgrpc` on the gRPC server, `otelhttp` on the gateway (again two edges, since
+      in-process registration bypasses interceptors), caller identity as span
+      attributes, and a logger middle layer putting `traceId`/`spanId` on every log
+      line so logs and traces join during an incident. Telemetry failure never blocks
+      startup — a payments service does not refuse to serve because a collector is down
+- [x] Health probes with the distinction that matters: `/healthz` checks **nothing**
+      but the process, because a liveness probe that consults the database would fail
+      on every pod during a brief outage and have the orchestrator restart the whole
+      service. `/readyz` checks the database and takes the pod out of rotation without
+      restarting it, with its own timeout so a hung database cannot hang the probe
 - [x] Transactional **outbox** table + drainer worker. Events are written in the same
       transaction as the change they describe; the drainer claims batches with
       `FOR UPDATE SKIP LOCKED` so several can run without double-publishing, records
@@ -617,8 +627,8 @@ Postgres-backed service that can safely run multi-table transactions.
 - [x] Background job runner (`WORKER` in `AppNames`) hosting the outbox drainer and
       the idempotency expiry sweeper; later the payment poller, hold sweeper and
       ledger invariant checker
-- [x] Docker Compose for local dev: Postgres (Redis/Kafka added when something needs
-      them — the outbox drainer is the first candidate)
+- [x] Docker Compose for local dev: Postgres and an OTel collector that prints traces
+      and metrics to its own logs (Redis/Kafka added when something needs them)
 
 **Exit criteria:** a trivial entity can be created through the API, inside a
 transaction, idempotently, with an outbox event published and consumed.

@@ -38,11 +38,17 @@ type Drainer struct {
 	cfg       Config
 	repo      Repository
 	publisher Publisher
+	metrics   *metrics
 }
 
 func NewDrainer(cfg Config, repo Repository, publisher Publisher) *Drainer {
 	cfg.withDefaults()
-	return &Drainer{cfg: cfg, repo: repo, publisher: publisher}
+	return &Drainer{
+		cfg:       cfg,
+		repo:      repo,
+		publisher: publisher,
+		metrics:   newMetrics(context.Background()),
+	}
 }
 
 // Run sweeps until the context is cancelled.
@@ -95,6 +101,7 @@ func (d *Drainer) drainOnce(ctx context.Context) (int, error) {
 				// failure is recorded and the sweep continues. The event stays
 				// unpublished and is retried next time.
 				logger.Error(ctx, "failed to publish outbox event %s: %v", event.EventID, err)
+				d.metrics.recordFailure(ctx, event.Topic)
 				if markErr := d.repo.MarkOutboxEventFailed(ctx, event.ID, err.Error()); markErr != nil {
 					return markErr
 				}
@@ -103,6 +110,7 @@ func (d *Drainer) drainOnce(ctx context.Context) (int, error) {
 			if err := d.repo.MarkOutboxEventPublished(ctx, event.ID); err != nil {
 				return err
 			}
+			d.metrics.recordPublished(ctx, event.Topic, time.Since(event.CreatedAt).Seconds())
 		}
 		return nil
 	})

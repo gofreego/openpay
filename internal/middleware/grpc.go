@@ -29,7 +29,9 @@ func CallerUnaryInterceptor() grpc.UnaryServerInterceptor {
 			}
 			return ""
 		})
-		return handler(appcontext.WithCaller(ctx, caller), req)
+		ctx = appcontext.WithCaller(ctx, caller)
+		annotateSpan(ctx, caller)
+		return handler(ctx, req)
 	}
 }
 

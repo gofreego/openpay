@@ -1,0 +1,30 @@
+# Local development collector. It accepts OTLP and prints everything to its
+# own stdout, so `docker compose logs otel-collector` is the local trace viewer.
+#
+# In a real environment the receivers stay identical and only the exporters
+# change — which is the point of exporting OTLP rather than a vendor protocol.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

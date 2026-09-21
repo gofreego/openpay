@@ -46,7 +46,10 @@ func CallerMiddleware() runtime.Middleware {
 		return func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
 			caller := appcontext.CallerFromValues(r.Header.Get)
 			w.Header().Set(appcontext.HeaderRequestID, caller.RequestID)
-			next(w, r.WithContext(appcontext.WithCaller(r.Context(), caller)), pathParams)
+
+			ctx := appcontext.WithCaller(r.Context(), caller)
+			annotateSpan(ctx, caller)
+			next(w, r.WithContext(ctx), pathParams)
 		}
 	}
 }

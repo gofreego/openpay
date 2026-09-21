@@ -19,5 +19,15 @@ services:
       timeout: 5s
       retries: 10
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    container_name: openpay-otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./resources/docker/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
 volumes:
   openpay-pgdata:

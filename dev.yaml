@@ -42,6 +42,16 @@ Worker:
     BatchSize: 100
   IdempotencySweepInterval: 1h
   IdempotencySweepBatch: 1000
+Telemetry:
+  Enabled: true
+  ServiceName: openpay
+  Environment: dev
+  Endpoint: localhost:4317
+  Insecure: true
+  # Payment volume is low, so keeping every trace is affordable and far more
+  # useful when investigating one customer's failed payment.
+  SampleRatio: 1.0
+  MetricInterval: 15s
 Debug:
   Enabled: true
   EnablePprof: true

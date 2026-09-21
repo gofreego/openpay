@@ -8,6 +8,7 @@ import (
 	"github.com/gofreego/openpay/internal/outbox"
 	repo "github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
+	"github.com/gofreego/openpay/internal/telemetry"
 
 	"github.com/gofreego/goutils/api/debug"
 	"github.com/gofreego/goutils/configutils"
@@ -23,6 +24,7 @@ type Configuration struct {
 	Repository   repo.Config        `yaml:"Repository"`
 	Service      service.Config     `yaml:"Service"`
 	Worker       Worker             `yaml:"Worker"`
+	Telemetry    telemetry.Config   `yaml:"Telemetry"`
 	Debug        debug.Config       `yaml:"Debug"`
 }
 
