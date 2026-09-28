@@ -81,6 +81,20 @@ func (l *logged) Cancel(ctx context.Context, id string) error {
 	return err
 }
 
+func (l *logged) Refund(ctx context.Context, req provider.RefundRequest) (*provider.Refund, error) {
+	started := time.Now()
+	res, err := l.Provider.Refund(ctx, req)
+	l.record(ctx, "refund", req.RefundID, req, res, err, started)
+	return res, err
+}
+
+func (l *logged) FetchRefund(ctx context.Context, id string) (*provider.Refund, error) {
+	started := time.Now()
+	res, err := l.Provider.FetchRefund(ctx, id)
+	l.record(ctx, "fetch_refund", id, nil, res, err, started)
+	return res, err
+}
+
 // VerifyWebhook is inbound, not a call we made; the raw event is kept in
 // provider_events instead.
 func (l *logged) VerifyWebhook(headers http.Header, body []byte) (*provider.Event, error) {

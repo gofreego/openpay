@@ -31,6 +31,16 @@ const (
 	OpWithdraw Operation = "withdraw"
 	// OpRefundIn returns value from a refunded purchase.
 	OpRefundIn Operation = "refund_in"
+	// OpRefundOut takes a top-up back out to be refunded to the card or bank
+	// it came from. Allowed whatever the capabilities — it reverses a load,
+	// it is not a withdrawal to anywhere of the customer's choosing — but not
+	// from a frozen wallet: a wallet under investigation is exactly where a
+	// refund-to-source is the fraud.
+	OpRefundOut Operation = "refund_out"
+	// OpRestore returns the money of a refund that failed. It always succeeds
+	// — it is the customer's own money coming back — so, like OpAdjust, it
+	// skips every capability, status and limit rule.
+	OpRestore Operation = "restore"
 	// OpAdjust is an operator correction. It bypasses capability and limit
 	// rules on purpose — it is how a wallet those rules got wrong is put
 	// right — and is instead gated by permission, reason code and audit.
@@ -70,7 +80,7 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 	if amount <= 0 {
 		return apperrors.New(apperrors.InvalidArgument, "amount must be positive, got %d", amount)
 	}
-	if op == OpAdjust {
+	if op == OpAdjust || op == OpRestore {
 		return nil
 	}
 	if wallet.Status != dao.WalletActive {
@@ -89,7 +99,7 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 		capable = walletType.Transferable
 	case OpRefundIn:
 		capable = walletType.RefundableToSource
-	case OpSpend, OpHold:
+	case OpSpend, OpHold, OpRefundOut:
 		capable = true
 	default:
 		return apperrors.New(apperrors.Internal, "unknown wallet operation %q", op)
@@ -98,7 +108,8 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 		return denied("wallet type %s does not allow %s", walletType.Code, op)
 	}
 
-	if walletType.MaxTxnAmount != nil && amount > *walletType.MaxTxnAmount {
+	// A refund returns an earlier top-up, which already passed this limit.
+	if op != OpRefundOut && walletType.MaxTxnAmount != nil && amount > *walletType.MaxTxnAmount {
 		return denied("%d exceeds the %s wallet's per-transaction limit of %d",
 			amount, walletType.Code, *walletType.MaxTxnAmount)
 	}

@@ -26,7 +26,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
-| 6 | Refunds, Reversals & Disputes | ☐ Not started |
+| 6 | Refunds, Reversals & Disputes | ◐ Refunds done; disputes next |
 | 7 | Orders & Checkout (Split Tender) | ☐ Not started |
 | 8 | Settlement & Reconciliation | ☐ Not started |
 | 9 | Payouts & Withdrawals | ☐ Not started |
@@ -1040,15 +1040,34 @@ special-casing.
 
 ## Phase 6 — Refunds, Reversals & Disputes
 
-- [ ] `refunds` table + state machine; full and partial; multiple partials per payment
-      with over-refund protection enforced in the database
-- [ ] Refund destination policy: back to source (PSP) vs. to wallet — per product config
-- [ ] **Refund requests carry their own tax breakdown** (D13). OpenPay cannot legitimately
+- [x] `refunds` table + state machine; full and partial; multiple partials per payment
+      with over-refund protection enforced in the database.
+      `payments.refunded_amount` (initiated + pending + processed) under a CHECK
+      against `captured_amount`; 10 concurrent ₹2 refunds of a ₹10 payment → exactly 5.
+      Refund money is reserved at initiation (wallet → `refunds_payable`) so it cannot
+      be spent while the provider works, and leaves the books when the provider
+      confirms. A top-up can only be refunded while its value is still in the wallet.
+      A timeout leaves the refund `initiated` and the poller resubmits it under the
+      same id; a failure restores the wallet with a reversal-linked journal.
+      Refunds are central-ops only for now: refunding a top-up to its card is close
+      to cashing out a closed-loop balance (Q1). Product backends get refunds with
+      orders
+- [ ] Refund destination policy: back to source (PSP) vs. to wallet — per product config.
+      **Phase 7**: only order payments have a choice; a top-up refund can only go
+      back to its source
+- [ ] **Refund requests carry their own tax breakdown** (D13). **Phase 7**, with
+      the orders that carry tax; top-ups have none. OpenPay cannot legitimately
       derive the tax portion of a partial refund; proportional allocation is a documented
       fallback only, and refunds created that way are flagged for finance
-- [ ] Ledger: refund posts a reversal-linked journal; fee refund policy configurable
-      (PSP fees are often non-refundable — model that explicitly)
-- [ ] Provider refund APIs + async refund webhooks (refunds are rarely synchronous)
+- [x] Ledger: refund posts a reversal-linked journal; fee refund policy configurable
+      (PSP fees are often non-refundable — model that explicitly).
+      Fees are recognised at settlement (D12), so nothing is booked for them at
+      refund time; whether a refund returns its fee is a Phase 8 settlement fact
+- [x] Provider refund APIs + async refund webhooks (refunds are rarely synchronous).
+      `provider_events` now carries `object_kind` (payment/refund/dispute); refund
+      webhooks are hints like payment ones — the refund is fetched and synced.
+      Unapplied payments (wallet refused the credit) are refunded from
+      `refunds_payable` directly
 - [ ] `disputes` / chargebacks: ingest, move funds to a `liability:disputed` holding
       account, evidence submission, win/loss resolution journals
 - [ ] Reconciliation of refund/dispute fees

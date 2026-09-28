@@ -46,6 +46,10 @@ const (
 	// It moves money only as the provider says it moved, so it is safe to
 	// give product operators.
 	PermPaymentsSync = "openpay:payments:sync"
+	// PermRefundsCreate returns money to a card or bank. Refunding a wallet
+	// top-up is close to cashing out a closed-loop balance, so it is
+	// platform-level and reason-coded until orders give products their own.
+	PermRefundsCreate = "openpay:refunds:create"
 
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"

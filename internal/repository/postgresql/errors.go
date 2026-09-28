@@ -11,6 +11,7 @@ import (
 const (
 	codeUniqueViolation     = "23505"
 	codeForeignKeyViolation = "23503"
+	codeCheckViolation      = "23514"
 )
 
 // isUniqueViolation reports whether err is a duplicate key error.
@@ -24,6 +25,13 @@ func isUniqueViolation(err error) bool {
 
 func isForeignKeyViolation(err error) bool {
 	return hasSQLState(err, codeForeignKeyViolation)
+}
+
+// isCheckViolation reports whether err is the named CHECK constraint
+// refusing a row — the constraint, not code, being the final word.
+func isCheckViolation(err error, constraint string) bool {
+	var pqErr *pq.Error
+	return errors.As(err, &pqErr) && string(pqErr.Code) == codeCheckViolation && pqErr.Constraint == constraint
 }
 
 func hasSQLState(err error, code string) bool {

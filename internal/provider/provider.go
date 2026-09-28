@@ -64,13 +64,52 @@ type Payment struct {
 	FailureReason string
 }
 
+// ObjectKind says what a webhook is about.
+type ObjectKind string
+
+const (
+	ObjectPayment ObjectKind = "payment"
+	ObjectRefund  ObjectKind = "refund"
+	ObjectDispute ObjectKind = "dispute"
+)
+
 // Event is a webhook after its signature has been verified. It is only a hint
-// that something changed: the engine fetches the payment before acting.
+// that something changed: the engine fetches the object before acting.
 type Event struct {
-	EventID           string
-	Type              string
+	EventID    string
+	Type       string
+	ObjectKind ObjectKind
+	// ObjectID is the provider's id for the payment, refund or dispute.
+	ObjectID   string
+	OccurredAt time.Time
+}
+
+// RefundStatus is a provider refund's state in OpenPay's vocabulary.
+type RefundStatus string
+
+const (
+	RefundPending   RefundStatus = "pending"
+	RefundProcessed RefundStatus = "processed"
+	RefundFailed    RefundStatus = "failed"
+)
+
+type RefundRequest struct {
+	// RefundID is our id. Providers use it as the idempotency key, so asking
+	// again after a timeout returns the same refund rather than a second one.
+	RefundID          string
 	ProviderPaymentID string
-	OccurredAt        time.Time
+	Amount            int64
+	Currency          string
+}
+
+// Refund is the provider's authoritative view of a refund.
+type Refund struct {
+	ProviderRefundID  string
+	ProviderPaymentID string
+	Status            RefundStatus
+	Amount            int64
+	Currency          string
+	FailureReason     string
 }
 
 type Capabilities struct {
@@ -90,6 +129,12 @@ type Provider interface {
 	FetchPayment(ctx context.Context, providerPaymentID string) (*Payment, error)
 	Capture(ctx context.Context, providerPaymentID string, amount int64) error
 	Cancel(ctx context.Context, providerPaymentID string) error
+
+	// Refund asks the provider to return money. Refunds are rarely
+	// synchronous: the usual answer is pending, and a webhook or a fetch says
+	// how it ended.
+	Refund(ctx context.Context, req RefundRequest) (*Refund, error)
+	FetchRefund(ctx context.Context, providerRefundID string) (*Refund, error)
 
 	// VerifyWebhook authenticates a webhook and normalizes it. An invalid
 	// signature is an Unauthenticated error; nothing from such a request may

@@ -57,6 +57,9 @@ type Payment struct {
 	Provider       *string
 	CapturedAmount *int64
 	CapturedAt     *time.Time
+	// RefundedAmount is what refunds have promised back so far — initiated,
+	// pending or processed. The database refuses it beyond CapturedAmount.
+	RefundedAmount int64
 
 	FailureCode   *string
 	FailureReason *string
@@ -108,7 +111,8 @@ type ProviderEvent struct {
 	Provider          string
 	EventID           string
 	EventType         string
-	ProviderPaymentID *string
+	ObjectKind        string
+	ObjectID          *string
 	Payload           []byte
 	ReceivedAt        time.Time
 	ProcessedAt       *time.Time
@@ -126,4 +130,62 @@ type ProviderRequest struct {
 	Response   []byte
 	Error      *string
 	DurationMs int
+}
+
+const (
+	PaymentPartiallyRefunded PaymentStatus = "partially_refunded"
+	PaymentRefunded          PaymentStatus = "refunded"
+)
+
+type RefundStatus string
+
+const (
+	// RefundInitiated: money reserved; the provider has not yet confirmed it
+	// holds the request. A timeout leaves a refund here and the poller asks again.
+	RefundInitiated RefundStatus = "initiated"
+	RefundPending   RefundStatus = "pending"
+	RefundProcessed RefundStatus = "processed"
+	RefundFailed    RefundStatus = "failed"
+)
+
+func (s RefundStatus) IsFinal() bool { return s == RefundProcessed || s == RefundFailed }
+
+// RefundSource is where a refund's money was taken from.
+type RefundSource string
+
+const (
+	// RefundFromWallet: the customer's wallet, which the top-up credited.
+	RefundFromWallet RefundSource = "wallet"
+	// RefundFromUnapplied: the refunds_payable balance of a payment its
+	// wallet refused.
+	RefundFromUnapplied RefundSource = "unapplied"
+)
+
+type Refund struct {
+	ID        int64
+	PublicID  string
+	PaymentID int64
+	ProductID int64
+
+	Amount   int64
+	Currency string
+	Status   RefundStatus
+	Source   RefundSource
+
+	ReasonCode string
+	Memo       string
+
+	Provider         string
+	ProviderRefundID *string
+	FailureCode      *string
+	FailureReason    *string
+
+	RequestedBy string
+	ProcessedAt *time.Time
+
+	// PaymentPublicID is read alongside, for the API.
+	PaymentPublicID string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

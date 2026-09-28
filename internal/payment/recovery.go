@@ -65,10 +65,14 @@ func WebhookHandler(prefix string, registry *provider.Registry, repo WebhookRepo
 		}
 
 		stored := &dao.ProviderEvent{
-			Provider: name, EventID: event.EventID, EventType: event.Type, Payload: body,
+			Provider: name, EventID: event.EventID, EventType: event.Type,
+			ObjectKind: string(event.ObjectKind), Payload: body,
 		}
-		if event.ProviderPaymentID != "" {
-			stored.ProviderPaymentID = &event.ProviderPaymentID
+		if stored.ObjectKind == "" {
+			stored.ObjectKind = string(provider.ObjectPayment)
+		}
+		if event.ObjectID != "" {
+			stored.ObjectID = &event.ObjectID
 		}
 		if _, err := repo.SaveProviderEvent(r.Context(), stored); err != nil {
 			// A 5xx makes the provider retry, which is what we want when we
@@ -129,15 +133,23 @@ func backoff(attempts int) time.Duration {
 // Because the event's own claim is never trusted, duplicates and
 // out-of-order deliveries converge on the same answer.
 func (e *Engine) processEvent(ctx context.Context, event *dao.ProviderEvent) error {
-	if event.ProviderPaymentID == nil {
-		return nil // not about a payment; nothing to do
+	if event.ObjectID == nil {
+		return nil // not about anything we track
 	}
-	attempt, err := e.attemptFor(ctx, event.Provider, *event.ProviderPaymentID)
-	if err != nil {
+	reference := event.Provider + ":" + event.EventID
+	switch provider.ObjectKind(event.ObjectKind) {
+	case provider.ObjectRefund:
+		return e.processRefundEvent(ctx, event.Provider, *event.ObjectID, reference)
+	case provider.ObjectPayment:
+		attempt, err := e.attemptFor(ctx, event.Provider, *event.ObjectID)
+		if err != nil {
+			return err
+		}
+		_, err = e.syncFromProvider(ctx, attempt, "webhook", reference)
 		return err
+	default:
+		return nil
 	}
-	_, err = e.syncFromProvider(ctx, attempt, "webhook", event.Provider+":"+event.EventID)
-	return err
 }
 
 func (e *Engine) attemptFor(ctx context.Context, providerName, providerPaymentID string) (*dao.PaymentAttempt, error) {

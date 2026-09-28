@@ -34,6 +34,7 @@ const SignatureHeader = "X-Mock-Signature"
 type payment struct {
 	provider.Payment
 	attemptID string
+	refunded  int64
 }
 
 // Provider is the mock PSP.
@@ -47,8 +48,13 @@ type Provider struct {
 	// provider's idempotency key would.
 	byAttempt map[string]string
 
+	refunds map[string]*provider.Refund
+	// byRefundID makes Refund idempotent on our refund id.
+	byRefundID map[string]string
+
 	// Programmable behaviour for the next calls.
 	failNextCreate error
+	failNextRefund error
 	manualCapture  bool
 }
 
@@ -60,6 +66,8 @@ func New(secret, checkoutURL string) *Provider {
 		checkoutURL: checkoutURL,
 		payments:    map[string]*payment{},
 		byAttempt:   map[string]string{},
+		refunds:     map[string]*provider.Refund{},
+		byRefundID:  map[string]string{},
 	}
 }
 
@@ -145,11 +153,60 @@ func (m *Provider) Cancel(_ context.Context, providerPaymentID string) error {
 	}
 }
 
+// Refund is asynchronous, as real refunds are: it answers pending, and
+// ProcessRefund or FailRefund decide how it ends. It refuses to refund more
+// than was captured and not yet refunded, as a real provider would.
+func (m *Provider) Refund(_ context.Context, req provider.RefundRequest) (*provider.Refund, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if err := m.failNextRefund; err != nil {
+		m.failNextRefund = nil
+		return nil, err
+	}
+	if id, ok := m.byRefundID[req.RefundID]; ok {
+		out := *m.refunds[id]
+		return &out, nil
+	}
+	p, ok := m.payments[req.ProviderPaymentID]
+	if !ok {
+		return nil, apperrors.New(apperrors.NotFound, "mock payment %q not found", req.ProviderPaymentID)
+	}
+	if p.Status != provider.StatusCaptured {
+		return nil, apperrors.New(apperrors.FailedPrecondition, "mock payment %q is %s, not captured", p.ProviderPaymentID, p.Status)
+	}
+	if p.refunded+req.Amount > p.Amount {
+		return nil, apperrors.New(apperrors.FailedPrecondition,
+			"mock payment %q has %d refundable, asked for %d", p.ProviderPaymentID, p.Amount-p.refunded, req.Amount)
+	}
+
+	p.refunded += req.Amount
+	id := "mockrfnd_" + ids.New(ids.Refund)[4:]
+	r := &provider.Refund{ProviderRefundID: id, ProviderPaymentID: p.ProviderPaymentID,
+		Status: provider.RefundPending, Amount: req.Amount, Currency: req.Currency}
+	m.refunds[id] = r
+	m.byRefundID[req.RefundID] = id
+	out := *r
+	return &out, nil
+}
+
+func (m *Provider) FetchRefund(_ context.Context, providerRefundID string) (*provider.Refund, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.refunds[providerRefundID]
+	if !ok {
+		return nil, apperrors.New(apperrors.NotFound, "mock refund %q not found", providerRefundID)
+	}
+	out := *r
+	return &out, nil
+}
+
 // webhook is the mock's wire format.
 type webhook struct {
 	EventID    string    `json:"event_id"`
 	Type       string    `json:"type"`
-	PaymentID  string    `json:"payment_id"`
+	Object     string    `json:"object"`
+	ObjectID   string    `json:"object_id"`
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
@@ -162,7 +219,8 @@ func (m *Provider) VerifyWebhook(headers http.Header, body []byte) (*provider.Ev
 	if err := json.Unmarshal(body, &w); err != nil || w.EventID == "" {
 		return nil, apperrors.New(apperrors.InvalidArgument, "webhook body is not a mock event")
 	}
-	return &provider.Event{EventID: w.EventID, Type: w.Type, ProviderPaymentID: w.PaymentID, OccurredAt: w.OccurredAt}, nil
+	return &provider.Event{EventID: w.EventID, Type: w.Type, ObjectKind: provider.ObjectKind(w.Object),
+		ObjectID: w.ObjectID, OccurredAt: w.OccurredAt}, nil
 }
 
 func (m *Provider) sign(body []byte) []byte {
@@ -222,12 +280,48 @@ func (m *Provider) SetManualCapture(on bool) {
 	m.manualCapture = on
 }
 
+// ProcessRefund completes a refund: the money has left.
+func (m *Provider) ProcessRefund(providerRefundID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if r, ok := m.refunds[providerRefundID]; ok && r.Status == provider.RefundPending {
+		r.Status = provider.RefundProcessed
+	}
+}
+
+// FailRefund fails a refund, returning its amount to what can be refunded.
+func (m *Provider) FailRefund(providerRefundID, reason string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if r, ok := m.refunds[providerRefundID]; ok && r.Status == provider.RefundPending {
+		r.Status = provider.RefundFailed
+		r.FailureReason = reason
+		m.payments[r.ProviderPaymentID].refunded -= r.Amount
+	}
+}
+
+// FailNextRefund makes the next Refund return err, e.g. a timeout.
+func (m *Provider) FailNextRefund(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.failNextRefund = err
+}
+
 // Webhook builds a signed webhook for a payment, as the provider would send
 // it. Deliver it as many times, as late, and in whatever order a test needs.
 func (m *Provider) Webhook(providerPaymentID, eventType string) (http.Header, []byte) {
+	return m.webhookFor(provider.ObjectPayment, providerPaymentID, eventType)
+}
+
+// RefundWebhook builds a signed webhook about a refund.
+func (m *Provider) RefundWebhook(providerRefundID, eventType string) (http.Header, []byte) {
+	return m.webhookFor(provider.ObjectRefund, providerRefundID, eventType)
+}
+
+func (m *Provider) webhookFor(kind provider.ObjectKind, objectID, eventType string) (http.Header, []byte) {
 	body, _ := json.Marshal(webhook{
 		EventID: "mockevt_" + ids.New(ids.OutboxEvent)[4:], Type: eventType,
-		PaymentID: providerPaymentID, OccurredAt: time.Now().UTC(),
+		Object: string(kind), ObjectID: objectID, OccurredAt: time.Now().UTC(),
 	})
 	headers := http.Header{}
 	headers.Set(SignatureHeader, hex.EncodeToString(m.sign(body)))

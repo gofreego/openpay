@@ -23,9 +23,15 @@ import (
 //   - POST ?outcome=decline declines and sends the webhook.
 //   - Adding &webhook=false changes state but sends no webhook, to watch the
 //     poller recover a lost one.
+//   - POST refunds/{providerRefundID}?outcome=process|fail finishes a refund
+//     the same way.
 func MockCheckoutHandler(prefix, webhookPath string, m *mock.Provider, webhooks http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, prefix)
+		if refundID, ok := strings.CutPrefix(id, "refunds/"); ok {
+			mockRefund(w, r, refundID, webhookPath, m, webhooks)
+			return
+		}
 		p, err := m.FetchPayment(r.Context(), id)
 		if err != nil {
 			http.Error(w, "unknown mock payment", http.StatusNotFound)
@@ -72,4 +78,33 @@ func MockCheckoutHandler(prefix, webhookPath string, m *mock.Provider, webhooks 
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"payment":%q,"event":%q,"webhook":%q}`, id, eventType, delivered)
 	})
+}
+
+func mockRefund(w http.ResponseWriter, r *http.Request, id, webhookPath string, m *mock.Provider, webhooks http.Handler) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if _, err := m.FetchRefund(r.Context(), id); err != nil {
+		http.Error(w, "unknown mock refund", http.StatusNotFound)
+		return
+	}
+	eventType := "refund.processed"
+	switch r.URL.Query().Get("outcome") {
+	case "process":
+		m.ProcessRefund(id)
+	case "fail":
+		m.FailRefund(id, "mock: refund failed")
+		eventType = "refund.failed"
+	default:
+		http.Error(w, "outcome must be process or fail", http.StatusBadRequest)
+		return
+	}
+	headers, body := m.RefundWebhook(id, eventType)
+	req := httptest.NewRequest(http.MethodPost, webhookPath, bytes.NewReader(body)).WithContext(r.Context())
+	req.Header = headers
+	rec := httptest.NewRecorder()
+	webhooks.ServeHTTP(rec, req)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"refund":%q,"event":%q,"webhook":"delivered, answered %d"}`, id, eventType, rec.Code)
 }

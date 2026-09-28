@@ -70,6 +70,16 @@ type PaymentRepository interface {
 	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
 
 	PostJournal(ctx context.Context, journal *dao.Journal) error
+
+	CreateRefund(ctx context.Context, refund *dao.Refund) error
+	UpdateRefund(ctx context.Context, refund *dao.Refund) error
+	LockRefund(ctx context.Context, id int64) (*dao.Refund, error)
+	GetRefundByPublicID(ctx context.Context, publicID string) (*dao.Refund, error)
+	GetRefundByProviderRef(ctx context.Context, providerName, providerRefundID string) (*dao.Refund, error)
+	ListPaymentRefunds(ctx context.Context, paymentID int64) ([]*dao.Refund, error)
+	ListOpenRefunds(ctx context.Context, before time.Time, limit int) ([]*dao.Refund, error)
+	SumProcessedRefunds(ctx context.Context, paymentID int64) (int64, error)
+	GetJournalByExternalID(ctx context.Context, externalID string) (*dao.Journal, error)
 }
 
 type WalletRepository interface {

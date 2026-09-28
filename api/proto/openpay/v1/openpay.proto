@@ -473,4 +473,38 @@ service OpenPay {
             description: "Fetches the provider's state and applies it, as the poller would. Requires openpay:payments:sync."
         };
     }
+
+    rpc CreateRefund (CreateRefundRequest) returns (CreateRefundResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/payments/{payment_id}/refunds"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Refund a payment"
+            description: "Returns part or all of a captured payment to its source. A wallet top-up can only be refunded while its value is still in the wallet. Central ops only: requires openpay:refunds:create and openpay:scope:all, an explained reason code, and an Idempotency-Key."
+        };
+    }
+
+    rpc GetRefund (GetRefundRequest) returns (GetRefundResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/refunds/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Get a refund"
+            description: "Requires openpay:payments:read within scope."
+        };
+    }
+
+    rpc ListRefunds (ListRefundsRequest) returns (ListRefundsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/payments/{payment_id}/refunds"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "List a payment's refunds"
+            description: "Requires openpay:payments:read within scope."
+        };
+    }
 }

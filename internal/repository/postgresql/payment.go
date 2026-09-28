@@ -15,7 +15,7 @@ import (
 
 const paymentColumns = `p.id, p.public_id, p.product_id, p.customer_id, p.purpose, p.wallet_id,
 	p.amount, p.currency, p.status, p.application, p.provider, p.captured_amount, p.captured_at,
-	p.failure_code, p.failure_reason, p.description, p.return_url, p.expires_at,
+	p.refunded_amount, p.failure_code, p.failure_reason, p.description, p.return_url, p.expires_at,
 	pr.public_id, c.public_id, w.public_id, p.created_at, p.updated_at`
 
 const paymentFrom = ` FROM payments p
@@ -72,13 +72,17 @@ func (r *Repository) UpdatePayment(ctx context.Context, p *dao.Payment) error {
 	const update = `
 		UPDATE payments
 		SET status = $2, application = $3, provider = $4, captured_amount = $5, captured_at = $6,
-		    failure_code = $7, failure_reason = $8
+		    failure_code = $7, failure_reason = $8, refunded_amount = $9
 		WHERE id = $1
 		RETURNING updated_at`
 	if err := r.executor(ctx).QueryRowContext(ctx, update,
 		p.ID, p.Status, p.Application, p.Provider, p.CapturedAmount, p.CapturedAt,
-		p.FailureCode, p.FailureReason,
+		p.FailureCode, p.FailureReason, p.RefundedAmount,
 	).Scan(&p.UpdatedAt); err != nil {
+		if isCheckViolation(err, "ck_payments_refunded") {
+			return apperrors.Wrap(err, apperrors.FailedPrecondition,
+				"payment %s cannot be refunded beyond what was captured", p.PublicID)
+		}
 		return apperrors.Wrap(err, apperrors.Internal, "failed to update payment %s", p.PublicID)
 	}
 	return nil
@@ -167,7 +171,7 @@ func scanPayment(row rowScanner) (*dao.Payment, error) {
 	var p dao.Payment
 	err := row.Scan(&p.ID, &p.PublicID, &p.ProductID, &p.CustomerID, &p.Purpose, &p.WalletID,
 		&p.Amount, &p.Currency, &p.Status, &p.Application, &p.Provider, &p.CapturedAmount, &p.CapturedAt,
-		&p.FailureCode, &p.FailureReason, &p.Description, &p.ReturnURL, &p.ExpiresAt,
+		&p.RefundedAmount, &p.FailureCode, &p.FailureReason, &p.Description, &p.ReturnURL, &p.ExpiresAt,
 		&p.ProductPublicID, &p.CustomerPublicID, &p.WalletPublicID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -300,12 +304,12 @@ func (r *Repository) ListPaymentTransitions(ctx context.Context, paymentID int64
 // unique (provider, event_id) is what makes a duplicate harmless.
 func (r *Repository) SaveProviderEvent(ctx context.Context, e *dao.ProviderEvent) (inserted bool, err error) {
 	const insert = `
-		INSERT INTO provider_events (provider, event_id, event_type, provider_payment_id, payload)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO provider_events (provider, event_id, event_type, object_kind, object_id, payload)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (provider, event_id) DO NOTHING
 		RETURNING id, received_at`
 	err = r.executor(ctx).QueryRowContext(ctx, insert,
-		e.Provider, e.EventID, e.EventType, e.ProviderPaymentID, e.Payload,
+		e.Provider, e.EventID, e.EventType, e.ObjectKind, e.ObjectID, e.Payload,
 	).Scan(&e.ID, &e.ReceivedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -323,7 +327,7 @@ func (r *Repository) ClaimProviderEvent(ctx context.Context, now time.Time) (*da
 		return nil, apperrors.New(apperrors.Internal, "ClaimProviderEvent must run inside a transaction")
 	}
 	const query = `
-		SELECT id, provider, event_id, event_type, provider_payment_id, payload, received_at,
+		SELECT id, provider, event_id, event_type, object_kind, object_id, payload, received_at,
 		       processed_at, attempts, next_attempt_at, last_error
 		FROM provider_events
 		WHERE processed_at IS NULL AND next_attempt_at <= $1
@@ -332,7 +336,7 @@ func (r *Repository) ClaimProviderEvent(ctx context.Context, now time.Time) (*da
 		FOR UPDATE SKIP LOCKED`
 	var e dao.ProviderEvent
 	err := r.executor(ctx).QueryRowContext(ctx, query, now).Scan(&e.ID, &e.Provider, &e.EventID, &e.EventType,
-		&e.ProviderPaymentID, &e.Payload, &e.ReceivedAt, &e.ProcessedAt, &e.Attempts, &e.NextAttemptAt, &e.LastError)
+		&e.ObjectKind, &e.ObjectID, &e.Payload, &e.ReceivedAt, &e.ProcessedAt, &e.Attempts, &e.NextAttemptAt, &e.LastError)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

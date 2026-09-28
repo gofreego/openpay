@@ -57,7 +57,7 @@ func Truncate(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer db.Close()
-	if _, err := db.Exec(`TRUNCATE provider_request_log, provider_events, payment_transitions, payment_attempts, payments,
+	if _, err := db.Exec(`TRUNCATE refunds, provider_request_log, provider_events, payment_transitions, payment_attempts, payments,
 		wallets, ledger_check_runs, ledger_holds, ledger_postings, ledger_journals,
 		ledger_balances, ledger_accounts, wallet_types, customers, audit_log, service_credentials,
 		products, idempotency_keys, outbox_events RESTART IDENTITY CASCADE`); err != nil {

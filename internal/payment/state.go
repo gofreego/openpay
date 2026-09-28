@@ -17,13 +17,15 @@ import (
 // a UPI payment reported failed that the bank later settles — and when the
 // provider says money was captured, refusing to record it would lose it.
 var transitions = map[dao.PaymentStatus][]dao.PaymentStatus{
-	dao.PaymentCreated:    {dao.PaymentPending, dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
-	dao.PaymentPending:    {dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
-	dao.PaymentAuthorized: {dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
-	dao.PaymentCaptured:   {dao.PaymentSettled},
-	dao.PaymentFailed:     {dao.PaymentCaptured},
-	dao.PaymentExpired:    {dao.PaymentCaptured},
-	dao.PaymentCancelled:  {dao.PaymentCaptured},
+	dao.PaymentCreated:           {dao.PaymentPending, dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
+	dao.PaymentPending:           {dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
+	dao.PaymentAuthorized:        {dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
+	dao.PaymentCaptured:          {dao.PaymentSettled, dao.PaymentPartiallyRefunded, dao.PaymentRefunded},
+	dao.PaymentSettled:           {dao.PaymentPartiallyRefunded, dao.PaymentRefunded},
+	dao.PaymentPartiallyRefunded: {dao.PaymentRefunded},
+	dao.PaymentFailed:            {dao.PaymentCaptured},
+	dao.PaymentExpired:           {dao.PaymentCaptured},
+	dao.PaymentCancelled:         {dao.PaymentCaptured},
 }
 
 func canTransition(from, to dao.PaymentStatus) bool {

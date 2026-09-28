@@ -726,3 +726,44 @@ func (e *Engine) CheckFund(ctx context.Context, w *dao.Wallet, amount int64) err
 	}
 	return assertAllowed(walletType, w, OpFund, amount)
 }
+
+// RefundOut takes a top-up back out of a wallet to be refunded to its source:
+// Dr wallet, Cr the counter account (the product's refunds_payable). The
+// ledger refuses it if the customer has already spent the money — a top-up
+// can only be refunded while its value is still in the wallet.
+func (e *Engine) RefundOut(ctx context.Context, req SpendRequest) (*dao.Journal, error) {
+	return e.move(ctx, req, OpRefundOut, dao.Debit, nil)
+}
+
+// Restore returns a failed refund's money: Dr the counter account, Cr wallet,
+// marked as reversing the journal that took it out.
+func (e *Engine) Restore(ctx context.Context, req SpendRequest, reverses *dao.Journal) (*dao.Journal, error) {
+	return e.move(ctx, req, OpRestore, dao.Credit, &reverses.ID)
+}
+
+// move posts a two-legged journal between a wallet and one counter account,
+// in the direction given for the wallet.
+func (e *Engine) move(ctx context.Context, req SpendRequest, op Operation, walletDirection dao.Direction, reverses *int64) (*dao.Journal, error) {
+	var journal *dao.Journal
+	err := e.repo.WithTx(ctx, func(ctx context.Context) error {
+		walletType, err := e.repo.GetWalletTypeByID(ctx, req.Wallet.WalletTypeID)
+		if err != nil {
+			return err
+		}
+		if err := assertAllowed(walletType, req.Wallet, op, req.Amount); err != nil {
+			return err
+		}
+		counter, err := e.repo.GetLedgerAccountByCode(ctx, req.CounterAccountCode)
+		if err != nil {
+			return err
+		}
+		journal = newJournal(req.ExternalID, req.Kind, &req.ProductID, req.Wallet)
+		journal.ReversesJournalID = reverses
+		journal.Postings = []*dao.Posting{
+			leg(req.Wallet.LedgerAccountID, walletDirection, req.Amount, walletType.Currency),
+			leg(counter.ID, -walletDirection, req.Amount, walletType.Currency),
+		}
+		return e.post(ctx, journal, req.Wallet, walletDirection, req.Amount, limitCheck{})
+	})
+	return journal, err
+}

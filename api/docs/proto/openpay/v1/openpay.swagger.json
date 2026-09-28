@@ -641,7 +641,9 @@
               "PAYMENT_STATUS_SETTLED",
               "PAYMENT_STATUS_FAILED",
               "PAYMENT_STATUS_EXPIRED",
-              "PAYMENT_STATUS_CANCELLED"
+              "PAYMENT_STATUS_CANCELLED",
+              "PAYMENT_STATUS_PARTIALLY_REFUNDED",
+              "PAYMENT_STATUS_REFUNDED"
             ],
             "default": "PAYMENT_STATUS_UNSPECIFIED"
           }
@@ -748,6 +750,76 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/OpenPaySyncPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/payments/{paymentId}/refunds": {
+      "get": {
+        "summary": "List a payment's refunds",
+        "description": "Requires openpay:payments:read within scope.",
+        "operationId": "OpenPay_ListRefunds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRefundsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      },
+      "post": {
+        "summary": "Refund a payment",
+        "description": "Returns part or all of a captured payment to its source. A wallet top-up can only be refunded while its value is still in the wallet. Central ops only: requires openpay:refunds:create and openpay:scope:all, an explained reason code, and an Idempotency-Key.",
+        "operationId": "OpenPay_CreateRefund",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateRefundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayCreateRefundBody"
             }
           }
         ],
@@ -915,6 +987,38 @@
         ],
         "tags": [
           "Products"
+        ]
+      }
+    },
+    "/openpay/v1/refunds/{id}": {
+      "get": {
+        "summary": "Get a refund",
+        "description": "Requires openpay:payments:read within scope.",
+        "operationId": "OpenPay_GetRefund",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRefundResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Payments"
         ]
       }
     },
@@ -1313,6 +1417,23 @@
         }
       }
     },
+    "OpenPayCreateRefundBody": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reasonCode": {
+          "type": "string",
+          "description": "customer_request, duplicate_payment, fraud, service_issue or unapplied_payment."
+        },
+        "memo": {
+          "type": "string"
+        }
+      },
+      "description": "CreateRefundRequest returns part or all of a captured payment to the card or\nbank it came from. Requires an Idempotency-Key."
+    },
     "OpenPayGrantWalletBody": {
       "type": "object",
       "properties": {
@@ -1475,6 +1596,14 @@
       "properties": {
         "product": {
           "$ref": "#/definitions/v1Product"
+        }
+      }
+    },
+    "v1CreateRefundResponse": {
+      "type": "object",
+      "properties": {
+        "refund": {
+          "$ref": "#/definitions/v1Refund"
         }
       }
     },
@@ -1694,6 +1823,14 @@
       "properties": {
         "product": {
           "$ref": "#/definitions/v1Product"
+        }
+      }
+    },
+    "v1GetRefundResponse": {
+      "type": "object",
+      "properties": {
+        "refund": {
+          "$ref": "#/definitions/v1Refund"
         }
       }
     },
@@ -2054,6 +2191,18 @@
         }
       }
     },
+    "v1ListRefundsResponse": {
+      "type": "object",
+      "properties": {
+        "refunds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Refund"
+          }
+        }
+      }
+    },
     "v1ListServiceCredentialsResponse": {
       "type": "object",
       "properties": {
@@ -2182,6 +2331,11 @@
             "type": "object",
             "$ref": "#/definitions/v1PaymentTransition"
           }
+        },
+        "refundedAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Promised back so far: refunds initiated, pending or processed."
         }
       }
     },
@@ -2248,7 +2402,9 @@
         "PAYMENT_STATUS_SETTLED",
         "PAYMENT_STATUS_FAILED",
         "PAYMENT_STATUS_EXPIRED",
-        "PAYMENT_STATUS_CANCELLED"
+        "PAYMENT_STATUS_CANCELLED",
+        "PAYMENT_STATUS_PARTIALLY_REFUNDED",
+        "PAYMENT_STATUS_REFUNDED"
       ],
       "default": "PAYMENT_STATUS_UNSPECIFIED",
       "description": " - PAYMENT_STATUS_PENDING: Waiting for the customer at the provider's checkout."
@@ -2325,6 +2481,66 @@
       ],
       "default": "PRODUCT_STATUS_UNSPECIFIED",
       "description": " - PRODUCT_STATUS_SUSPENDED: Suspended stops new activity. Products are never deleted: money has moved\nagainst them and the ledger must stay interpretable."
+    },
+    "v1Refund": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "paymentId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1RefundStatus"
+        },
+        "source": {
+          "type": "string",
+          "description": "wallet: taken from the customer's wallet. unapplied: from money the\nwallet had refused, already owed back."
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "memo": {
+          "type": "string"
+        },
+        "providerRefundId": {
+          "type": "string"
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "type": "string"
+        },
+        "processedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1RefundStatus": {
+      "type": "string",
+      "enum": [
+        "REFUND_STATUS_UNSPECIFIED",
+        "REFUND_STATUS_INITIATED",
+        "REFUND_STATUS_PENDING",
+        "REFUND_STATUS_PROCESSED",
+        "REFUND_STATUS_FAILED"
+      ],
+      "default": "REFUND_STATUS_UNSPECIFIED",
+      "description": " - REFUND_STATUS_INITIATED: Money reserved; the provider has not yet confirmed it has the request."
     },
     "v1RevokeServiceCredentialResponse": {
       "type": "object",

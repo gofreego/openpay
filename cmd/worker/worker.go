@@ -52,7 +52,11 @@ func (w *Worker) Run(ctx context.Context) error {
 	registry, _ := payment.Providers(w.cfg.Service.Payments)
 	payments := payment.New(repo, registry, engine, w.cfg.Service.Payments)
 
-	w.done.Add(9)
+	w.done.Add(10)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "refund poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollRefunds(ctx, repo, payments) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "payment event processor", w.cfg.Worker.PaymentEventInterval, func() { w.processPaymentEvents(ctx, repo, payments) })
@@ -177,6 +181,21 @@ func (w *Worker) pollPayments(ctx context.Context, repo service.Repository, paym
 	for _, p := range stale {
 		if _, err := payments.Poll(ctx, p, "poller"); err != nil {
 			logger.Warn(ctx, "failed to poll payment %s: %v", p.PublicID, err)
+		}
+	}
+}
+
+// pollRefunds recovers refunds that went quiet: resubmits ones a timeout left
+// initiated, and fetches pending ones whose webhook never came.
+func (w *Worker) pollRefunds(ctx context.Context, repo service.Repository, payments *payment.Engine) {
+	open, err := repo.ListOpenRefunds(ctx, time.Now().Add(-w.cfg.Service.Payments.PollAfter), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list open refunds: %v", err)
+		return
+	}
+	for _, r := range open {
+		if _, err := payments.PollRefund(ctx, r); err != nil {
+			logger.Warn(ctx, "failed to poll refund %s: %v", r.PublicID, err)
 		}
 	}
 }

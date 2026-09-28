@@ -440,7 +440,7 @@ func TestWebhookForUnknownPaymentIsRetried(t *testing.T) {
 
 	var retryAt time.Time
 	var attempts int
-	testsupport.Query(t, `SELECT next_attempt_at, attempts FROM provider_events WHERE provider_payment_id = 'mockpay_never_seen'`,
+	testsupport.Query(t, `SELECT next_attempt_at, attempts FROM provider_events WHERE object_id = 'mockpay_never_seen'`,
 		&retryAt, &attempts)
 	if attempts != 1 || !retryAt.After(time.Now()) {
 		t.Errorf("event attempts %d, retry at %s; want 1 attempt and a retry scheduled in the future", attempts, retryAt)

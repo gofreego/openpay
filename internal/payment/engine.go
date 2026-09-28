@@ -37,6 +37,8 @@ type Repository interface {
 	SaveOutboxEvent(ctx context.Context, event *dao.OutboxEvent) error
 
 	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
+
+	RefundRepository
 }
 
 // Config tunes payment timing.

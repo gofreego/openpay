@@ -51,6 +51,9 @@ const (
 	OpenPay_GetPayment_FullMethodName              = "/v1.OpenPay/GetPayment"
 	OpenPay_ListPayments_FullMethodName            = "/v1.OpenPay/ListPayments"
 	OpenPay_SyncPayment_FullMethodName             = "/v1.OpenPay/SyncPayment"
+	OpenPay_CreateRefund_FullMethodName            = "/v1.OpenPay/CreateRefund"
+	OpenPay_GetRefund_FullMethodName               = "/v1.OpenPay/GetRefund"
+	OpenPay_ListRefunds_FullMethodName             = "/v1.OpenPay/ListRefunds"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -93,6 +96,9 @@ type OpenPayClient interface {
 	GetPayment(ctx context.Context, in *GetPaymentRequest, opts ...grpc.CallOption) (*GetPaymentResponse, error)
 	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 	SyncPayment(ctx context.Context, in *SyncPaymentRequest, opts ...grpc.CallOption) (*SyncPaymentResponse, error)
+	CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...grpc.CallOption) (*CreateRefundResponse, error)
+	GetRefund(ctx context.Context, in *GetRefundRequest, opts ...grpc.CallOption) (*GetRefundResponse, error)
+	ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...grpc.CallOption) (*ListRefundsResponse, error)
 }
 
 type openPayClient struct {
@@ -423,6 +429,36 @@ func (c *openPayClient) SyncPayment(ctx context.Context, in *SyncPaymentRequest,
 	return out, nil
 }
 
+func (c *openPayClient) CreateRefund(ctx context.Context, in *CreateRefundRequest, opts ...grpc.CallOption) (*CreateRefundResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateRefundResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateRefund_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetRefund(ctx context.Context, in *GetRefundRequest, opts ...grpc.CallOption) (*GetRefundResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRefundResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetRefund_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListRefunds(ctx context.Context, in *ListRefundsRequest, opts ...grpc.CallOption) (*ListRefundsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRefundsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListRefunds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -463,6 +499,9 @@ type OpenPayServer interface {
 	GetPayment(context.Context, *GetPaymentRequest) (*GetPaymentResponse, error)
 	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	SyncPayment(context.Context, *SyncPaymentRequest) (*SyncPaymentResponse, error)
+	CreateRefund(context.Context, *CreateRefundRequest) (*CreateRefundResponse, error)
+	GetRefund(context.Context, *GetRefundRequest) (*GetRefundResponse, error)
+	ListRefunds(context.Context, *ListRefundsRequest) (*ListRefundsResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -568,6 +607,15 @@ func (UnimplementedOpenPayServer) ListPayments(context.Context, *ListPaymentsReq
 }
 func (UnimplementedOpenPayServer) SyncPayment(context.Context, *SyncPaymentRequest) (*SyncPaymentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SyncPayment not implemented")
+}
+func (UnimplementedOpenPayServer) CreateRefund(context.Context, *CreateRefundRequest) (*CreateRefundResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRefund not implemented")
+}
+func (UnimplementedOpenPayServer) GetRefund(context.Context, *GetRefundRequest) (*GetRefundResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRefund not implemented")
+}
+func (UnimplementedOpenPayServer) ListRefunds(context.Context, *ListRefundsRequest) (*ListRefundsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRefunds not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1166,6 +1214,60 @@ func _OpenPay_SyncPayment_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CreateRefund_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRefundRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateRefund(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateRefund_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateRefund(ctx, req.(*CreateRefundRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetRefund_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRefundRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetRefund(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetRefund_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetRefund(ctx, req.(*GetRefundRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListRefunds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRefundsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListRefunds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListRefunds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListRefunds(ctx, req.(*ListRefundsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1300,6 +1402,18 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SyncPayment",
 			Handler:    _OpenPay_SyncPayment_Handler,
+		},
+		{
+			MethodName: "CreateRefund",
+			Handler:    _OpenPay_CreateRefund_Handler,
+		},
+		{
+			MethodName: "GetRefund",
+			Handler:    _OpenPay_GetRefund_Handler,
+		},
+		{
+			MethodName: "ListRefunds",
+			Handler:    _OpenPay_ListRefunds_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

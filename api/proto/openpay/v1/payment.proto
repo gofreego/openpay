@@ -21,6 +21,8 @@ enum PaymentStatus {
   PAYMENT_STATUS_FAILED = 6;
   PAYMENT_STATUS_EXPIRED = 7;
   PAYMENT_STATUS_CANCELLED = 8;
+  PAYMENT_STATUS_PARTIALLY_REFUNDED = 9;
+  PAYMENT_STATUS_REFUNDED = 10;
 }
 
 enum PaymentPurpose {
@@ -89,6 +91,65 @@ message Payment {
   // Operator views only: every try and every state change, with its cause.
   repeated PaymentAttempt attempts = 19;
   repeated PaymentTransition transitions = 20;
+  // Promised back so far: refunds initiated, pending or processed.
+  int64 refunded_amount = 21;
+}
+
+enum RefundStatus {
+  REFUND_STATUS_UNSPECIFIED = 0;
+  // Money reserved; the provider has not yet confirmed it has the request.
+  REFUND_STATUS_INITIATED = 1;
+  REFUND_STATUS_PENDING = 2;
+  REFUND_STATUS_PROCESSED = 3;
+  REFUND_STATUS_FAILED = 4;
+}
+
+message Refund {
+  string id = 1;
+  string payment_id = 2;
+  int64 amount = 3;
+  string currency = 4;
+  RefundStatus status = 5;
+  // wallet: taken from the customer's wallet. unapplied: from money the
+  // wallet had refused, already owed back.
+  string source = 6;
+  string reason_code = 7;
+  string memo = 8;
+  string provider_refund_id = 9;
+  string failure_reason = 10;
+  string requested_by = 11;
+  google.protobuf.Timestamp processed_at = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+// CreateRefundRequest returns part or all of a captured payment to the card or
+// bank it came from. Requires an Idempotency-Key.
+message CreateRefundRequest {
+  string payment_id = 1 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 2 [(validate.rules).int64 = {gt: 0}];
+  // customer_request, duplicate_payment, fraud, service_issue or unapplied_payment.
+  string reason_code = 3 [(validate.rules).string = {min_len: 1, max_len: 50}];
+  string memo = 4 [(validate.rules).string = {min_len: 1, max_len: 500}];
+}
+
+message CreateRefundResponse {
+  Refund refund = 1;
+}
+
+message GetRefundRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetRefundResponse {
+  Refund refund = 1;
+}
+
+message ListRefundsRequest {
+  string payment_id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message ListRefundsResponse {
+  repeated Refund refunds = 1;
 }
 
 // CreatePaymentRequest starts collecting money. Called by a product backend

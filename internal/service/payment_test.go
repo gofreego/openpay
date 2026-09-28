@@ -78,3 +78,25 @@ func TestOrderPaymentsAreRefusedUntilOrdersExist(t *testing.T) {
 	_, err := w.svc.CreatePayment(withKey(backend(t, w.estate, w.zshala), "order-1"), req)
 	wantCode(t, "order payment", err, apperrors.InvalidArgument)
 }
+
+// Refunding a top-up returns closed-loop money to a card, so only central ops
+// may do it: not the product's backend, not its operators.
+func TestRefundsAreCentralOnly(t *testing.T) {
+	w := setupWallets(t)
+	created, err := w.svc.CreatePayment(withKey(backend(t, w.estate, w.zshala), "checkout-r"), topupRequest(w.zshalaMain.GetId()))
+	if err != nil {
+		t.Fatalf("create payment: %v", err)
+	}
+	req := &openpay_v1.CreateRefundRequest{PaymentId: created.GetPayment().GetId(), Amount: 100,
+		ReasonCode: "customer_request", Memo: "changed their mind"}
+
+	_, err = w.svc.CreateRefund(withKey(backend(t, w.estate, w.zshala), "refund-1"), req)
+	wantCode(t, "product backend refunding", err, apperrors.PermissionDenied)
+
+	_, err = w.svc.CreateRefund(as(auth.PermRefundsCreate, auth.PermScopeProductPrefix+"zshala"), req)
+	wantCode(t, "product operator refunding", err, apperrors.PermissionDenied)
+
+	// Central ops are allowed to try; this payment is unpaid, so the engine refuses it.
+	_, err = w.svc.CreateRefund(withKey(as(auth.PermRefundsCreate, auth.PermScopeAll), "refund-2"), req)
+	wantCode(t, "refunding an unpaid payment", err, apperrors.FailedPrecondition)
+}

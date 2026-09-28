@@ -236,7 +236,7 @@ func toProtoPayment(p *dao.Payment) *openpay_v1.Payment {
 		Amount:  p.Amount, Currency: p.Currency,
 		Status:      toProtoPaymentStatus(p.Status),
 		Application: toProtoApplication(p.Application),
-		Provider:    deref(p.Provider),
+		Provider:    deref(p.Provider), RefundedAmount: p.RefundedAmount,
 		FailureCode: deref(p.FailureCode), FailureReason: deref(p.FailureReason),
 		Description: p.Description,
 		ExpiresAt:   timestamppb.New(p.ExpiresAt),
@@ -261,6 +261,9 @@ var paymentStatuses = map[dao.PaymentStatus]openpay_v1.PaymentStatus{
 	dao.PaymentFailed:     openpay_v1.PaymentStatus_PAYMENT_STATUS_FAILED,
 	dao.PaymentExpired:    openpay_v1.PaymentStatus_PAYMENT_STATUS_EXPIRED,
 	dao.PaymentCancelled:  openpay_v1.PaymentStatus_PAYMENT_STATUS_CANCELLED,
+
+	dao.PaymentPartiallyRefunded: openpay_v1.PaymentStatus_PAYMENT_STATUS_PARTIALLY_REFUNDED,
+	dao.PaymentRefunded:          openpay_v1.PaymentStatus_PAYMENT_STATUS_REFUNDED,
 }
 
 func toProtoPaymentStatus(s dao.PaymentStatus) openpay_v1.PaymentStatus {
@@ -287,4 +290,98 @@ func toProtoApplication(a dao.PaymentApplication) openpay_v1.PaymentApplication 
 	default:
 		return openpay_v1.PaymentApplication_PAYMENT_APPLICATION_PENDING
 	}
+}
+
+func (s *Service) CreateRefund(ctx context.Context, req *openpay_v1.CreateRefundRequest) (*openpay_v1.CreateRefundResponse, error) {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermRefundsCreate); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+
+	return idempotent(ctx, s.repo, "CreateRefund", req,
+		func(ctx context.Context) (*openpay_v1.CreateRefundResponse, error) {
+			p, err := s.repo.GetPaymentByPublicID(ctx, req.GetPaymentId())
+			if err != nil {
+				return nil, err
+			}
+			caller, _ := appcontext.CallerFrom(ctx)
+			refund, err := s.payments.CreateRefund(ctx, payment.RefundRequest{
+				PaymentID: p.ID, Amount: req.GetAmount(), ReasonCode: req.GetReasonCode(),
+				Memo: req.GetMemo(), RequestedBy: caller.UserID,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if err := s.audit(ctx, auditParams{
+				Action: "refund.created", ResourceType: "refund", ResourceID: refund.PublicID,
+				ProductID: &p.ProductID,
+				After: map[string]any{"payment_id": p.PublicID, "amount": refund.Amount,
+					"reason_code": refund.ReasonCode, "memo": refund.Memo, "status": refund.Status},
+			}); err != nil {
+				return nil, err
+			}
+			return &openpay_v1.CreateRefundResponse{Refund: toProtoRefund(refund)}, nil
+		})
+}
+
+func (s *Service) GetRefund(ctx context.Context, req *openpay_v1.GetRefundRequest) (*openpay_v1.GetRefundResponse, error) {
+	if err := auth.RequireOperator(ctx, auth.PermPaymentsRead); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	refund, err := s.repo.GetRefundByPublicID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	if err := requireVisible(scope, &refund.ProductID, "refund", req.GetId()); err != nil {
+		return nil, err
+	}
+	return &openpay_v1.GetRefundResponse{Refund: toProtoRefund(refund)}, nil
+}
+
+func (s *Service) ListRefunds(ctx context.Context, req *openpay_v1.ListRefundsRequest) (*openpay_v1.ListRefundsResponse, error) {
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	p, _, err := s.visiblePayment(ctx, req.GetPaymentId(), auth.PermPaymentsRead)
+	if err != nil {
+		return nil, err
+	}
+	refunds, err := s.repo.ListPaymentRefunds(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	response := &openpay_v1.ListRefundsResponse{}
+	for _, r := range refunds {
+		response.Refunds = append(response.Refunds, toProtoRefund(r))
+	}
+	return response, nil
+}
+
+var refundStatuses = map[dao.RefundStatus]openpay_v1.RefundStatus{
+	dao.RefundInitiated: openpay_v1.RefundStatus_REFUND_STATUS_INITIATED,
+	dao.RefundPending:   openpay_v1.RefundStatus_REFUND_STATUS_PENDING,
+	dao.RefundProcessed: openpay_v1.RefundStatus_REFUND_STATUS_PROCESSED,
+	dao.RefundFailed:    openpay_v1.RefundStatus_REFUND_STATUS_FAILED,
+}
+
+func toProtoRefund(r *dao.Refund) *openpay_v1.Refund {
+	out := &openpay_v1.Refund{
+		Id: r.PublicID, PaymentId: r.PaymentPublicID, Amount: r.Amount, Currency: r.Currency,
+		Status: refundStatuses[r.Status], Source: string(r.Source), ReasonCode: r.ReasonCode, Memo: r.Memo,
+		ProviderRefundId: deref(r.ProviderRefundID), FailureReason: deref(r.FailureReason),
+		RequestedBy: r.RequestedBy, CreatedAt: timestamppb.New(r.CreatedAt),
+	}
+	if r.ProcessedAt != nil {
+		out.ProcessedAt = timestamppb.New(*r.ProcessedAt)
+	}
+	return out
 }
