@@ -9,6 +9,7 @@ import (
 	"github.com/gofreego/openpay/internal/models/filter"
 	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/payment"
+	"github.com/gofreego/openpay/internal/recon"
 	"github.com/gofreego/openpay/internal/wallet"
 )
 
@@ -19,6 +20,9 @@ type Config struct {
 	Payments payment.Config `yaml:"Payments"`
 	// Orders configures how long an order's card share may take.
 	Orders order.Config `yaml:"Orders"`
+	// Recon configures settlement matching and when it alerts.
+	Recon       recon.Config      `yaml:"Recon"`
+	ReconAlerts recon.AlertConfig `yaml:"ReconAlerts"`
 }
 
 type Repository interface {
@@ -105,6 +109,24 @@ type PaymentRepository interface {
 	CreateOrderRefundPart(ctx context.Context, p *dao.OrderRefundPart) error
 	ListOrderRefunds(ctx context.Context, orderID int64) ([]*dao.OrderRefund, error)
 	ListOrderRefundParts(ctx context.Context, orderRefundID int64) ([]*dao.OrderRefundPart, error)
+
+	CreateSettlement(ctx context.Context, s *dao.Settlement) (bool, error)
+	SetSettlementStatus(ctx context.Context, id int64, status dao.SettlementStatus) error
+	LatestSettlementAt(ctx context.Context, providerName string) (time.Time, error)
+	GetSettlementByPublicID(ctx context.Context, publicID string) (*dao.Settlement, error)
+	ListSettlements(ctx context.Context, providerName string, limit int) ([]*dao.Settlement, error)
+	CreateSettlementItem(ctx context.Context, it *dao.SettlementItem) error
+	ListSettlementItems(ctx context.Context, settlementID int64) ([]*dao.SettlementItem, error)
+	IsSettled(ctx context.Context, kind, providerRef string) (bool, error)
+	SettlementByProduct(ctx context.Context, settlementID int64) ([]dao.SettlementProductShare, error)
+	FeeVariance(ctx context.Context, from, to time.Time) ([]dao.FeeVarianceLine, error)
+	CreateBreak(ctx context.Context, b *dao.ReconBreak) (bool, error)
+	UpdateBreak(ctx context.Context, b *dao.ReconBreak) error
+	LockBreak(ctx context.Context, publicID string) (*dao.ReconBreak, error)
+	OpenMissingAtProviderBreak(ctx context.Context, paymentID int64) (*dao.ReconBreak, error)
+	ListBreaks(ctx context.Context, scope *filter.ProductScope, status dao.BreakStatus, limit int) ([]*dao.ReconBreak, error)
+	BreakSummary(ctx context.Context, agedBefore time.Time) (open, aged int64, err error)
+	ListUnsettledPayments(ctx context.Context, providerName string, capturedBefore time.Time, limit int) ([]*dao.Payment, error)
 
 	CreateDispute(ctx context.Context, d *dao.Dispute) error
 	UpdateDispute(ctx context.Context, d *dao.Dispute) error
@@ -264,6 +286,8 @@ type Service struct {
 	wallets  *wallet.Engine
 	payments *payment.Engine
 	orders   *order.Engine
+	recon    *recon.Engine
+	alerts   recon.AlertConfig
 	openpay_v1.UnimplementedOpenPayServer
 }
 
@@ -278,5 +302,7 @@ func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 		// Connects itself to payments: order card shares are settled or
 		// failed from inside the payment's own transaction.
 		orders: order.New(repo, wallets, payments, cfg.Orders),
+		recon:  recon.New(repo, registry, payments, cfg.Recon),
+		alerts: cfg.ReconAlerts,
 	}
 }

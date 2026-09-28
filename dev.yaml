@@ -52,6 +52,15 @@ Service:
       Enabled: true
       WebhookSecret: dev-mock-webhook-secret
       CheckoutURL: http://localhost:8085/openpay/v1/mock-provider/checkout/
+  Recon:
+    # The bank account settlements land in (a Ledger.Banks entry).
+    Bank: hdfc
+    # A captured payment unsettled this long is flagged missing at the provider.
+    SettleWithin: 72h
+  ReconAlerts:
+    AgedAfter: 48h
+    # Alert when a provider's suspense holds more than this, either way (paise).
+    SuspenseThreshold: 100000
 Worker:
   Outbox:
     Interval: 5s
@@ -63,6 +72,7 @@ Worker:
   WalletExpiryInterval: 1h
   PaymentEventInterval: 1s
   PaymentPollInterval: 1m
+  ReconInterval: 1h
 # Platform chart of accounts: each provider gets a receivable and a suspense
 # account, each bank a current account. Adding one here creates its accounts
 # the next time the worker starts; removing one never deletes anything.

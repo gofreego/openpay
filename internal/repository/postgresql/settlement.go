@@ -284,3 +284,57 @@ func scanBreak(row rowScanner) (*dao.ReconBreak, error) {
 	}
 	return &b, nil
 }
+
+// SettlementByProduct splits one mixed bank credit by the product each line
+// was matched to: of this credit, which product earned what. Unmatched lines
+// form their own share with no product.
+func (r *Repository) SettlementByProduct(ctx context.Context, settlementID int64) ([]dao.SettlementProductShare, error) {
+	rows, err := r.executor(ctx).QueryContext(ctx, `
+		SELECT i.product_id, p.public_id, COUNT(*), SUM(i.gross), SUM(i.fee), SUM(i.fee_tax), SUM(i.net)
+		FROM settlement_items i LEFT JOIN products p ON p.id = i.product_id
+		WHERE i.settlement_id = $1
+		GROUP BY i.product_id, p.public_id
+		ORDER BY i.product_id NULLS LAST`, settlementID)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to split settlement by product")
+	}
+	defer rows.Close()
+	var out []dao.SettlementProductShare
+	for rows.Next() {
+		var s dao.SettlementProductShare
+		if err := rows.Scan(&s.ProductID, &s.ProductPublicID, &s.Lines, &s.Gross, &s.Fees, &s.FeeTax, &s.Net); err != nil {
+			return nil, apperrors.Wrap(err, apperrors.Internal, "failed to scan product share")
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+// FeeVariance compares fee recovery with actual PSP fees per product over a
+// period (plan.md D12). Persistent one-sided variance means the rate card
+// customers are charged from has drifted from what the provider charges.
+func (r *Repository) FeeVariance(ctx context.Context, from, to time.Time) ([]dao.FeeVarianceLine, error) {
+	rows, err := r.executor(ctx).QueryContext(ctx, `
+		SELECT pr.id, pr.public_id,
+		       COALESCE(SUM(-p.direction * p.amount) FILTER (WHERE a.code LIKE 'income:%:fee_recovery'), 0),
+		       COALESCE(SUM(p.direction * p.amount)  FILTER (WHERE a.code LIKE 'expense:%:psp_fees'), 0)
+		FROM products pr
+		JOIN ledger_accounts a ON a.product_id = pr.id
+		     AND (a.code LIKE 'income:%:fee_recovery' OR a.code LIKE 'expense:%:psp_fees')
+		LEFT JOIN ledger_postings p ON p.account_id = a.id AND p.created_at >= $1 AND p.created_at < $2
+		GROUP BY pr.id, pr.public_id
+		ORDER BY pr.id`, from, to)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to compute fee variance")
+	}
+	defer rows.Close()
+	var out []dao.FeeVarianceLine
+	for rows.Next() {
+		var l dao.FeeVarianceLine
+		if err := rows.Scan(&l.ProductID, &l.ProductPublicID, &l.Charged, &l.Cost); err != nil {
+			return nil, apperrors.Wrap(err, apperrors.Internal, "failed to scan fee variance")
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}

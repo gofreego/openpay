@@ -1,0 +1,168 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Reconciliation: what the PSP says it paid us, matched line by line against
+// the ledger. Platform-level throughout — a settlement mixes every product's
+// payments, so only central ops work it (plan.md U-D6).
+
+message SettlementLine {
+  // payment, refund or chargeback.
+  string kind = 1;
+  string provider_ref = 2;
+  int64 gross = 3;
+  int64 fee = 4;
+  int64 fee_tax = 5;
+  int64 net = 6;
+  // What the ledger expected, and what did not match it (held in suspense).
+  int64 expected = 7;
+  int64 unexplained = 8;
+  // matched, missing_in_ledger, amount_mismatch, fee_mismatch or duplicate.
+  string classification = 9;
+  string product_id = 10;
+}
+
+// Of one bank credit, which product earned what.
+message SettlementProductShare {
+  // Empty for lines that matched nothing.
+  string product_id = 1;
+  int64 lines = 2;
+  int64 gross = 3;
+  int64 fees = 4;
+  int64 fee_tax = 5;
+  int64 net = 6;
+}
+
+message Settlement {
+  string id = 1;
+  string provider = 2;
+  string provider_settlement_id = 3;
+  string bank = 4;
+  string bank_reference = 5;
+  google.protobuf.Timestamp settled_at = 6;
+  int64 gross = 7;
+  int64 fees = 8;
+  int64 fee_tax = 9;
+  int64 net = 10;
+  string currency = 11;
+  int32 item_count = 12;
+  // clean or breaks.
+  string status = 13;
+  repeated SettlementLine lines = 14;
+  repeated SettlementProductShare by_product = 15;
+}
+
+message ListSettlementsRequest {
+  string provider = 1;
+  int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}];
+}
+
+message ListSettlementsResponse {
+  repeated Settlement settlements = 1;
+}
+
+message GetSettlementRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetSettlementResponse {
+  Settlement settlement = 1;
+}
+
+message ReconBreak {
+  string id = 1;
+  string provider = 2;
+  // missing_in_ledger, missing_at_provider, amount_mismatch, fee_mismatch, duplicate.
+  string classification = 3;
+  string payment_id = 4;
+  string product_id = 5;
+  int64 amount = 6;
+  string currency = 7;
+  string detail = 8;
+  // open, resolved, force_matched or written_off.
+  string status = 9;
+  string reason_code = 10;
+  string note = 11;
+  string resolved_by = 12;
+  google.protobuf.Timestamp resolved_at = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message ListReconBreaksRequest {
+  // Empty for every status.
+  string status = 1 [(validate.rules).string = {in: ["", "open", "resolved", "force_matched", "written_off"]}];
+  int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}];
+}
+
+message ListReconBreaksResponse {
+  repeated ReconBreak breaks = 1;
+}
+
+enum BreakAction {
+  BREAK_ACTION_UNSPECIFIED = 0;
+  // Explain it. Only for a break with nothing in suspense.
+  BREAK_ACTION_RESOLVE = 1;
+  // Attribute its money to a payment (payment_id): suspense → receivable.
+  BREAK_ACTION_FORCE_MATCH = 2;
+  // Give up on its money: suspense (or receivable) → write-offs.
+  BREAK_ACTION_WRITE_OFF = 3;
+}
+
+message ResolveReconBreakRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  BreakAction action = 2 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  // provider_error, reference_mismatch, timing, bank_adjustment, unrecoverable or other.
+  string reason_code = 3 [(validate.rules).string = {min_len: 1, max_len: 50}];
+  // What was found. Required: a decision nobody explained cannot be audited.
+  string note = 4 [(validate.rules).string = {min_len: 1, max_len: 2000}];
+  string payment_id = 5;
+}
+
+message ResolveReconBreakResponse {
+  ReconBreak break = 1;
+}
+
+message ReconSummary {
+  int64 open_breaks = 1;
+  // Open breaks past the age threshold: anything here needs a person.
+  int64 aged_breaks = 2;
+  // Per provider. Suspense should trend to zero; a receivable that only
+  // grows means settlements are not arriving.
+  map<string, int64> suspense = 3;
+  map<string, int64> receivable = 4;
+}
+
+message GetReconSummaryRequest {}
+
+message GetReconSummaryResponse {
+  ReconSummary summary = 1;
+}
+
+message RunReconCycleRequest {}
+
+message RunReconCycleResponse {
+  ReconSummary summary = 1;
+}
+
+message FeeVarianceLine {
+  string product_id = 1;
+  // income:<product>:fee_recovery — what customers were charged.
+  int64 charged = 2;
+  // expense:<product>:psp_fees — what those payments actually cost.
+  int64 cost = 3;
+  // charged - cost. Persistently one-sided means the rate card is wrong.
+  int64 variance = 4;
+}
+
+message GetFeeVarianceRequest {
+  google.protobuf.Timestamp from = 1 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp to = 2 [(validate.rules).timestamp.required = true];
+}
+
+message GetFeeVarianceResponse {
+  repeated FeeVarianceLine lines = 1;
+}

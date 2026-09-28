@@ -28,7 +28,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
-| 8 | Settlement & Reconciliation | ◐ Ingestion, matching, settlement journal and break detection done; ops APIs, reports and daily recon job next |
+| 8 | Settlement & Reconciliation | ✅ Complete against the mock (real report formats arrive with each provider in P5) |
 | 9 | Payouts & Withdrawals | ☐ Not started |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
 
@@ -1196,17 +1196,28 @@ the same day.
       in `expense:psp_fees` (D13) — it is reclaimable, and merging it overstates payment
       costs. This is the one tax OpenPay handles, because it arrives in the settlement
       report rather than from a calling product
-- [ ] Fee variance report: `income:<product>:fee_recovery` vs
+- [x] Fee variance report: `income:<product>:fee_recovery` vs
       `expense:<product>:psp_fees`, i.e. what we charged customers against what it
-      actually cost. Persistent one-sided variance means the rate card is wrong
-- [ ] Per-product settlement report: of this ₹X bank credit, which product earned what
+      actually cost. Persistent one-sided variance means the rate card is wrong.
+      `GET /recon/fee-variance?from&to`; charged is 0 until a product uses
+      `DEDUCTED`/`PASSED_ON`
+- [x] Per-product settlement report: of this ₹X bank credit, which product earned what.
+      `GET /settlements/{id}` → `by_product` (gross, fees, fee tax, net per product)
 - [x] Unmatched items park in `suspense:<provider>` with an ops work queue — the
       suspense account balance is a KPI and should trend to zero.
       `recon_breaks`; a payment unsettled past `SettleWithin` (72h) is flagged
       missing-at-provider once, and the break closes itself if it settles late
-- [ ] Daily recon report + alerting on drift threshold and on aged breaks
-- [ ] Ops APIs: resolve break, force-match with reason code, write off (permissioned,
-      fully audited, always a journal)
+- [x] Daily recon report + alerting on drift threshold and on aged breaks.
+      The worker runs a cycle every `ReconInterval` (1h): ingest, flag unsettled,
+      summarise. Aged breaks (`AgedAfter`, 48h) and suspense beyond
+      `SuspenseThreshold` log at error level; gauges `openpay.recon.open_breaks`,
+      `aged_breaks`, `suspense{provider}`. `POST /recon/cycles` runs one on demand
+- [x] Ops APIs: resolve break, force-match with reason code, write off (permissioned,
+      fully audited, always a journal).
+      Resolve only explains a break with nothing in suspense; force-match moves the
+      money suspense → receivable and settles the named payment; write-off moves it to
+      `expense:reconciliation_writeoffs` (for missing-at-provider, out of the
+      receivable). Central only (`openpay:recon:manage` + whole-estate scope)
 
 **Exit criteria:** a day of synthetic traffic reconciles to zero breaks; an injected
 mismatch is detected, classified, and alerted within one cycle.

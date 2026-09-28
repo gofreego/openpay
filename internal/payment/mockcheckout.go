@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gofreego/openpay/internal/provider"
 	"github.com/gofreego/openpay/internal/provider/mock"
 )
 
@@ -28,11 +29,17 @@ import (
 //     the same way.
 //   - POST disputes/open/{providerPaymentID}?amount=N charges a payment back;
 //     POST disputes/{providerDisputeID}?outcome=won|lost decides it.
+//   - POST settle?fee_bps=N pays out everything unsettled as one settlement;
+//     &inflate=M adds M to the first line, to watch a break be caught.
 func MockCheckoutHandler(prefix, webhookPath string, m *mock.Provider, webhooks http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, prefix)
 		if refundID, ok := strings.CutPrefix(id, "refunds/"); ok {
 			mockRefund(w, r, refundID, webhookPath, m, webhooks)
+			return
+		}
+		if id == "settle" {
+			mockSettle(w, r, m)
 			return
 		}
 		if rest, ok := strings.CutPrefix(id, "disputes/"); ok {
@@ -156,4 +163,23 @@ func mockDispute(w http.ResponseWriter, r *http.Request, rest, webhookPath strin
 	webhooks.ServeHTTP(rec, req)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"dispute":%q,"event":%q,"webhook":"delivered, answered %d"}`, disputeID, eventType, rec.Code)
+}
+
+func mockSettle(w http.ResponseWriter, r *http.Request, m *mock.Provider) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	feeBps, _ := strconv.ParseInt(r.URL.Query().Get("fee_bps"), 10, 64)
+	inflate, _ := strconv.ParseInt(r.URL.Query().Get("inflate"), 10, 64)
+	lines := 0
+	id := m.Settle(feeBps, func(st *provider.Settlement) {
+		lines = len(st.Items)
+		if inflate != 0 && lines > 0 {
+			st.Items[0].Gross += inflate
+			st.Items[0].Net += inflate
+		}
+	})
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"settlement":%q,"lines":%d}`, id, lines)
 }

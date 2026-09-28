@@ -13,6 +13,7 @@ import "proto/openpay/v1/ledger.proto";
 import "proto/openpay/v1/wallet.proto";
 import "proto/openpay/v1/payment.proto";
 import "proto/openpay/v1/order.proto";
+import "proto/openpay/v1/recon.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -48,6 +49,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Orders"
       description: "What was bought, and settling it from wallets and cards"
+    },
+    {
+      name: "Reconciliation"
+      description: "Settlements matched against the ledger, and the break queue"
     },
     {
       name: "Ledger"
@@ -604,6 +609,87 @@ service OpenPay {
             tags: "Orders"
             summary: "Refund an order"
             description: "Returns part or all of a paid order with its own tax split, real money first: card, then purchased wallets, then granted ones. Product backend for its own orders, or central ops with openpay:refunds:create. Requires an Idempotency-Key."
+        };
+    }
+
+    // ---- Reconciliation ----
+
+    rpc ListSettlements (ListSettlementsRequest) returns (ListSettlementsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/settlements"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "List settlements"
+            description: "Newest first. Central ops: requires openpay:recon:read and openpay:scope:all."
+        };
+    }
+
+    rpc GetSettlement (GetSettlementRequest) returns (GetSettlementResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/settlements/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "Get a settlement"
+            description: "Every line with how it matched, and the credit split by product. Central ops: requires openpay:recon:read and openpay:scope:all."
+        };
+    }
+
+    rpc ListReconBreaks (ListReconBreaksRequest) returns (ListReconBreaksResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/recon/breaks"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "List reconciliation breaks"
+            description: "The work queue, oldest first. Central ops: requires openpay:recon:read and openpay:scope:all."
+        };
+    }
+
+    rpc ResolveReconBreak (ResolveReconBreakRequest) returns (ResolveReconBreakResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/recon/breaks/{id}/resolve"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "Resolve a reconciliation break"
+            description: "Explain, force-match to a payment, or write off — reason-coded, explained, audited, and a journal whenever money moves. Central ops: requires openpay:recon:manage and openpay:scope:all."
+        };
+    }
+
+    rpc GetReconSummary (GetReconSummaryRequest) returns (GetReconSummaryResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/recon/summary"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "Get the reconciliation summary"
+            description: "Open and aged breaks, suspense and receivable per provider. Central ops: requires openpay:recon:read and openpay:scope:all."
+        };
+    }
+
+    rpc RunReconCycle (RunReconCycleRequest) returns (RunReconCycleResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/recon/cycles"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "Run a reconciliation cycle now"
+            description: "Ingests new settlements, flags unsettled payments, and returns the summary. Central ops: requires openpay:recon:manage and openpay:scope:all."
+        };
+    }
+
+    rpc GetFeeVariance (GetFeeVarianceRequest) returns (GetFeeVarianceResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/recon/fee-variance"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reconciliation"
+            summary: "Get fee variance per product"
+            description: "Fees charged to customers against fees paid to providers over a period. Central ops: requires openpay:recon:read and openpay:scope:all."
         };
     }
 }

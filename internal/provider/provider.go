@@ -229,6 +229,17 @@ func NewRegistry(priority []string, providers ...Provider) *Registry {
 	return r
 }
 
+// Names lists the configured providers, in priority order where given.
+func (r *Registry) Names() []string {
+	var names []string
+	for _, name := range r.priority {
+		if _, ok := r.providers[name]; ok {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // Get returns a provider by name.
 func (r *Registry) Get(name string) (Provider, error) {
 	p, ok := r.providers[name]

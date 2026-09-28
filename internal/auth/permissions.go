@@ -54,6 +54,10 @@ const (
 	// since a dispute response speaks for the company to the card network.
 	PermDisputesManage = "openpay:disputes:manage"
 
+	// Reconciliation spans every product's money, so both are platform-level.
+	PermReconRead   = "openpay:recon:read"
+	PermReconManage = "openpay:recon:manage"
+
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"
 	// PermWalletsAdjust moves money that no payment or grant explains, so it

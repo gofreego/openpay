@@ -18,6 +18,7 @@ import (
 	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/payment"
+	"github.com/gofreego/openpay/internal/recon"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/wallet"
@@ -55,8 +56,17 @@ func (w *Worker) Run(ctx context.Context) error {
 	// The worker processes webhooks too, so its payment engine must know about
 	// orders: an order's card capture settles the order in the same transaction.
 	orders := order.New(repo, engine, payments, w.cfg.Service.Orders)
+	reconciler := recon.New(repo, registry, payments, w.cfg.Service.Recon)
 
-	w.done.Add(12)
+	w.done.Add(13)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "reconciliation", w.cfg.Worker.ReconInterval, func() {
+			if _, err := reconciler.Cycle(ctx, repo, w.cfg.Service.ReconAlerts); err != nil {
+				logger.Error(ctx, "reconciliation cycle failed: %v", err)
+			}
+		})
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "order expiry sweeper", w.cfg.Worker.PaymentPollInterval, func() { w.expireOrders(ctx, repo, orders) })

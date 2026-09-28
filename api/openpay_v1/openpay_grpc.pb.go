@@ -62,6 +62,13 @@ const (
 	OpenPay_CreateOrder_FullMethodName             = "/v1.OpenPay/CreateOrder"
 	OpenPay_GetOrder_FullMethodName                = "/v1.OpenPay/GetOrder"
 	OpenPay_RefundOrder_FullMethodName             = "/v1.OpenPay/RefundOrder"
+	OpenPay_ListSettlements_FullMethodName         = "/v1.OpenPay/ListSettlements"
+	OpenPay_GetSettlement_FullMethodName           = "/v1.OpenPay/GetSettlement"
+	OpenPay_ListReconBreaks_FullMethodName         = "/v1.OpenPay/ListReconBreaks"
+	OpenPay_ResolveReconBreak_FullMethodName       = "/v1.OpenPay/ResolveReconBreak"
+	OpenPay_GetReconSummary_FullMethodName         = "/v1.OpenPay/GetReconSummary"
+	OpenPay_RunReconCycle_FullMethodName           = "/v1.OpenPay/RunReconCycle"
+	OpenPay_GetFeeVariance_FullMethodName          = "/v1.OpenPay/GetFeeVariance"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -115,6 +122,13 @@ type OpenPayClient interface {
 	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
 	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 	RefundOrder(ctx context.Context, in *RefundOrderRequest, opts ...grpc.CallOption) (*RefundOrderResponse, error)
+	ListSettlements(ctx context.Context, in *ListSettlementsRequest, opts ...grpc.CallOption) (*ListSettlementsResponse, error)
+	GetSettlement(ctx context.Context, in *GetSettlementRequest, opts ...grpc.CallOption) (*GetSettlementResponse, error)
+	ListReconBreaks(ctx context.Context, in *ListReconBreaksRequest, opts ...grpc.CallOption) (*ListReconBreaksResponse, error)
+	ResolveReconBreak(ctx context.Context, in *ResolveReconBreakRequest, opts ...grpc.CallOption) (*ResolveReconBreakResponse, error)
+	GetReconSummary(ctx context.Context, in *GetReconSummaryRequest, opts ...grpc.CallOption) (*GetReconSummaryResponse, error)
+	RunReconCycle(ctx context.Context, in *RunReconCycleRequest, opts ...grpc.CallOption) (*RunReconCycleResponse, error)
+	GetFeeVariance(ctx context.Context, in *GetFeeVarianceRequest, opts ...grpc.CallOption) (*GetFeeVarianceResponse, error)
 }
 
 type openPayClient struct {
@@ -555,6 +569,76 @@ func (c *openPayClient) RefundOrder(ctx context.Context, in *RefundOrderRequest,
 	return out, nil
 }
 
+func (c *openPayClient) ListSettlements(ctx context.Context, in *ListSettlementsRequest, opts ...grpc.CallOption) (*ListSettlementsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSettlementsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListSettlements_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetSettlement(ctx context.Context, in *GetSettlementRequest, opts ...grpc.CallOption) (*GetSettlementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSettlementResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetSettlement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListReconBreaks(ctx context.Context, in *ListReconBreaksRequest, opts ...grpc.CallOption) (*ListReconBreaksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReconBreaksResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListReconBreaks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ResolveReconBreak(ctx context.Context, in *ResolveReconBreakRequest, opts ...grpc.CallOption) (*ResolveReconBreakResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveReconBreakResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ResolveReconBreak_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetReconSummary(ctx context.Context, in *GetReconSummaryRequest, opts ...grpc.CallOption) (*GetReconSummaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReconSummaryResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetReconSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) RunReconCycle(ctx context.Context, in *RunReconCycleRequest, opts ...grpc.CallOption) (*RunReconCycleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunReconCycleResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RunReconCycle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetFeeVariance(ctx context.Context, in *GetFeeVarianceRequest, opts ...grpc.CallOption) (*GetFeeVarianceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFeeVarianceResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetFeeVariance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -606,6 +690,13 @@ type OpenPayServer interface {
 	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
 	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	RefundOrder(context.Context, *RefundOrderRequest) (*RefundOrderResponse, error)
+	ListSettlements(context.Context, *ListSettlementsRequest) (*ListSettlementsResponse, error)
+	GetSettlement(context.Context, *GetSettlementRequest) (*GetSettlementResponse, error)
+	ListReconBreaks(context.Context, *ListReconBreaksRequest) (*ListReconBreaksResponse, error)
+	ResolveReconBreak(context.Context, *ResolveReconBreakRequest) (*ResolveReconBreakResponse, error)
+	GetReconSummary(context.Context, *GetReconSummaryRequest) (*GetReconSummaryResponse, error)
+	RunReconCycle(context.Context, *RunReconCycleRequest) (*RunReconCycleResponse, error)
+	GetFeeVariance(context.Context, *GetFeeVarianceRequest) (*GetFeeVarianceResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -744,6 +835,27 @@ func (UnimplementedOpenPayServer) GetOrder(context.Context, *GetOrderRequest) (*
 }
 func (UnimplementedOpenPayServer) RefundOrder(context.Context, *RefundOrderRequest) (*RefundOrderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefundOrder not implemented")
+}
+func (UnimplementedOpenPayServer) ListSettlements(context.Context, *ListSettlementsRequest) (*ListSettlementsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSettlements not implemented")
+}
+func (UnimplementedOpenPayServer) GetSettlement(context.Context, *GetSettlementRequest) (*GetSettlementResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSettlement not implemented")
+}
+func (UnimplementedOpenPayServer) ListReconBreaks(context.Context, *ListReconBreaksRequest) (*ListReconBreaksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListReconBreaks not implemented")
+}
+func (UnimplementedOpenPayServer) ResolveReconBreak(context.Context, *ResolveReconBreakRequest) (*ResolveReconBreakResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveReconBreak not implemented")
+}
+func (UnimplementedOpenPayServer) GetReconSummary(context.Context, *GetReconSummaryRequest) (*GetReconSummaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReconSummary not implemented")
+}
+func (UnimplementedOpenPayServer) RunReconCycle(context.Context, *RunReconCycleRequest) (*RunReconCycleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunReconCycle not implemented")
+}
+func (UnimplementedOpenPayServer) GetFeeVariance(context.Context, *GetFeeVarianceRequest) (*GetFeeVarianceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFeeVariance not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1540,6 +1652,132 @@ func _OpenPay_RefundOrder_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_ListSettlements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSettlementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListSettlements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListSettlements_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListSettlements(ctx, req.(*ListSettlementsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetSettlement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSettlementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetSettlement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetSettlement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetSettlement(ctx, req.(*GetSettlementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListReconBreaks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReconBreaksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListReconBreaks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListReconBreaks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListReconBreaks(ctx, req.(*ListReconBreaksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ResolveReconBreak_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveReconBreakRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ResolveReconBreak(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ResolveReconBreak_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ResolveReconBreak(ctx, req.(*ResolveReconBreakRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetReconSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReconSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetReconSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetReconSummary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetReconSummary(ctx, req.(*GetReconSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_RunReconCycle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunReconCycleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RunReconCycle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RunReconCycle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RunReconCycle(ctx, req.(*RunReconCycleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetFeeVariance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFeeVarianceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetFeeVariance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetFeeVariance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetFeeVariance(ctx, req.(*GetFeeVarianceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1718,6 +1956,34 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefundOrder",
 			Handler:    _OpenPay_RefundOrder_Handler,
+		},
+		{
+			MethodName: "ListSettlements",
+			Handler:    _OpenPay_ListSettlements_Handler,
+		},
+		{
+			MethodName: "GetSettlement",
+			Handler:    _OpenPay_GetSettlement_Handler,
+		},
+		{
+			MethodName: "ListReconBreaks",
+			Handler:    _OpenPay_ListReconBreaks_Handler,
+		},
+		{
+			MethodName: "ResolveReconBreak",
+			Handler:    _OpenPay_ResolveReconBreak_Handler,
+		},
+		{
+			MethodName: "GetReconSummary",
+			Handler:    _OpenPay_GetReconSummary_Handler,
+		},
+		{
+			MethodName: "RunReconCycle",
+			Handler:    _OpenPay_RunReconCycle_Handler,
+		},
+		{
+			MethodName: "GetFeeVariance",
+			Handler:    _OpenPay_GetFeeVariance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

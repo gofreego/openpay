@@ -44,6 +44,10 @@ type Repository interface {
 	GetProductByID(ctx context.Context, id int64) (*dao.Product, error)
 	GetLedgerAccountByCode(ctx context.Context, code string) (*dao.LedgerAccount, error)
 	PostJournal(ctx context.Context, journal *dao.Journal) error
+
+	GetBalance(ctx context.Context, accountID int64) (*dao.Balance, error)
+	LockBreak(ctx context.Context, publicID string) (*dao.ReconBreak, error)
+	GetPaymentByPublicID(ctx context.Context, publicID string) (*dao.Payment, error)
 }
 
 type Config struct {

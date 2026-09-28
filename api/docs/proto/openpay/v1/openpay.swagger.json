@@ -35,6 +35,10 @@
       "description": "What was bought, and settling it from wallets and cards"
     },
     {
+      "name": "Reconciliation",
+      "description": "Settlements matched against the ledger, and the break queue"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -1280,6 +1284,184 @@
         ]
       }
     },
+    "/openpay/v1/recon/breaks": {
+      "get": {
+        "summary": "List reconciliation breaks",
+        "description": "The work queue, oldest first. Central ops: requires openpay:recon:read and openpay:scope:all.",
+        "operationId": "OpenPay_ListReconBreaks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListReconBreaksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": "Empty for every status.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/recon/breaks/{id}/resolve": {
+      "post": {
+        "summary": "Resolve a reconciliation break",
+        "description": "Explain, force-match to a payment, or write off — reason-coded, explained, audited, and a journal whenever money moves. Central ops: requires openpay:recon:manage and openpay:scope:all.",
+        "operationId": "OpenPay_ResolveReconBreak",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResolveReconBreakResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayResolveReconBreakBody"
+            }
+          }
+        ],
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/recon/cycles": {
+      "post": {
+        "summary": "Run a reconciliation cycle now",
+        "description": "Ingests new settlements, flags unsettled payments, and returns the summary. Central ops: requires openpay:recon:manage and openpay:scope:all.",
+        "operationId": "OpenPay_RunReconCycle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunReconCycleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RunReconCycleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/recon/fee-variance": {
+      "get": {
+        "summary": "Get fee variance per product",
+        "description": "Fees charged to customers against fees paid to providers over a period. Central ops: requires openpay:recon:read and openpay:scope:all.",
+        "operationId": "OpenPay_GetFeeVariance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetFeeVarianceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/recon/summary": {
+      "get": {
+        "summary": "Get the reconciliation summary",
+        "description": "Open and aged breaks, suspense and receivable per provider. Central ops: requires openpay:recon:read and openpay:scope:all.",
+        "operationId": "OpenPay_GetReconSummary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetReconSummaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
     "/openpay/v1/refunds/{id}": {
       "get": {
         "summary": "Get a refund",
@@ -1309,6 +1491,77 @@
         ],
         "tags": [
           "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/settlements": {
+      "get": {
+        "summary": "List settlements",
+        "description": "Newest first. Central ops: requires openpay:recon:read and openpay:scope:all.",
+        "operationId": "OpenPay_ListSettlements",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSettlementsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/settlements/{id}": {
+      "get": {
+        "summary": "Get a settlement",
+        "description": "Every line with how it matched, and the credit split by product. Central ops: requires openpay:recon:read and openpay:scope:all.",
+        "operationId": "OpenPay_GetSettlement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSettlementResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Reconciliation"
         ]
       }
     },
@@ -1779,6 +2032,25 @@
         }
       }
     },
+    "OpenPayResolveReconBreakBody": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/definitions/v1BreakAction"
+        },
+        "reasonCode": {
+          "type": "string",
+          "description": "provider_error, reference_mismatch, timing, bank_adjustment, unrecoverable or other."
+        },
+        "note": {
+          "type": "string",
+          "description": "What was found. Required: a decision nobody explained cannot be audited."
+        },
+        "paymentId": {
+          "type": "string"
+        }
+      }
+    },
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
     },
@@ -1876,6 +2148,17 @@
           "type": "string"
         }
       }
+    },
+    "v1BreakAction": {
+      "type": "string",
+      "enum": [
+        "BREAK_ACTION_UNSPECIFIED",
+        "BREAK_ACTION_RESOLVE",
+        "BREAK_ACTION_FORCE_MATCH",
+        "BREAK_ACTION_WRITE_OFF"
+      ],
+      "default": "BREAK_ACTION_UNSPECIFIED",
+      "description": " - BREAK_ACTION_RESOLVE: Explain it. Only for a break with nothing in suspense.\n - BREAK_ACTION_FORCE_MATCH: Attribute its money to a payment (payment_id): suspense → receivable.\n - BREAK_ACTION_WRITE_OFF: Give up on its money: suspense (or receivable) → write-offs."
     },
     "v1CreateItemRequest": {
       "type": "object",
@@ -2245,6 +2528,29 @@
       "default": "EXPIRY_POLICY_UNSPECIFIED",
       "description": " - EXPIRY_POLICY_FIXED: Expires a fixed period after the balance was credited.\n - EXPIRY_POLICY_ROLLING: Pushes expiry out on every use."
     },
+    "v1FeeVarianceLine": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "charged": {
+          "type": "string",
+          "format": "int64",
+          "description": "income:\u003cproduct\u003e:fee_recovery — what customers were charged."
+        },
+        "cost": {
+          "type": "string",
+          "format": "int64",
+          "description": "expense:\u003cproduct\u003e:psp_fees — what those payments actually cost."
+        },
+        "variance": {
+          "type": "string",
+          "format": "int64",
+          "description": "charged - cost. Persistently one-sided means the rate card is wrong."
+        }
+      }
+    },
     "v1FloatHeldLine": {
       "type": "object",
       "properties": {
@@ -2299,6 +2605,18 @@
       "properties": {
         "dispute": {
           "$ref": "#/definitions/v1Dispute"
+        }
+      }
+    },
+    "v1GetFeeVarianceResponse": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FeeVarianceLine"
+          }
         }
       }
     },
@@ -2358,11 +2676,27 @@
         }
       }
     },
+    "v1GetReconSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "$ref": "#/definitions/v1ReconSummary"
+        }
+      }
+    },
     "v1GetRefundResponse": {
       "type": "object",
       "properties": {
         "refund": {
           "$ref": "#/definitions/v1Refund"
+        }
+      }
+    },
+    "v1GetSettlementResponse": {
+      "type": "object",
+      "properties": {
+        "settlement": {
+          "$ref": "#/definitions/v1Settlement"
         }
       }
     },
@@ -2777,6 +3111,18 @@
         }
       }
     },
+    "v1ListReconBreaksResponse": {
+      "type": "object",
+      "properties": {
+        "breaks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ReconBreak"
+          }
+        }
+      }
+    },
     "v1ListRefundsResponse": {
       "type": "object",
       "properties": {
@@ -2797,6 +3143,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ServiceCredential"
+          }
+        }
+      }
+    },
+    "v1ListSettlementsResponse": {
+      "type": "object",
+      "properties": {
+        "settlements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Settlement"
           }
         }
       }
@@ -3296,6 +3654,87 @@
       "default": "PRODUCT_STATUS_UNSPECIFIED",
       "description": " - PRODUCT_STATUS_SUSPENDED: Suspended stops new activity. Products are never deleted: money has moved\nagainst them and the ledger must stay interpretable."
     },
+    "v1ReconBreak": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "classification": {
+          "type": "string",
+          "description": "missing_in_ledger, missing_at_provider, amount_mismatch, fee_mismatch, duplicate."
+        },
+        "paymentId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "description": "open, resolved, force_matched or written_off."
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "resolvedBy": {
+          "type": "string"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ReconSummary": {
+      "type": "object",
+      "properties": {
+        "openBreaks": {
+          "type": "string",
+          "format": "int64"
+        },
+        "agedBreaks": {
+          "type": "string",
+          "format": "int64",
+          "description": "Open breaks past the age threshold: anything here needs a person."
+        },
+        "suspense": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "int64"
+          },
+          "description": "Per provider. Suspense should trend to zero; a receivable that only\ngrows means settlements are not arriving."
+        },
+        "receivable": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "format": "int64"
+          }
+        }
+      }
+    },
     "v1Refund": {
       "type": "object",
       "properties": {
@@ -3367,6 +3806,14 @@
       "default": "REFUND_STATUS_UNSPECIFIED",
       "description": " - REFUND_STATUS_INITIATED: Money reserved; the provider has not yet confirmed it has the request."
     },
+    "v1ResolveReconBreakResponse": {
+      "type": "object",
+      "properties": {
+        "break": {
+          "$ref": "#/definitions/v1ReconBreak"
+        }
+      }
+    },
     "v1RevokeServiceCredentialResponse": {
       "type": "object",
       "properties": {
@@ -3383,6 +3830,17 @@
       "properties": {
         "run": {
           "$ref": "#/definitions/v1LedgerCheckRun"
+        }
+      }
+    },
+    "v1RunReconCycleRequest": {
+      "type": "object"
+    },
+    "v1RunReconCycleResponse": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "$ref": "#/definitions/v1ReconSummary"
         }
       }
     },
@@ -3420,6 +3878,145 @@
         }
       },
       "description": "ServiceCredential is how a product's backend authenticates. It never carries\nthe secret: that exists only in the response to CreateServiceCredential."
+    },
+    "v1Settlement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "providerSettlementId": {
+          "type": "string"
+        },
+        "bank": {
+          "type": "string"
+        },
+        "bankReference": {
+          "type": "string"
+        },
+        "settledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "gross": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fees": {
+          "type": "string",
+          "format": "int64"
+        },
+        "feeTax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "net": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "itemCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "status": {
+          "type": "string",
+          "description": "clean or breaks."
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SettlementLine"
+          }
+        },
+        "byProduct": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SettlementProductShare"
+          }
+        }
+      }
+    },
+    "v1SettlementLine": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "payment, refund or chargeback."
+        },
+        "providerRef": {
+          "type": "string"
+        },
+        "gross": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fee": {
+          "type": "string",
+          "format": "int64"
+        },
+        "feeTax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "net": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expected": {
+          "type": "string",
+          "format": "int64",
+          "description": "What the ledger expected, and what did not match it (held in suspense)."
+        },
+        "unexplained": {
+          "type": "string",
+          "format": "int64"
+        },
+        "classification": {
+          "type": "string",
+          "description": "matched, missing_in_ledger, amount_mismatch, fee_mismatch or duplicate."
+        },
+        "productId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SettlementProductShare": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Empty for lines that matched nothing."
+        },
+        "lines": {
+          "type": "string",
+          "format": "int64"
+        },
+        "gross": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fees": {
+          "type": "string",
+          "format": "int64"
+        },
+        "feeTax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "net": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Of one bank credit, which product earned what."
     },
     "v1StatementEntry": {
       "type": "object",

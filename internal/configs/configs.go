@@ -67,6 +67,9 @@ type Worker struct {
 	// PaymentPollInterval is how often open payments are checked with their
 	// provider — the safety net for webhooks that never arrive.
 	PaymentPollInterval time.Duration `yaml:"PaymentPollInterval"`
+
+	// ReconInterval is how often settlements are ingested and reconciled.
+	ReconInterval time.Duration `yaml:"ReconInterval"`
 }
 
 func (w *Worker) WithDefaults() {
@@ -90,6 +93,9 @@ func (w *Worker) WithDefaults() {
 	}
 	if w.PaymentPollInterval <= 0 {
 		w.PaymentPollInterval = time.Minute
+	}
+	if w.ReconInterval <= 0 {
+		w.ReconInterval = time.Hour
 	}
 }
 

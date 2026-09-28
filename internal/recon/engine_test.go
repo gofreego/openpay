@@ -223,7 +223,7 @@ func TestInjectedMismatchesAreClassified(t *testing.T) {
 	f := setup(t, recon.Config{})
 	_, a := f.topup("zshala", 10000)
 	_, b := f.topup("zshala", 20000)
-	f.topup("bappaapp", 30000)
+	_, c := f.topup("bappaapp", 30000)
 
 	f.mock.Settle(0, func(st *provider.Settlement) {
 		for i := range st.Items {
@@ -234,10 +234,11 @@ func TestInjectedMismatchesAreClassified(t *testing.T) {
 				st.Items[i].Fee = 100
 			}
 		}
-		// A payment nobody here has heard of, and a line repeated.
+		// A payment nobody here has heard of, and a line repeated. (Line order
+		// is not fixed, so the repeat is picked by reference.)
 		st.Items = append(st.Items,
 			provider.SettlementItem{Kind: provider.SettlePayment, ProviderRef: "mockpay_unknown", Gross: 777, Net: 777},
-			st.Items[len(st.Items)-1])
+			provider.SettlementItem{Kind: provider.SettlePayment, ProviderRef: c, Gross: 30000, Net: 30000})
 	})
 	f.ingest()
 
@@ -289,4 +290,103 @@ func TestMissingAtProviderIsFlaggedAndClosedWhenLate(t *testing.T) {
 		t.Errorf("breaks = %v, want the late one closed", breaks)
 	}
 	f.assertLedgerHealthy()
+}
+
+func (f *fixture) onlyBreak(class dao.Classification) *dao.ReconBreak {
+	f.t.Helper()
+	breaks, err := f.repo.ListBreaks(f.ctx, filter.AllProducts(), dao.BreakOpen, 100)
+	if err != nil {
+		f.t.Fatalf("breaks: %v", err)
+	}
+	for _, b := range breaks {
+		if b.Classification == class {
+			return b
+		}
+	}
+	f.t.Fatalf("no open %s break in %v", class, breaks)
+	return nil
+}
+
+// The provider settled a payment under a reference our matching could not
+// follow. An operator identifies the payment; the money moves from suspense
+// to the receivable on the record, and the payment is settled.
+func TestForceMatch(t *testing.T) {
+	f := setup(t, recon.Config{})
+	p, id := f.topup("zshala", 10000)
+	f.mock.Settle(0, func(st *provider.Settlement) {
+		for i := range st.Items {
+			if st.Items[i].ProviderRef == id {
+				st.Items[i].ProviderRef = "MANGLED-" + id
+			}
+		}
+	})
+	f.ingest()
+	b := f.onlyBreak(dao.MissingInLedger)
+
+	_, err := f.recon.Resolve(f.ctx, recon.Resolution{BreakID: b.PublicID, ReasonCode: "reference_mismatch", Note: "x", By: "op"})
+	if err == nil {
+		t.Error("a break holding money in suspense was explained away")
+	}
+	_, err = f.recon.ForceMatch(f.ctx, recon.Resolution{BreakID: b.PublicID, ReasonCode: "reference_mismatch",
+		Note: "provider prefixed the reference", By: "op_1", PaymentID: p.PublicID})
+	if err != nil {
+		t.Fatalf("force-match: %v", err)
+	}
+	if f.balance(ledger.PSPSuspense(mock.Name)) != 0 || f.balance(ledger.PSPReceivable(mock.Name)) != 0 {
+		t.Errorf("suspense %d, receivable %d; want both 0", f.balance(ledger.PSPSuspense(mock.Name)), f.balance(ledger.PSPReceivable(mock.Name)))
+	}
+	if settled, _ := f.repo.GetPaymentByID(f.ctx, p.ID); settled.SettledAt == nil {
+		t.Error("force-matched payment not marked settled")
+	}
+	f.assertLedgerHealthy()
+}
+
+// Writing off takes the money out of suspense — or, for a payment the
+// provider will never pay, out of the receivable — into the write-offs expense.
+func TestWriteOff(t *testing.T) {
+	f := setup(t, recon.Config{SettleWithin: time.Nanosecond})
+	f.topup("zshala", 10000)
+	f.mock.Settle(0, func(st *provider.Settlement) {
+		st.Items = []provider.SettlementItem{{Kind: provider.SettlePayment, ProviderRef: "mockpay_ghost", Gross: 333, Net: 333}}
+	})
+	f.ingest()
+	time.Sleep(time.Millisecond)
+	if _, err := f.recon.FlagUnsettled(f.ctx, mock.Name); err != nil {
+		t.Fatalf("flag: %v", err)
+	}
+
+	for _, class := range []dao.Classification{dao.MissingInLedger, dao.MissingAtProvider} {
+		b := f.onlyBreak(class)
+		if _, err := f.recon.WriteOff(f.ctx, recon.Resolution{BreakID: b.PublicID, ReasonCode: "unrecoverable",
+			Note: "confirmed with the provider", By: "op_1"}); err != nil {
+			t.Fatalf("write off %s: %v", class, err)
+		}
+		if _, err := f.recon.WriteOff(f.ctx, recon.Resolution{BreakID: b.PublicID, ReasonCode: "unrecoverable",
+			Note: "again", By: "op_1"}); err == nil {
+			t.Errorf("a %s break was written off twice", class)
+		}
+	}
+	if f.balance(ledger.PSPSuspense(mock.Name)) != 0 || f.balance(ledger.PSPReceivable(mock.Name)) != 0 {
+		t.Errorf("suspense %d, receivable %d; want both cleared", f.balance(ledger.PSPSuspense(mock.Name)), f.balance(ledger.PSPReceivable(mock.Name)))
+	}
+	// 10000 lost, 333 gained.
+	if got := f.balance(ledger.ReconWriteoffs); got != 10000-333 {
+		t.Errorf("write-offs = %d, want %d", got, 10000-333)
+	}
+	f.assertLedgerHealthy()
+}
+
+// An injected mismatch is detected, classified and alerted within one cycle.
+func TestCycleReportsBreaksAndSuspense(t *testing.T) {
+	f := setup(t, recon.Config{})
+	f.topup("zshala", 10000)
+	f.mock.Settle(0, func(st *provider.Settlement) { st.Items[0].Gross, st.Items[0].Net = 12000, 12000 })
+
+	s, err := f.recon.Cycle(f.ctx, f.repo, recon.AlertConfig{AgedAfter: time.Hour, SuspenseThreshold: 1000})
+	if err != nil {
+		t.Fatalf("cycle: %v", err)
+	}
+	if s.OpenBreaks != 1 || s.Suspense[mock.Name] != -2000 {
+		t.Errorf("summary: %d open breaks, suspense %d; want 1 and -2000", s.OpenBreaks, s.Suspense[mock.Name])
+	}
 }

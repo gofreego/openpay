@@ -89,3 +89,21 @@ type ReconBreak struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+// SettlementProductShare is one product's part of a settlement: of this bank
+// credit, what the product earned. Unmatched lines have no product.
+type SettlementProductShare struct {
+	ProductID                *int64
+	ProductPublicID          *string
+	Lines                    int64
+	Gross, Fees, FeeTax, Net int64
+}
+
+// FeeVarianceLine is what one product charged customers in fees against
+// what those payments actually cost.
+type FeeVarianceLine struct {
+	ProductID       int64
+	ProductPublicID string
+	Charged         int64 // income:<product>:fee_recovery
+	Cost            int64 // expense:<product>:psp_fees
+}
