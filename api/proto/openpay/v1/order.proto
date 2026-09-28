@@ -48,6 +48,8 @@ enum OrderStatus {
   ORDER_STATUS_PAID = 2;
   ORDER_STATUS_FAILED = 3;
   ORDER_STATUS_CANCELLED = 4;
+  ORDER_STATUS_PARTIALLY_REFUNDED = 5;
+  ORDER_STATUS_REFUNDED = 6;
 }
 
 message OrderLine {
@@ -98,6 +100,52 @@ message Order {
   google.protobuf.Timestamp expires_at = 20;
   google.protobuf.Timestamp paid_at = 21;
   google.protobuf.Timestamp created_at = 22;
+  repeated OrderRefund refunds = 23;
+}
+
+// An order refund carries its own tax split (plan.md D13). Without one, the
+// split is proportional to the order's and tax_breakdown_provided is false.
+message OrderRefund {
+  string id = 1;
+  int64 amount = 2;
+  int64 subtotal = 3;
+  int64 discount = 4;
+  int64 tax = 5;
+  bool tax_breakdown_provided = 6;
+  // source or wallet.
+  string destination = 7;
+  string reason_code = 8;
+  string memo = 9;
+  repeated OrderRefundPart parts = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+// How much of a refund went back through one tender, and where.
+message OrderRefundPart {
+  int64 amount = 1;
+  // Credited to this wallet…
+  string wallet_id = 2;
+  // …or returned to the card through this payment refund.
+  string refund_id = 3;
+}
+
+message RefundOrderRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 2 [(validate.rules).int64 = {gt: 0}];
+  // The refund's own split. Leave false to have it split proportionally.
+  bool tax_breakdown_provided = 3;
+  int64 subtotal = 4 [(validate.rules).int64 = {gte: 0}];
+  int64 discount = 5 [(validate.rules).int64 = {gte: 0}];
+  int64 tax = 6 [(validate.rules).int64 = {gte: 0}];
+  // Empty uses the product's default.
+  string destination = 7 [(validate.rules).string = {in: ["", "source", "wallet"]}];
+  string reason_code = 8 [(validate.rules).string = {min_len: 1, max_len: 50}];
+  string memo = 9 [(validate.rules).string = {max_len: 500}];
+}
+
+message RefundOrderResponse {
+  Order order = 1;
+  OrderRefund refund = 2;
 }
 
 // CreateOrderRequest records a purchase and starts paying for it. Called by

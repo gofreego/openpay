@@ -85,8 +85,11 @@ type Product struct {
 	DefaultCurrency string                 `protobuf:"bytes,5,opt,name=default_currency,json=defaultCurrency,proto3" json:"default_currency,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Where an order refund goes unless the refund says otherwise: "source"
+	// (back to how it was paid) or "wallet" (store credit).
+	RefundDestination string `protobuf:"bytes,8,opt,name=refund_destination,json=refundDestination,proto3" json:"refund_destination,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Product) Reset() {
@@ -166,6 +169,13 @@ func (x *Product) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Product) GetRefundDestination() string {
+	if x != nil {
+		return x.RefundDestination
+	}
+	return ""
 }
 
 type CreateProductRequest struct {
@@ -487,12 +497,14 @@ func (x *ListProductsResponse) GetTotal() int64 {
 }
 
 type UpdateProductRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status        ProductStatus          `protobuf:"varint,3,opt,name=status,proto3,enum=v1.ProductStatus" json:"status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status ProductStatus          `protobuf:"varint,3,opt,name=status,proto3,enum=v1.ProductStatus" json:"status,omitempty"`
+	// Empty leaves it unchanged.
+	RefundDestination string `protobuf:"bytes,4,opt,name=refund_destination,json=refundDestination,proto3" json:"refund_destination,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateProductRequest) Reset() {
@@ -546,6 +558,13 @@ func (x *UpdateProductRequest) GetStatus() ProductStatus {
 	return ProductStatus_PRODUCT_STATUS_UNSPECIFIED
 }
 
+func (x *UpdateProductRequest) GetRefundDestination() string {
+	if x != nil {
+		return x.RefundDestination
+	}
+	return ""
+}
+
 type UpdateProductResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Product       *Product               `protobuf:"bytes,1,opt,name=product,proto3" json:"product,omitempty"`
@@ -594,7 +613,7 @@ var File_proto_openpay_v1_product_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_product_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/openpay/v1/product.proto\x12\x02v1\x1a\x17validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8d\x02\n" +
+	"\x1eproto/openpay/v1/product.proto\x12\x02v1\x1a\x17validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x02\n" +
 	"\aProduct\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -604,7 +623,8 @@ const file_proto_openpay_v1_product_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9f\x01\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12-\n" +
+	"\x12refund_destination\x18\b \x01(\tR\x11refundDestination\"\x9f\x01\n" +
 	"\x14CreateProductRequest\x121\n" +
 	"\x04code\x18\x01 \x01(\tB\x1d\xfaB\x1ar\x182\x16^[a-z][a-z0-9_]{1,30}$R\x04code\x12\x1d\n" +
 	"\x04name\x18\x02 \x01(\tB\t\xfaB\x06r\x04\x10\x01\x18dR\x04name\x125\n" +
@@ -623,12 +643,13 @@ const file_proto_openpay_v1_product_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\x0e2\x11.v1.ProductStatusR\x06status\"U\n" +
 	"\x14ListProductsResponse\x12'\n" +
 	"\bproducts\x18\x01 \x03(\v2\v.v1.ProductR\bproducts\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05total\"\x85\x01\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xcd\x01\n" +
 	"\x14UpdateProductRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\x12\x1d\n" +
 	"\x04name\x18\x02 \x01(\tB\t\xfaB\x06r\x04\x10\x01\x18dR\x04name\x125\n" +
 	"\x06status\x18\x03 \x01(\x0e2\x11.v1.ProductStatusB\n" +
-	"\xfaB\a\x82\x01\x04\x10\x01 \x00R\x06status\">\n" +
+	"\xfaB\a\x82\x01\x04\x10\x01 \x00R\x06status\x12F\n" +
+	"\x12refund_destination\x18\x04 \x01(\tB\x17\xfaB\x14r\x12R\x00R\x06sourceR\x06walletR\x11refundDestination\">\n" +
 	"\x15UpdateProductResponse\x12%\n" +
 	"\aproduct\x18\x01 \x01(\v2\v.v1.ProductR\aproduct*h\n" +
 	"\rProductStatus\x12\x1e\n" +

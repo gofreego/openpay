@@ -827,6 +827,46 @@
         ]
       }
     },
+    "/openpay/v1/orders/{id}/refunds": {
+      "post": {
+        "summary": "Refund an order",
+        "description": "Returns part or all of a paid order with its own tax split, real money first: card, then purchased wallets, then granted ones. Product backend for its own orders, or central ops with openpay:refunds:create. Requires an Idempotency-Key.",
+        "operationId": "OpenPay_RefundOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RefundOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayRefundOrderBody"
+            }
+          }
+        ],
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/openpay/v1/payments": {
       "get": {
         "summary": "List payments",
@@ -1704,6 +1744,41 @@
         }
       }
     },
+    "OpenPayRefundOrderBody": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "taxBreakdownProvided": {
+          "type": "boolean",
+          "description": "The refund's own split. Leave false to have it split proportionally."
+        },
+        "subtotal": {
+          "type": "string",
+          "format": "int64"
+        },
+        "discount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "destination": {
+          "type": "string",
+          "description": "Empty uses the product's default."
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "memo": {
+          "type": "string"
+        }
+      }
+    },
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
     },
@@ -1741,6 +1816,10 @@
         },
         "status": {
           "$ref": "#/definitions/v1ProductStatus"
+        },
+        "refundDestination": {
+          "type": "string",
+          "description": "Empty leaves it unchanged."
         }
       }
     },
@@ -2845,6 +2924,13 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "refunds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrderRefund"
+          }
         }
       }
     },
@@ -2872,6 +2958,73 @@
         }
       }
     },
+    "v1OrderRefund": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "subtotal": {
+          "type": "string",
+          "format": "int64"
+        },
+        "discount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "taxBreakdownProvided": {
+          "type": "boolean"
+        },
+        "destination": {
+          "type": "string",
+          "description": "source or wallet."
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "memo": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrderRefundPart"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "An order refund carries its own tax split (plan.md D13). Without one, the\nsplit is proportional to the order's and tax_breakdown_provided is false."
+    },
+    "v1OrderRefundPart": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "walletId": {
+          "type": "string",
+          "title": "Credited to this wallet…"
+        },
+        "refundId": {
+          "type": "string",
+          "description": "…or returned to the card through this payment refund."
+        }
+      },
+      "description": "How much of a refund went back through one tender, and where."
+    },
     "v1OrderStatus": {
       "type": "string",
       "enum": [
@@ -2879,7 +3032,9 @@
         "ORDER_STATUS_PENDING_PAYMENT",
         "ORDER_STATUS_PAID",
         "ORDER_STATUS_FAILED",
-        "ORDER_STATUS_CANCELLED"
+        "ORDER_STATUS_CANCELLED",
+        "ORDER_STATUS_PARTIALLY_REFUNDED",
+        "ORDER_STATUS_REFUNDED"
       ],
       "default": "ORDER_STATUS_UNSPECIFIED",
       "description": " - ORDER_STATUS_PENDING_PAYMENT: Waiting for the card share; wallet shares are held."
@@ -3123,6 +3278,10 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "refundDestination": {
+          "type": "string",
+          "description": "Where an order refund goes unless the refund says otherwise: \"source\"\n(back to how it was paid) or \"wallet\" (store credit)."
         }
       },
       "description": "Product is one of our own apps. It is the scoping dimension for wallets,\norders and revenue."
@@ -3182,6 +3341,17 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1RefundOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/v1Order"
+        },
+        "refund": {
+          "$ref": "#/definitions/v1OrderRefund"
         }
       }
     },

@@ -48,6 +48,12 @@ type Repository interface {
 	PostJournal(ctx context.Context, journal *dao.Journal) error
 	CaptureHolds(ctx context.Context, holdExternalIDs []string, journal *dao.Journal) ([]*dao.Hold, bool, error)
 	SaveOutboxEvent(ctx context.Context, event *dao.OutboxEvent) error
+
+	CreateOrderRefund(ctx context.Context, x *dao.OrderRefund) error
+	CreateOrderRefundPart(ctx context.Context, p *dao.OrderRefundPart) error
+	ListWalletTypes(ctx context.Context, productID int64) ([]*dao.WalletType, error)
+	GetCustomerByPublicID(ctx context.Context, publicID string) (*dao.Customer, error)
+	GetJournalByExternalID(ctx context.Context, externalID string) (*dao.Journal, error)
 }
 
 type Config struct {

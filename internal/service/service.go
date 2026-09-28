@@ -101,6 +101,10 @@ type PaymentRepository interface {
 	GetOrderPayment(ctx context.Context, orderID int64) (*dao.Payment, error)
 	GetHoldByExternalID(ctx context.Context, externalID string) (*dao.Hold, error)
 	CaptureHolds(ctx context.Context, holdExternalIDs []string, journal *dao.Journal) ([]*dao.Hold, bool, error)
+	CreateOrderRefund(ctx context.Context, x *dao.OrderRefund) error
+	CreateOrderRefundPart(ctx context.Context, p *dao.OrderRefundPart) error
+	ListOrderRefunds(ctx context.Context, orderID int64) ([]*dao.OrderRefund, error)
+	ListOrderRefundParts(ctx context.Context, orderRefundID int64) ([]*dao.OrderRefundPart, error)
 
 	CreateDispute(ctx context.Context, d *dao.Dispute) error
 	UpdateDispute(ctx context.Context, d *dao.Dispute) error

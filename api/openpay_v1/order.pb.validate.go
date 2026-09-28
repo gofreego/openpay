@@ -1278,6 +1278,40 @@ func (m *Order) validate(all bool) error {
 		}
 	}
 
+	for idx, item := range m.GetRefunds() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, OrderValidationError{
+						field:  fmt.Sprintf("Refunds[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, OrderValidationError{
+						field:  fmt.Sprintf("Refunds[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return OrderValidationError{
+					field:  fmt.Sprintf("Refunds[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return OrderMultiError(errors)
 	}
@@ -1354,6 +1388,650 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = OrderValidationError{}
+
+// Validate checks the field values on OrderRefund with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *OrderRefund) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrderRefund with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in OrderRefundMultiError, or
+// nil if none found.
+func (m *OrderRefund) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrderRefund) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for Amount
+
+	// no validation rules for Subtotal
+
+	// no validation rules for Discount
+
+	// no validation rules for Tax
+
+	// no validation rules for TaxBreakdownProvided
+
+	// no validation rules for Destination
+
+	// no validation rules for ReasonCode
+
+	// no validation rules for Memo
+
+	for idx, item := range m.GetParts() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, OrderRefundValidationError{
+						field:  fmt.Sprintf("Parts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, OrderRefundValidationError{
+						field:  fmt.Sprintf("Parts[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return OrderRefundValidationError{
+					field:  fmt.Sprintf("Parts[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if all {
+		switch v := interface{}(m.GetCreatedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, OrderRefundValidationError{
+					field:  "CreatedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, OrderRefundValidationError{
+					field:  "CreatedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreatedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return OrderRefundValidationError{
+				field:  "CreatedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return OrderRefundMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrderRefundMultiError is an error wrapping multiple validation errors
+// returned by OrderRefund.ValidateAll() if the designated constraints aren't met.
+type OrderRefundMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrderRefundMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrderRefundMultiError) AllErrors() []error { return m }
+
+// OrderRefundValidationError is the validation error returned by
+// OrderRefund.Validate if the designated constraints aren't met.
+type OrderRefundValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrderRefundValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrderRefundValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrderRefundValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrderRefundValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrderRefundValidationError) ErrorName() string { return "OrderRefundValidationError" }
+
+// Error satisfies the builtin error interface
+func (e OrderRefundValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrderRefund.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrderRefundValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrderRefundValidationError{}
+
+// Validate checks the field values on OrderRefundPart with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *OrderRefundPart) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on OrderRefundPart with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// OrderRefundPartMultiError, or nil if none found.
+func (m *OrderRefundPart) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *OrderRefundPart) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Amount
+
+	// no validation rules for WalletId
+
+	// no validation rules for RefundId
+
+	if len(errors) > 0 {
+		return OrderRefundPartMultiError(errors)
+	}
+
+	return nil
+}
+
+// OrderRefundPartMultiError is an error wrapping multiple validation errors
+// returned by OrderRefundPart.ValidateAll() if the designated constraints
+// aren't met.
+type OrderRefundPartMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m OrderRefundPartMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m OrderRefundPartMultiError) AllErrors() []error { return m }
+
+// OrderRefundPartValidationError is the validation error returned by
+// OrderRefundPart.Validate if the designated constraints aren't met.
+type OrderRefundPartValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e OrderRefundPartValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e OrderRefundPartValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e OrderRefundPartValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e OrderRefundPartValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e OrderRefundPartValidationError) ErrorName() string { return "OrderRefundPartValidationError" }
+
+// Error satisfies the builtin error interface
+func (e OrderRefundPartValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sOrderRefundPart.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = OrderRefundPartValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = OrderRefundPartValidationError{}
+
+// Validate checks the field values on RefundOrderRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *RefundOrderRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on RefundOrderRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// RefundOrderRequestMultiError, or nil if none found.
+func (m *RefundOrderRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *RefundOrderRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetId()) < 1 {
+		err := RefundOrderRequestValidationError{
+			field:  "Id",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetAmount() <= 0 {
+		err := RefundOrderRequestValidationError{
+			field:  "Amount",
+			reason: "value must be greater than 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for TaxBreakdownProvided
+
+	if m.GetSubtotal() < 0 {
+		err := RefundOrderRequestValidationError{
+			field:  "Subtotal",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetDiscount() < 0 {
+		err := RefundOrderRequestValidationError{
+			field:  "Discount",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetTax() < 0 {
+		err := RefundOrderRequestValidationError{
+			field:  "Tax",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if _, ok := _RefundOrderRequest_Destination_InLookup[m.GetDestination()]; !ok {
+		err := RefundOrderRequestValidationError{
+			field:  "Destination",
+			reason: "value must be in list [ source wallet]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetReasonCode()); l < 1 || l > 50 {
+		err := RefundOrderRequestValidationError{
+			field:  "ReasonCode",
+			reason: "value length must be between 1 and 50 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetMemo()) > 500 {
+		err := RefundOrderRequestValidationError{
+			field:  "Memo",
+			reason: "value length must be at most 500 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return RefundOrderRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// RefundOrderRequestMultiError is an error wrapping multiple validation errors
+// returned by RefundOrderRequest.ValidateAll() if the designated constraints
+// aren't met.
+type RefundOrderRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m RefundOrderRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m RefundOrderRequestMultiError) AllErrors() []error { return m }
+
+// RefundOrderRequestValidationError is the validation error returned by
+// RefundOrderRequest.Validate if the designated constraints aren't met.
+type RefundOrderRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e RefundOrderRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e RefundOrderRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e RefundOrderRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e RefundOrderRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e RefundOrderRequestValidationError) ErrorName() string {
+	return "RefundOrderRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e RefundOrderRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sRefundOrderRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = RefundOrderRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = RefundOrderRequestValidationError{}
+
+var _RefundOrderRequest_Destination_InLookup = map[string]struct{}{
+	"":       {},
+	"source": {},
+	"wallet": {},
+}
+
+// Validate checks the field values on RefundOrderResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *RefundOrderResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on RefundOrderResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// RefundOrderResponseMultiError, or nil if none found.
+func (m *RefundOrderResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *RefundOrderResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetOrder()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, RefundOrderResponseValidationError{
+					field:  "Order",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, RefundOrderResponseValidationError{
+					field:  "Order",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetOrder()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return RefundOrderResponseValidationError{
+				field:  "Order",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetRefund()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, RefundOrderResponseValidationError{
+					field:  "Refund",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, RefundOrderResponseValidationError{
+					field:  "Refund",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetRefund()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return RefundOrderResponseValidationError{
+				field:  "Refund",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return RefundOrderResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// RefundOrderResponseMultiError is an error wrapping multiple validation
+// errors returned by RefundOrderResponse.ValidateAll() if the designated
+// constraints aren't met.
+type RefundOrderResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m RefundOrderResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m RefundOrderResponseMultiError) AllErrors() []error { return m }
+
+// RefundOrderResponseValidationError is the validation error returned by
+// RefundOrderResponse.Validate if the designated constraints aren't met.
+type RefundOrderResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e RefundOrderResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e RefundOrderResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e RefundOrderResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e RefundOrderResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e RefundOrderResponseValidationError) ErrorName() string {
+	return "RefundOrderResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e RefundOrderResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sRefundOrderResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = RefundOrderResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = RefundOrderResponseValidationError{}
 
 // Validate checks the field values on CreateOrderRequest with the rules
 // defined in the proto definition for this message. If any rules are

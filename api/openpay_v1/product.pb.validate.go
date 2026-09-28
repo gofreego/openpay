@@ -124,6 +124,8 @@ func (m *Product) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for RefundDestination
+
 	if len(errors) > 0 {
 		return ProductMultiError(errors)
 	}
@@ -1058,6 +1060,17 @@ func (m *UpdateProductRequest) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if _, ok := _UpdateProductRequest_RefundDestination_InLookup[m.GetRefundDestination()]; !ok {
+		err := UpdateProductRequestValidationError{
+			field:  "RefundDestination",
+			reason: "value must be in list [ source wallet]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if len(errors) > 0 {
 		return UpdateProductRequestMultiError(errors)
 	}
@@ -1140,6 +1153,12 @@ var _ interface {
 
 var _UpdateProductRequest_Status_NotInLookup = map[ProductStatus]struct{}{
 	0: {},
+}
+
+var _UpdateProductRequest_RefundDestination_InLookup = map[string]struct{}{
+	"":       {},
+	"source": {},
+	"wallet": {},
 }
 
 // Validate checks the field values on UpdateProductResponse with the rules

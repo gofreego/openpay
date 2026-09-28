@@ -76,6 +76,11 @@ func (e *Engine) CreateRefund(ctx context.Context, req RefundRequest) (*dao.Refu
 		source := dao.RefundFromWallet
 		switch payment.Application {
 		case dao.ApplicationApplied:
+			if payment.Purpose == dao.PurposeOrder {
+				// The order refund has already moved this share into
+				// refunds_payable, with its tax split; nothing more to reserve.
+				source = dao.RefundFromOrder
+			}
 		case dao.ApplicationUnapplied:
 			source = dao.RefundFromUnapplied
 		default:
@@ -246,6 +251,8 @@ func (e *Engine) failRefund(ctx context.Context, refund *dao.Refund, reason stri
 		return err
 	}
 
+	// An unapplied or order refund's money stays in refunds_payable: still
+	// owed to the customer, awaiting another refund or an operator's decision.
 	if refund.Source == dao.RefundFromWallet {
 		reserve, err := e.repo.GetJournalByExternalID(ctx, reserveID(refund))
 		if err != nil {

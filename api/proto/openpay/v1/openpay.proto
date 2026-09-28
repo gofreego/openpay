@@ -594,4 +594,16 @@ service OpenPay {
             description: "Product backend for its own orders, or an operator holding openpay:payments:read within scope."
         };
     }
+
+    rpc RefundOrder (RefundOrderRequest) returns (RefundOrderResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/orders/{id}/refunds"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "Refund an order"
+            description: "Returns part or all of a paid order with its own tax split, real money first: card, then purchased wallets, then granted ones. Product backend for its own orders, or central ops with openpay:refunds:create. Requires an Idempotency-Key."
+        };
+    }
 }

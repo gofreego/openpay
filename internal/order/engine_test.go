@@ -76,7 +76,8 @@ func (f *fixture) newProduct(code string) *dao.Product {
 func (f *fixture) walletType(p *dao.Product, code string, fundable, grantable bool) *dao.WalletType {
 	f.t.Helper()
 	wt := &dao.WalletType{PublicID: ids.New(ids.WalletType), Code: code, Name: code, Currency: "INR",
-		Fundable: fundable, Grantable: grantable, ExpiryPolicy: dao.ExpiryNone, Status: dao.WalletTypeActive,
+		Fundable: fundable, Grantable: grantable, RefundableToSource: true,
+		ExpiryPolicy: dao.ExpiryNone, Status: dao.WalletTypeActive,
 		Scope: dao.WalletScopePlatform}
 	if p != nil {
 		wt.ProductID, wt.Scope = &p.ID, dao.WalletScopeProduct

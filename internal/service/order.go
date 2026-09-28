@@ -191,6 +191,18 @@ func (s *Service) orderDetail(ctx context.Context, o *dao.Order) (*openpay_v1.Or
 			WalletId: deref(t.WalletPublicID), Amount: t.Amount, Status: string(t.Status)})
 	}
 
+	refunds, err := s.repo.ListOrderRefunds(ctx, o.ID)
+	if err != nil {
+		return nil, err
+	}
+	for _, x := range refunds {
+		parts, err := s.repo.ListOrderRefundParts(ctx, x.ID)
+		if err != nil {
+			return nil, err
+		}
+		out.Refunds = append(out.Refunds, toProtoOrderRefund(x, parts))
+	}
+
 	if o.GatewayAmount > 0 {
 		p, err := s.repo.GetOrderPayment(ctx, o.ID)
 		if err != nil && !apperrors.Is(err, apperrors.NotFound) {
@@ -216,6 +228,10 @@ func toProtoOrderStatus(s dao.OrderStatus) openpay_v1.OrderStatus {
 		return openpay_v1.OrderStatus_ORDER_STATUS_PENDING_PAYMENT
 	case dao.OrderPaid:
 		return openpay_v1.OrderStatus_ORDER_STATUS_PAID
+	case dao.OrderPartiallyRefunded:
+		return openpay_v1.OrderStatus_ORDER_STATUS_PARTIALLY_REFUNDED
+	case dao.OrderRefunded:
+		return openpay_v1.OrderStatus_ORDER_STATUS_REFUNDED
 	case dao.OrderFailed:
 		return openpay_v1.OrderStatus_ORDER_STATUS_FAILED
 	case dao.OrderCancelled:
@@ -228,4 +244,74 @@ func toProtoOrderStatus(s dao.OrderStatus) openpay_v1.OrderStatus {
 func toProtoItem(it *dao.Item) *openpay_v1.Item {
 	return &openpay_v1.Item{Id: it.PublicID, Code: it.Code, Name: it.Name, ReferencePrice: it.ReferencePrice,
 		Currency: it.Currency, TaxClass: it.TaxClass, CreatedAt: timestamppb.New(it.CreatedAt)}
+}
+
+func (s *Service) RefundOrder(ctx context.Context, req *openpay_v1.RefundOrderRequest) (*openpay_v1.RefundOrderResponse, error) {
+	// A product refunds its own orders; central ops can refund any. Unlike a
+	// top-up refund, this cannot leak closed-loop money: every share goes
+	// back the way it came, or becomes store credit.
+	caller, _ := appcontext.CallerFrom(ctx)
+	scope := filter.AllProducts()
+	if caller.IsService() {
+		scope = filter.OnlyProducts(caller.ProductID)
+	} else if err := auth.RequirePlatformOperator(ctx, auth.PermRefundsCreate); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+
+	return idempotent(ctx, s.repo, "RefundOrder", req,
+		func(ctx context.Context) (*openpay_v1.RefundOrderResponse, error) {
+			o, err := s.repo.GetOrderByPublicID(ctx, req.GetId())
+			if err != nil {
+				return nil, err
+			}
+			if err := requireVisible(scope, &o.ProductID, "order", req.GetId()); err != nil {
+				return nil, err
+			}
+			refundReq := order.RefundRequest{
+				OrderID: o.ID, Amount: req.GetAmount(), Destination: req.GetDestination(),
+				ReasonCode: req.GetReasonCode(), Memo: req.GetMemo(), RequestedBy: caller.UserID,
+			}
+			if caller.IsService() {
+				refundReq.RequestedBy = caller.CredentialID
+			}
+			if req.GetTaxBreakdownProvided() {
+				refundReq.Breakdown = &order.Breakdown{Subtotal: req.GetSubtotal(), Discount: req.GetDiscount(), Tax: req.GetTax()}
+			}
+			refund, parts, err := s.orders.Refund(ctx, refundReq)
+			if err != nil {
+				return nil, err
+			}
+			if err := s.audit(ctx, auditParams{
+				Action: "order.refunded", ResourceType: "order", ResourceID: o.PublicID, ProductID: &o.ProductID,
+				After: map[string]any{"refund_id": refund.PublicID, "amount": refund.Amount, "tax": refund.Tax,
+					"destination": refund.Destination, "reason_code": refund.ReasonCode},
+			}); err != nil {
+				return nil, err
+			}
+			current, err := s.repo.GetOrderByPublicID(ctx, o.PublicID)
+			if err != nil {
+				return nil, err
+			}
+			out, err := s.orderDetail(ctx, current)
+			if err != nil {
+				return nil, err
+			}
+			return &openpay_v1.RefundOrderResponse{Order: out, Refund: toProtoOrderRefund(refund, parts)}, nil
+		})
+}
+
+func toProtoOrderRefund(x *dao.OrderRefund, parts []*dao.OrderRefundPart) *openpay_v1.OrderRefund {
+	out := &openpay_v1.OrderRefund{
+		Id: x.PublicID, Amount: x.Amount, Subtotal: x.Subtotal, Discount: x.Discount, Tax: x.Tax,
+		TaxBreakdownProvided: x.TaxBreakdownProvided, Destination: x.Destination,
+		ReasonCode: x.ReasonCode, Memo: x.Memo, CreatedAt: timestamppb.New(x.CreatedAt),
+	}
+	for _, p := range parts {
+		out.Parts = append(out.Parts, &openpay_v1.OrderRefundPart{Amount: p.Amount,
+			WalletId: deref(p.WalletPublicID), RefundId: deref(p.RefundPublicID)})
+	}
+	return out
 }

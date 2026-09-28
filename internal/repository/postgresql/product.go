@@ -13,7 +13,7 @@ import (
 	"github.com/gofreego/openpay/pkg/apperrors"
 )
 
-const productColumns = `id, public_id, code, name, status, default_currency, created_at, updated_at`
+const productColumns = `id, public_id, code, name, status, default_currency, refund_destination, created_at, updated_at`
 
 func (r *Repository) CreateProduct(ctx context.Context, product *dao.Product) error {
 	const query = `
@@ -128,13 +128,14 @@ func (r *Repository) ListProducts(ctx context.Context, f *filter.Product) ([]*da
 // unreadable.
 func (r *Repository) UpdateProduct(ctx context.Context, product *dao.Product) error {
 	const query = `
-		UPDATE products SET name = $1, status = $2
+		UPDATE products SET name = $1, status = $2,
+		       refund_destination = COALESCE(NULLIF($4, ''), refund_destination)
 		WHERE public_id = $3
-		RETURNING id, code, default_currency, created_at, updated_at`
+		RETURNING id, code, default_currency, refund_destination, created_at, updated_at`
 
 	err := r.executor(ctx).QueryRowContext(ctx, query,
-		product.Name, product.Status, product.PublicID,
-	).Scan(&product.ID, &product.Code, &product.DefaultCurrency, &product.CreatedAt, &product.UpdatedAt)
+		product.Name, product.Status, product.PublicID, product.RefundDestination,
+	).Scan(&product.ID, &product.Code, &product.DefaultCurrency, &product.RefundDestination, &product.CreatedAt, &product.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return apperrors.New(apperrors.NotFound, "product %q not found", product.PublicID)
@@ -147,7 +148,7 @@ func (r *Repository) UpdateProduct(ctx context.Context, product *dao.Product) er
 func scanProduct(row rowScanner) (*dao.Product, error) {
 	var p dao.Product
 	err := row.Scan(&p.ID, &p.PublicID, &p.Code, &p.Name, &p.Status,
-		&p.DefaultCurrency, &p.CreatedAt, &p.UpdatedAt)
+		&p.DefaultCurrency, &p.RefundDestination, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

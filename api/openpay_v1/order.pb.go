@@ -28,10 +28,12 @@ type OrderStatus int32
 const (
 	OrderStatus_ORDER_STATUS_UNSPECIFIED OrderStatus = 0
 	// Waiting for the card share; wallet shares are held.
-	OrderStatus_ORDER_STATUS_PENDING_PAYMENT OrderStatus = 1
-	OrderStatus_ORDER_STATUS_PAID            OrderStatus = 2
-	OrderStatus_ORDER_STATUS_FAILED          OrderStatus = 3
-	OrderStatus_ORDER_STATUS_CANCELLED       OrderStatus = 4
+	OrderStatus_ORDER_STATUS_PENDING_PAYMENT    OrderStatus = 1
+	OrderStatus_ORDER_STATUS_PAID               OrderStatus = 2
+	OrderStatus_ORDER_STATUS_FAILED             OrderStatus = 3
+	OrderStatus_ORDER_STATUS_CANCELLED          OrderStatus = 4
+	OrderStatus_ORDER_STATUS_PARTIALLY_REFUNDED OrderStatus = 5
+	OrderStatus_ORDER_STATUS_REFUNDED           OrderStatus = 6
 )
 
 // Enum value maps for OrderStatus.
@@ -42,13 +44,17 @@ var (
 		2: "ORDER_STATUS_PAID",
 		3: "ORDER_STATUS_FAILED",
 		4: "ORDER_STATUS_CANCELLED",
+		5: "ORDER_STATUS_PARTIALLY_REFUNDED",
+		6: "ORDER_STATUS_REFUNDED",
 	}
 	OrderStatus_value = map[string]int32{
-		"ORDER_STATUS_UNSPECIFIED":     0,
-		"ORDER_STATUS_PENDING_PAYMENT": 1,
-		"ORDER_STATUS_PAID":            2,
-		"ORDER_STATUS_FAILED":          3,
-		"ORDER_STATUS_CANCELLED":       4,
+		"ORDER_STATUS_UNSPECIFIED":        0,
+		"ORDER_STATUS_PENDING_PAYMENT":    1,
+		"ORDER_STATUS_PAID":               2,
+		"ORDER_STATUS_FAILED":             3,
+		"ORDER_STATUS_CANCELLED":          4,
+		"ORDER_STATUS_PARTIALLY_REFUNDED": 5,
+		"ORDER_STATUS_REFUNDED":           6,
 	}
 )
 
@@ -598,6 +604,7 @@ type Order struct {
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	PaidAt        *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=paid_at,json=paidAt,proto3" json:"paid_at,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Refunds       []*OrderRefund         `protobuf:"bytes,23,rep,name=refunds,proto3" json:"refunds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -786,6 +793,365 @@ func (x *Order) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Order) GetRefunds() []*OrderRefund {
+	if x != nil {
+		return x.Refunds
+	}
+	return nil
+}
+
+// An order refund carries its own tax split (plan.md D13). Without one, the
+// split is proportional to the order's and tax_breakdown_provided is false.
+type OrderRefund struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Amount               int64                  `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	Subtotal             int64                  `protobuf:"varint,3,opt,name=subtotal,proto3" json:"subtotal,omitempty"`
+	Discount             int64                  `protobuf:"varint,4,opt,name=discount,proto3" json:"discount,omitempty"`
+	Tax                  int64                  `protobuf:"varint,5,opt,name=tax,proto3" json:"tax,omitempty"`
+	TaxBreakdownProvided bool                   `protobuf:"varint,6,opt,name=tax_breakdown_provided,json=taxBreakdownProvided,proto3" json:"tax_breakdown_provided,omitempty"`
+	// source or wallet.
+	Destination   string                 `protobuf:"bytes,7,opt,name=destination,proto3" json:"destination,omitempty"`
+	ReasonCode    string                 `protobuf:"bytes,8,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"`
+	Memo          string                 `protobuf:"bytes,9,opt,name=memo,proto3" json:"memo,omitempty"`
+	Parts         []*OrderRefundPart     `protobuf:"bytes,10,rep,name=parts,proto3" json:"parts,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrderRefund) Reset() {
+	*x = OrderRefund{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderRefund) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderRefund) ProtoMessage() {}
+
+func (x *OrderRefund) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderRefund.ProtoReflect.Descriptor instead.
+func (*OrderRefund) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *OrderRefund) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OrderRefund) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *OrderRefund) GetSubtotal() int64 {
+	if x != nil {
+		return x.Subtotal
+	}
+	return 0
+}
+
+func (x *OrderRefund) GetDiscount() int64 {
+	if x != nil {
+		return x.Discount
+	}
+	return 0
+}
+
+func (x *OrderRefund) GetTax() int64 {
+	if x != nil {
+		return x.Tax
+	}
+	return 0
+}
+
+func (x *OrderRefund) GetTaxBreakdownProvided() bool {
+	if x != nil {
+		return x.TaxBreakdownProvided
+	}
+	return false
+}
+
+func (x *OrderRefund) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *OrderRefund) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *OrderRefund) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
+func (x *OrderRefund) GetParts() []*OrderRefundPart {
+	if x != nil {
+		return x.Parts
+	}
+	return nil
+}
+
+func (x *OrderRefund) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+// How much of a refund went back through one tender, and where.
+type OrderRefundPart struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Amount int64                  `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Credited to this wallet…
+	WalletId string `protobuf:"bytes,2,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
+	// …or returned to the card through this payment refund.
+	RefundId      string `protobuf:"bytes,3,opt,name=refund_id,json=refundId,proto3" json:"refund_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrderRefundPart) Reset() {
+	*x = OrderRefundPart{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderRefundPart) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderRefundPart) ProtoMessage() {}
+
+func (x *OrderRefundPart) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderRefundPart.ProtoReflect.Descriptor instead.
+func (*OrderRefundPart) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *OrderRefundPart) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *OrderRefundPart) GetWalletId() string {
+	if x != nil {
+		return x.WalletId
+	}
+	return ""
+}
+
+func (x *OrderRefundPart) GetRefundId() string {
+	if x != nil {
+		return x.RefundId
+	}
+	return ""
+}
+
+type RefundOrderRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Amount int64                  `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	// The refund's own split. Leave false to have it split proportionally.
+	TaxBreakdownProvided bool  `protobuf:"varint,3,opt,name=tax_breakdown_provided,json=taxBreakdownProvided,proto3" json:"tax_breakdown_provided,omitempty"`
+	Subtotal             int64 `protobuf:"varint,4,opt,name=subtotal,proto3" json:"subtotal,omitempty"`
+	Discount             int64 `protobuf:"varint,5,opt,name=discount,proto3" json:"discount,omitempty"`
+	Tax                  int64 `protobuf:"varint,6,opt,name=tax,proto3" json:"tax,omitempty"`
+	// Empty uses the product's default.
+	Destination   string `protobuf:"bytes,7,opt,name=destination,proto3" json:"destination,omitempty"`
+	ReasonCode    string `protobuf:"bytes,8,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"`
+	Memo          string `protobuf:"bytes,9,opt,name=memo,proto3" json:"memo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefundOrderRequest) Reset() {
+	*x = RefundOrderRequest{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefundOrderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefundOrderRequest) ProtoMessage() {}
+
+func (x *RefundOrderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefundOrderRequest.ProtoReflect.Descriptor instead.
+func (*RefundOrderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RefundOrderRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RefundOrderRequest) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *RefundOrderRequest) GetTaxBreakdownProvided() bool {
+	if x != nil {
+		return x.TaxBreakdownProvided
+	}
+	return false
+}
+
+func (x *RefundOrderRequest) GetSubtotal() int64 {
+	if x != nil {
+		return x.Subtotal
+	}
+	return 0
+}
+
+func (x *RefundOrderRequest) GetDiscount() int64 {
+	if x != nil {
+		return x.Discount
+	}
+	return 0
+}
+
+func (x *RefundOrderRequest) GetTax() int64 {
+	if x != nil {
+		return x.Tax
+	}
+	return 0
+}
+
+func (x *RefundOrderRequest) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+func (x *RefundOrderRequest) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *RefundOrderRequest) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
+type RefundOrderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	Refund        *OrderRefund           `protobuf:"bytes,2,opt,name=refund,proto3" json:"refund,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefundOrderResponse) Reset() {
+	*x = RefundOrderResponse{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefundOrderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefundOrderResponse) ProtoMessage() {}
+
+func (x *RefundOrderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefundOrderResponse.ProtoReflect.Descriptor instead.
+func (*RefundOrderResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RefundOrderResponse) GetOrder() *Order {
+	if x != nil {
+		return x.Order
+	}
+	return nil
+}
+
+func (x *RefundOrderResponse) GetRefund() *OrderRefund {
+	if x != nil {
+		return x.Refund
+	}
+	return nil
+}
+
 // CreateOrderRequest records a purchase and starts paying for it. Called by
 // a product backend with an Idempotency-Key; also idempotent on external_ref.
 type CreateOrderRequest struct {
@@ -818,7 +1184,7 @@ type CreateOrderRequest struct {
 
 func (x *CreateOrderRequest) Reset() {
 	*x = CreateOrderRequest{}
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[9]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -830,7 +1196,7 @@ func (x *CreateOrderRequest) String() string {
 func (*CreateOrderRequest) ProtoMessage() {}
 
 func (x *CreateOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[9]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -843,7 +1209,7 @@ func (x *CreateOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrderRequest.ProtoReflect.Descriptor instead.
 func (*CreateOrderRequest) Descriptor() ([]byte, []int) {
-	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{9}
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateOrderRequest) GetExternalRef() string {
@@ -960,7 +1326,7 @@ type CreateOrderResponse struct {
 
 func (x *CreateOrderResponse) Reset() {
 	*x = CreateOrderResponse{}
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[10]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -972,7 +1338,7 @@ func (x *CreateOrderResponse) String() string {
 func (*CreateOrderResponse) ProtoMessage() {}
 
 func (x *CreateOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[10]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -985,7 +1351,7 @@ func (x *CreateOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrderResponse.ProtoReflect.Descriptor instead.
 func (*CreateOrderResponse) Descriptor() ([]byte, []int) {
-	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{10}
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateOrderResponse) GetOrder() *Order {
@@ -1004,7 +1370,7 @@ type GetOrderRequest struct {
 
 func (x *GetOrderRequest) Reset() {
 	*x = GetOrderRequest{}
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[11]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1016,7 +1382,7 @@ func (x *GetOrderRequest) String() string {
 func (*GetOrderRequest) ProtoMessage() {}
 
 func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[11]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1029,7 +1395,7 @@ func (x *GetOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrderRequest.ProtoReflect.Descriptor instead.
 func (*GetOrderRequest) Descriptor() ([]byte, []int) {
-	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{11}
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetOrderRequest) GetId() string {
@@ -1048,7 +1414,7 @@ type GetOrderResponse struct {
 
 func (x *GetOrderResponse) Reset() {
 	*x = GetOrderResponse{}
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[12]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1060,7 +1426,7 @@ func (x *GetOrderResponse) String() string {
 func (*GetOrderResponse) ProtoMessage() {}
 
 func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_openpay_v1_order_proto_msgTypes[12]
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1073,7 +1439,7 @@ func (x *GetOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrderResponse.ProtoReflect.Descriptor instead.
 func (*GetOrderResponse) Descriptor() ([]byte, []int) {
-	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{12}
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetOrderResponse) GetOrder() *Order {
@@ -1124,7 +1490,7 @@ const file_proto_openpay_v1_order_proto_rawDesc = "" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12\x16\n" +
 	"\x06amount\x18\x03 \x01(\x03R\x06amount\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\"\x9c\x06\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\"\xc7\x06\n" +
 	"\x05Order\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fexternal_ref\x18\x02 \x01(\tR\vexternalRef\x12\x1f\n" +
@@ -1154,7 +1520,41 @@ const file_proto_openpay_v1_order_proto_rawDesc = "" +
 	"expires_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x123\n" +
 	"\apaid_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\x06paidAt\x129\n" +
 	"\n" +
-	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xe9\x04\n" +
+	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12)\n" +
+	"\arefunds\x18\x17 \x03(\v2\x0f.v1.OrderRefundR\arefunds\"\xf2\x02\n" +
+	"\vOrderRefund\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06amount\x18\x02 \x01(\x03R\x06amount\x12\x1a\n" +
+	"\bsubtotal\x18\x03 \x01(\x03R\bsubtotal\x12\x1a\n" +
+	"\bdiscount\x18\x04 \x01(\x03R\bdiscount\x12\x10\n" +
+	"\x03tax\x18\x05 \x01(\x03R\x03tax\x124\n" +
+	"\x16tax_breakdown_provided\x18\x06 \x01(\bR\x14taxBreakdownProvided\x12 \n" +
+	"\vdestination\x18\a \x01(\tR\vdestination\x12\x1f\n" +
+	"\vreason_code\x18\b \x01(\tR\n" +
+	"reasonCode\x12\x12\n" +
+	"\x04memo\x18\t \x01(\tR\x04memo\x12)\n" +
+	"\x05parts\x18\n" +
+	" \x03(\v2\x13.v1.OrderRefundPartR\x05parts\x129\n" +
+	"\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"c\n" +
+	"\x0fOrderRefundPart\x12\x16\n" +
+	"\x06amount\x18\x01 \x01(\x03R\x06amount\x12\x1b\n" +
+	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12\x1b\n" +
+	"\trefund_id\x18\x03 \x01(\tR\brefundId\"\xee\x02\n" +
+	"\x12RefundOrderRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\x12\x1f\n" +
+	"\x06amount\x18\x02 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x06amount\x124\n" +
+	"\x16tax_breakdown_provided\x18\x03 \x01(\bR\x14taxBreakdownProvided\x12#\n" +
+	"\bsubtotal\x18\x04 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\bsubtotal\x12#\n" +
+	"\bdiscount\x18\x05 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\bdiscount\x12\x19\n" +
+	"\x03tax\x18\x06 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x03tax\x129\n" +
+	"\vdestination\x18\a \x01(\tB\x17\xfaB\x14r\x12R\x00R\x06sourceR\x06walletR\vdestination\x12*\n" +
+	"\vreason_code\x18\b \x01(\tB\t\xfaB\x06r\x04\x10\x01\x182R\n" +
+	"reasonCode\x12\x1c\n" +
+	"\x04memo\x18\t \x01(\tB\b\xfaB\x05r\x03\x18\xf4\x03R\x04memo\"_\n" +
+	"\x13RefundOrderResponse\x12\x1f\n" +
+	"\x05order\x18\x01 \x01(\v2\t.v1.OrderR\x05order\x12'\n" +
+	"\x06refund\x18\x02 \x01(\v2\x0f.v1.OrderRefundR\x06refund\"\xe9\x04\n" +
 	"\x12CreateOrderRequest\x12-\n" +
 	"\fexternal_ref\x18\x01 \x01(\tB\n" +
 	"\xfaB\ar\x05\x10\x01\x18\xc8\x01R\vexternalRef\x12)\n" +
@@ -1183,13 +1583,15 @@ const file_proto_openpay_v1_order_proto_rawDesc = "" +
 	"\x0fGetOrderRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\"3\n" +
 	"\x10GetOrderResponse\x12\x1f\n" +
-	"\x05order\x18\x01 \x01(\v2\t.v1.OrderR\x05order*\x99\x01\n" +
+	"\x05order\x18\x01 \x01(\v2\t.v1.OrderR\x05order*\xd9\x01\n" +
 	"\vOrderStatus\x12\x1c\n" +
 	"\x18ORDER_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cORDER_STATUS_PENDING_PAYMENT\x10\x01\x12\x15\n" +
 	"\x11ORDER_STATUS_PAID\x10\x02\x12\x17\n" +
 	"\x13ORDER_STATUS_FAILED\x10\x03\x12\x1a\n" +
-	"\x16ORDER_STATUS_CANCELLED\x10\x04B\x0eZ\f./openpay_v1b\x06proto3"
+	"\x16ORDER_STATUS_CANCELLED\x10\x04\x12#\n" +
+	"\x1fORDER_STATUS_PARTIALLY_REFUNDED\x10\x05\x12\x19\n" +
+	"\x15ORDER_STATUS_REFUNDED\x10\x06B\x0eZ\f./openpay_v1b\x06proto3"
 
 var (
 	file_proto_openpay_v1_order_proto_rawDescOnce sync.Once
@@ -1204,7 +1606,7 @@ func file_proto_openpay_v1_order_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_openpay_v1_order_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_openpay_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_proto_openpay_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_proto_openpay_v1_order_proto_goTypes = []any{
 	(OrderStatus)(0),              // 0: v1.OrderStatus
 	(*Item)(nil),                  // 1: v1.Item
@@ -1216,31 +1618,40 @@ var file_proto_openpay_v1_order_proto_goTypes = []any{
 	(*WalletTender)(nil),          // 7: v1.WalletTender
 	(*OrderTender)(nil),           // 8: v1.OrderTender
 	(*Order)(nil),                 // 9: v1.Order
-	(*CreateOrderRequest)(nil),    // 10: v1.CreateOrderRequest
-	(*CreateOrderResponse)(nil),   // 11: v1.CreateOrderResponse
-	(*GetOrderRequest)(nil),       // 12: v1.GetOrderRequest
-	(*GetOrderResponse)(nil),      // 13: v1.GetOrderResponse
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
+	(*OrderRefund)(nil),           // 10: v1.OrderRefund
+	(*OrderRefundPart)(nil),       // 11: v1.OrderRefundPart
+	(*RefundOrderRequest)(nil),    // 12: v1.RefundOrderRequest
+	(*RefundOrderResponse)(nil),   // 13: v1.RefundOrderResponse
+	(*CreateOrderRequest)(nil),    // 14: v1.CreateOrderRequest
+	(*CreateOrderResponse)(nil),   // 15: v1.CreateOrderResponse
+	(*GetOrderRequest)(nil),       // 16: v1.GetOrderRequest
+	(*GetOrderResponse)(nil),      // 17: v1.GetOrderResponse
+	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
 }
 var file_proto_openpay_v1_order_proto_depIdxs = []int32{
-	14, // 0: v1.Item.created_at:type_name -> google.protobuf.Timestamp
+	18, // 0: v1.Item.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 1: v1.CreateItemResponse.item:type_name -> v1.Item
 	1,  // 2: v1.ListItemsResponse.items:type_name -> v1.Item
 	0,  // 3: v1.Order.status:type_name -> v1.OrderStatus
 	6,  // 4: v1.Order.lines:type_name -> v1.OrderLine
 	8,  // 5: v1.Order.tenders:type_name -> v1.OrderTender
-	14, // 6: v1.Order.expires_at:type_name -> google.protobuf.Timestamp
-	14, // 7: v1.Order.paid_at:type_name -> google.protobuf.Timestamp
-	14, // 8: v1.Order.created_at:type_name -> google.protobuf.Timestamp
-	6,  // 9: v1.CreateOrderRequest.lines:type_name -> v1.OrderLine
-	7,  // 10: v1.CreateOrderRequest.wallet_tenders:type_name -> v1.WalletTender
-	9,  // 11: v1.CreateOrderResponse.order:type_name -> v1.Order
-	9,  // 12: v1.GetOrderResponse.order:type_name -> v1.Order
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	18, // 6: v1.Order.expires_at:type_name -> google.protobuf.Timestamp
+	18, // 7: v1.Order.paid_at:type_name -> google.protobuf.Timestamp
+	18, // 8: v1.Order.created_at:type_name -> google.protobuf.Timestamp
+	10, // 9: v1.Order.refunds:type_name -> v1.OrderRefund
+	11, // 10: v1.OrderRefund.parts:type_name -> v1.OrderRefundPart
+	18, // 11: v1.OrderRefund.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 12: v1.RefundOrderResponse.order:type_name -> v1.Order
+	10, // 13: v1.RefundOrderResponse.refund:type_name -> v1.OrderRefund
+	6,  // 14: v1.CreateOrderRequest.lines:type_name -> v1.OrderLine
+	7,  // 15: v1.CreateOrderRequest.wallet_tenders:type_name -> v1.WalletTender
+	9,  // 16: v1.CreateOrderResponse.order:type_name -> v1.Order
+	9,  // 17: v1.GetOrderResponse.order:type_name -> v1.Order
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_proto_openpay_v1_order_proto_init() }
@@ -1254,7 +1665,7 @@ func file_proto_openpay_v1_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_openpay_v1_order_proto_rawDesc), len(file_proto_openpay_v1_order_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   13,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

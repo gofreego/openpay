@@ -790,3 +790,13 @@ func (e *Engine) CheckSpend(ctx context.Context, w *dao.Wallet, amount int64) er
 func (e *Engine) EmitMovements(ctx context.Context, journal *dao.Journal, wallets []*dao.Wallet) error {
 	return e.emitMovements(ctx, journal, wallets)
 }
+
+// CheckRefundIn says whether a wallet may receive a refund: its type must be
+// refundable_to_source and the wallet active.
+func (e *Engine) CheckRefundIn(ctx context.Context, w *dao.Wallet, amount int64) error {
+	walletType, err := e.repo.GetWalletTypeByID(ctx, w.WalletTypeID)
+	if err != nil {
+		return err
+	}
+	return assertAllowed(walletType, w, OpRefundIn, amount)
+}

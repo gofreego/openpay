@@ -134,9 +134,10 @@ func (s *Service) UpdateProduct(ctx context.Context, req *openpay_v1.UpdateProdu
 	return idempotent(ctx, s.repo, "UpdateProduct", req,
 		func(ctx context.Context) (*openpay_v1.UpdateProductResponse, error) {
 			updated := &dao.Product{
-				PublicID: req.GetId(),
-				Name:     req.GetName(),
-				Status:   fromProtoProductStatus(req.GetStatus()),
+				PublicID:          req.GetId(),
+				Name:              req.GetName(),
+				Status:            fromProtoProductStatus(req.GetStatus()),
+				RefundDestination: req.GetRefundDestination(),
 			}
 
 			// Read the prior state inside the transaction so the audit entry's
@@ -164,13 +165,14 @@ func (s *Service) UpdateProduct(ctx context.Context, req *openpay_v1.UpdateProdu
 
 func toProtoProduct(p *dao.Product) *openpay_v1.Product {
 	return &openpay_v1.Product{
-		Id:              p.PublicID,
-		Code:            p.Code,
-		Name:            p.Name,
-		Status:          toProtoProductStatus(p.Status),
-		DefaultCurrency: p.DefaultCurrency,
-		CreatedAt:       timestamppb.New(p.CreatedAt),
-		UpdatedAt:       timestamppb.New(p.UpdatedAt),
+		Id:                p.PublicID,
+		Code:              p.Code,
+		Name:              p.Name,
+		Status:            toProtoProductStatus(p.Status),
+		DefaultCurrency:   p.DefaultCurrency,
+		RefundDestination: p.RefundDestination,
+		CreatedAt:         timestamppb.New(p.CreatedAt),
+		UpdatedAt:         timestamppb.New(p.UpdatedAt),
 	}
 }
 

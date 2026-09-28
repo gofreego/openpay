@@ -24,6 +24,9 @@ message Product {
   string default_currency = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // Where an order refund goes unless the refund says otherwise: "source"
+  // (back to how it was paid) or "wallet" (store credit).
+  string refund_destination = 8;
 }
 
 message CreateProductRequest {
@@ -70,6 +73,8 @@ message UpdateProductRequest {
   string id = 1 [(validate.rules).string = {min_len: 1}];
   string name = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
   ProductStatus status = 3 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  // Empty leaves it unchanged.
+  string refund_destination = 4 [(validate.rules).string = {in: ["", "source", "wallet"]}];
 }
 
 message UpdateProductResponse {

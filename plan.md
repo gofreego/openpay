@@ -27,7 +27,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ✅ Complete for top-ups (tax split and destination policy with P7 orders; fee reconciliation with P8) |
-| 7 | Orders & Checkout (Split Tender) | ◐ Orders, split tender and settlement done; order refunds next |
+| 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
 | 8 | Settlement & Reconciliation | ☐ Not started |
 | 9 | Payouts & Withdrawals | ☐ Not started |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
@@ -1052,11 +1052,11 @@ special-casing.
       Refunds are central-ops only for now: refunding a top-up to its card is close
       to cashing out a closed-loop balance (Q1). Product backends get refunds with
       orders
-- [ ] Refund destination policy: back to source (PSP) vs. to wallet — per product config.
-      **Phase 7**: only order payments have a choice; a top-up refund can only go
+- [x] Refund destination policy: back to source (PSP) vs. to wallet — per product config.
+      Done in Phase 7 (`products.refund_destination`); a top-up refund can only go
       back to its source
-- [ ] **Refund requests carry their own tax breakdown** (D13). **Phase 7**, with
-      the orders that carry tax; top-ups have none. OpenPay cannot legitimately
+- [x] **Refund requests carry their own tax breakdown** (D13). Done in Phase 7 for
+      orders; top-ups carry no tax. OpenPay cannot legitimately
       derive the tax portion of a partial refund; proportional allocation is a documented
       fallback only, and refunds created that way are flagged for finance
 - [x] Ledger: refund posts a reversal-linked journal; fee refund policy configurable
@@ -1144,8 +1144,16 @@ and partly from a card.
       owns the entitlement, for the same reason tax belongs to whoever owns pricing (D13)
 - [x] Payment purpose stays `WALLET_TOPUP | ORDER`; no renewal purpose, no mandate
       storage, no dunning or retry schedules
-- [ ] Order refunds, carrying their own tax split (D13) and following a per-product
-      destination policy (back to source vs. to wallet) — deferred here from Phase 6
+- [x] Order refunds, carrying their own tax split (D13) and following a per-product
+      destination policy (back to source vs. to wallet) — deferred here from Phase 6.
+      One journal reverses each component by the refund's own split (Dr sales,
+      Dr GST, Cr discounts) and credits the destinations; without a split one is
+      allocated proportionally and the refund is flagged. `products.refund_destination`
+      (source | wallet) with a per-request override. Split across tenders real money
+      first — card, purchased wallets, granted wallets. Every limit is a CHECK: per
+      component on the order, per tender. The card share goes through Phase 6's
+      provider refunds (source `order`). Product backends refund their own orders:
+      unlike top-up refunds, every share goes back the way it came
 - [ ] Cancelling a pending order from the product side; FULFILLED state (the product
       owns entitlement, so possibly never)
 

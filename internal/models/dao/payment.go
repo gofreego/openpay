@@ -161,6 +161,9 @@ const (
 	// RefundFromUnapplied: the refunds_payable balance of a payment its
 	// wallet refused.
 	RefundFromUnapplied RefundSource = "unapplied"
+	// RefundFromOrder: an order refund already moved the card share into
+	// refunds_payable, with its own tax split.
+	RefundFromOrder RefundSource = "order"
 )
 
 type Refund struct {

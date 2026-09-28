@@ -61,6 +61,7 @@ const (
 	OpenPay_ListItems_FullMethodName               = "/v1.OpenPay/ListItems"
 	OpenPay_CreateOrder_FullMethodName             = "/v1.OpenPay/CreateOrder"
 	OpenPay_GetOrder_FullMethodName                = "/v1.OpenPay/GetOrder"
+	OpenPay_RefundOrder_FullMethodName             = "/v1.OpenPay/RefundOrder"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -113,6 +114,7 @@ type OpenPayClient interface {
 	ListItems(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*ListItemsResponse, error)
 	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
 	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
+	RefundOrder(ctx context.Context, in *RefundOrderRequest, opts ...grpc.CallOption) (*RefundOrderResponse, error)
 }
 
 type openPayClient struct {
@@ -543,6 +545,16 @@ func (c *openPayClient) GetOrder(ctx context.Context, in *GetOrderRequest, opts 
 	return out, nil
 }
 
+func (c *openPayClient) RefundOrder(ctx context.Context, in *RefundOrderRequest, opts ...grpc.CallOption) (*RefundOrderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefundOrderResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RefundOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -593,6 +605,7 @@ type OpenPayServer interface {
 	ListItems(context.Context, *ListItemsRequest) (*ListItemsResponse, error)
 	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
 	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
+	RefundOrder(context.Context, *RefundOrderRequest) (*RefundOrderResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -728,6 +741,9 @@ func (UnimplementedOpenPayServer) CreateOrder(context.Context, *CreateOrderReque
 }
 func (UnimplementedOpenPayServer) GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetOrder not implemented")
+}
+func (UnimplementedOpenPayServer) RefundOrder(context.Context, *RefundOrderRequest) (*RefundOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefundOrder not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1506,6 +1522,24 @@ func _OpenPay_GetOrder_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_RefundOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefundOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RefundOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RefundOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RefundOrder(ctx, req.(*RefundOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1680,6 +1714,10 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetOrder",
 			Handler:    _OpenPay_GetOrder_Handler,
+		},
+		{
+			MethodName: "RefundOrder",
+			Handler:    _OpenPay_RefundOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

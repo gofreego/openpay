@@ -24,6 +24,9 @@ type Product struct {
 	Name            string
 	Status          ProductStatus
 	DefaultCurrency string
+	// RefundDestination is where an order refund goes by default: "source"
+	// (back to how it was paid) or "wallet" (credit to the customer's wallet).
+	RefundDestination string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

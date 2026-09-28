@@ -113,8 +113,8 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 		return denied("wallet type %s does not allow %s", walletType.Code, op)
 	}
 
-	// A refund returns an earlier top-up, which already passed this limit.
-	if op != OpRefundOut && walletType.MaxTxnAmount != nil && amount > *walletType.MaxTxnAmount {
+	// A refund returns an earlier top-up or spend, which already passed this limit.
+	if op != OpRefundOut && op != OpRefundIn && walletType.MaxTxnAmount != nil && amount > *walletType.MaxTxnAmount {
 		return denied("%d exceeds the %s wallet's per-transaction limit of %d",
 			amount, walletType.Code, *walletType.MaxTxnAmount)
 	}

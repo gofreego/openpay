@@ -1,0 +1,13 @@
+ALTER TABLE refunds DROP CONSTRAINT refunds_source_check;
+ALTER TABLE refunds ADD CONSTRAINT refunds_source_check CHECK (source IN ('wallet', 'unapplied'));
+DROP TABLE IF EXISTS order_refund_parts;
+DROP TABLE IF EXISTS order_refunds;
+ALTER TABLE order_tenders DROP CONSTRAINT IF EXISTS ck_order_tenders_refunded;
+ALTER TABLE order_tenders DROP COLUMN IF EXISTS refunded_amount;
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS ck_orders_refunded;
+ALTER TABLE orders DROP COLUMN IF EXISTS refunded_subtotal, DROP COLUMN IF EXISTS refunded_discount, DROP COLUMN IF EXISTS refunded_tax;
+ALTER TABLE orders DROP CONSTRAINT ck_orders_paid;
+ALTER TABLE orders ADD CONSTRAINT ck_orders_paid CHECK ((status = 'paid') = (paid_at IS NOT NULL));
+ALTER TABLE orders DROP CONSTRAINT orders_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN ('pending_payment', 'paid', 'failed', 'cancelled'));
+ALTER TABLE products DROP COLUMN IF EXISTS refund_destination;
