@@ -148,7 +148,7 @@ func (r *Repository) CaptureHold(ctx context.Context, holdExternalID string, jou
 			holdExternalID, hold.Amount, account.Code, captured)
 	}
 
-	posted, err := r.postJournal(ctx, journal, &holdRelease{accountID: hold.AccountID, amount: hold.Amount})
+	posted, err := r.postJournal(ctx, journal, postOptions{release: &holdRelease{accountID: hold.AccountID, amount: hold.Amount}})
 	if err != nil {
 		return nil, err
 	}

@@ -22,14 +22,35 @@ import (
 // external id returns the journal already posted rather than posting it again,
 // which is what makes a retried payment capture safe.
 func (r *Repository) PostJournal(ctx context.Context, journal *dao.Journal) error {
-	_, err := r.postJournal(ctx, journal, nil)
+	_, err := r.postJournal(ctx, journal, postOptions{})
 	return err
+}
+
+// PostJournalChecked is PostJournal with a check run after the postings are
+// written and before the locks are released. An error from check fails the
+// posting, and the caller's transaction rolls it back.
+//
+// It is for rules that depend on the balance being moved — a wallet's maximum
+// balance, its daily load — which are only race-free while the account is
+// locked. Checking them beforehand would let two concurrent credits both see
+// room for one; taking a lock of one's own first would break the ascending
+// lock order and deadlock against the shared accounts on the other side.
+//
+// check does not run when the journal was already posted: that work was
+// checked when it was first done.
+func (r *Repository) PostJournalChecked(ctx context.Context, journal *dao.Journal, check func(ctx context.Context) error) (posted bool, err error) {
+	return r.postJournal(ctx, journal, postOptions{check: check})
 }
 
 // holdRelease frees a hold's reservation as part of posting a journal.
 type holdRelease struct {
 	accountID int64
 	amount    int64
+}
+
+type postOptions struct {
+	release *holdRelease
+	check   func(ctx context.Context) error
 }
 
 // postJournal is PostJournal, optionally releasing a hold in the same locked
@@ -40,7 +61,8 @@ type holdRelease struct {
 //
 // posted reports whether this call wrote the journal, as opposed to finding
 // it already posted under the same external id.
-func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, release *holdRelease) (posted bool, err error) {
+func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, opts postOptions) (posted bool, err error) {
+	release := opts.release
 	if !InTx(ctx) {
 		return false, apperrors.New(apperrors.Internal,
 			"PostJournal must run inside a transaction: a journal and its postings cannot be allowed to commit separately")
@@ -75,7 +97,15 @@ func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, rele
 		account.held -= release.amount
 	}
 
-	return true, r.writePostings(ctx, journal, accounts)
+	if err := r.writePostings(ctx, journal, accounts); err != nil {
+		return false, err
+	}
+	if opts.check != nil {
+		if err := opts.check(ctx); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 // validateJournal checks what must be true of any journal before the database
@@ -121,14 +151,14 @@ func validateJournal(journal *dao.Journal) error {
 func (r *Repository) insertJournal(ctx context.Context, journal *dao.Journal) (posted bool, existing *dao.Journal, err error) {
 	const insert = `
 		INSERT INTO ledger_journals (public_id, external_id, kind, product_id,
-		                             source_kind, source_id, reverses_journal_id, memo)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		                             source_kind, source_id, reverses_journal_id, memo, reason_code)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (external_id) DO NOTHING
 		RETURNING id, posted_at, created_at`
 
 	err = r.executor(ctx).QueryRowContext(ctx, insert,
 		journal.PublicID, journal.ExternalID, journal.Kind, journal.ProductID,
-		journal.SourceKind, journal.SourceID, journal.ReversesJournalID, journal.Memo,
+		journal.SourceKind, journal.SourceID, journal.ReversesJournalID, journal.Memo, journal.ReasonCode,
 	).Scan(&journal.ID, &journal.PostedAt, &journal.CreatedAt)
 	if err == nil {
 		return true, nil, nil
@@ -284,7 +314,7 @@ func (r *Repository) writePostings(ctx context.Context, journal *dao.Journal, ac
 func (r *Repository) GetJournalByExternalID(ctx context.Context, externalID string) (*dao.Journal, error) {
 	const query = `
 		SELECT id, public_id, external_id, kind, product_id, source_kind, source_id,
-		       reverses_journal_id, memo, posted_at, created_at
+		       reverses_journal_id, memo, reason_code, posted_at, created_at
 		FROM ledger_journals WHERE external_id = $1`
 
 	journal, err := scanJournal(r.executor(ctx).QueryRowContext(ctx, query, externalID))
@@ -334,7 +364,7 @@ func (r *Repository) listPostings(ctx context.Context, journalID int64) ([]*dao.
 func scanJournal(row rowScanner) (*dao.Journal, error) {
 	var j dao.Journal
 	err := row.Scan(&j.ID, &j.PublicID, &j.ExternalID, &j.Kind, &j.ProductID,
-		&j.SourceKind, &j.SourceID, &j.ReversesJournalID, &j.Memo, &j.PostedAt, &j.CreatedAt)
+		&j.SourceKind, &j.SourceID, &j.ReversesJournalID, &j.Memo, &j.ReasonCode, &j.PostedAt, &j.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

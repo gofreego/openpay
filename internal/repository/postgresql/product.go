@@ -43,6 +43,11 @@ func (r *Repository) GetProductByCode(ctx context.Context, code string) (*dao.Pr
 	return r.getProduct(ctx, query, code, "product with code %q not found", code)
 }
 
+func (r *Repository) GetProductByID(ctx context.Context, id int64) (*dao.Product, error) {
+	const query = `SELECT ` + productColumns + ` FROM products WHERE id = $1`
+	return r.getProduct(ctx, query, strconv.FormatInt(id, 10), "product %d not found", id)
+}
+
 func (r *Repository) getProduct(ctx context.Context, query, arg, notFoundMsg string, notFoundArgs ...any) (*dao.Product, error) {
 	product, err := scanProduct(r.executor(ctx).QueryRowContext(ctx, query, arg))
 	if err != nil {

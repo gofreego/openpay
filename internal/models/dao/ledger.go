@@ -111,8 +111,11 @@ type Journal struct {
 
 	ReversesJournalID *int64
 
-	Memo     string
-	PostedAt time.Time
+	Memo string
+	// ReasonCode says why money moved when no payment explains it — a grant or
+	// an adjustment. Drawn from a fixed list, so it can be reported on.
+	ReasonCode *string
+	PostedAt   time.Time
 
 	Postings []*Posting
 

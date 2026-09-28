@@ -59,6 +59,27 @@ func ProductPromotions(product string) string {
 	return "expense:" + product + ":promotions"
 }
 func ProductPSPFees(product string) string { return "expense:" + product + ":psp_fees" }
+
+// ProductAdjustments funds operator corrections and goodwill credits. Kept
+// apart from promotions: an adjustment puts right something that went wrong,
+// a promotion is a decision to give money away, and finance reads them
+// differently.
+func ProductAdjustments(product string) string {
+	return "expense:" + product + ":adjustments"
+}
+
+// PlatformScope stands in for the product segment of a platform-scoped
+// wallet's account code, which belongs to no product.
+const PlatformScope = "platform"
+
+// WalletAccount is the liability backing one customer's wallet of one type,
+// e.g. wallet:cus_0199…:zshala:MAIN. Pass PlatformScope as product for a
+// platform-scoped type. Customer public ids never contain ':', so the code
+// cannot be ambiguous.
+func WalletAccount(customer, product, walletType string) string {
+	return "wallet:" + customer + ":" + product + ":" + walletType
+}
+
 func ProductRefundsPayable(product string) string {
 	return "liability:" + product + ":refunds_payable"
 }
@@ -126,6 +147,7 @@ func ProductChart(product *dao.Product) []*dao.LedgerAccount {
 		chartAccount(ProductPromotions(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
 		chartAccount(ProductPSPFees(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
 		chartAccount(ProductRefundsPayable(code), dao.AccountLiability, dao.OwnerMerchant, owner, id),
+		chartAccount(ProductAdjustments(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
 	}
 }
 

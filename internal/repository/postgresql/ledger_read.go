@@ -165,7 +165,7 @@ func (r *Repository) GetJournalView(ctx context.Context, ref string) (*dao.Journ
 	}
 	query := `
 		SELECT j.id, j.public_id, j.external_id, j.kind, j.product_id, j.source_kind, j.source_id,
-		       j.reverses_journal_id, COALESCE(j.memo, ''), j.posted_at, j.created_at,
+		       j.reverses_journal_id, COALESCE(j.memo, ''), j.reason_code, j.posted_at, j.created_at,
 		       p.public_id, rj.public_id
 		FROM ledger_journals j
 		LEFT JOIN products p ON p.id = j.product_id
@@ -174,7 +174,7 @@ func (r *Repository) GetJournalView(ctx context.Context, ref string) (*dao.Journ
 
 	var j dao.Journal
 	err := r.executor(ctx).QueryRowContext(ctx, query, ref).Scan(&j.ID, &j.PublicID, &j.ExternalID, &j.Kind,
-		&j.ProductID, &j.SourceKind, &j.SourceID, &j.ReversesJournalID, &j.Memo, &j.PostedAt, &j.CreatedAt,
+		&j.ProductID, &j.SourceKind, &j.SourceID, &j.ReversesJournalID, &j.Memo, &j.ReasonCode, &j.PostedAt, &j.CreatedAt,
 		&j.ProductPublicID, &j.ReversesJournalPublicID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

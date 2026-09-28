@@ -2,15 +2,7 @@ package service_test
 
 import (
 	"context"
-	"database/sql"
-	"os"
-	"sync"
 	"testing"
-
-	_ "github.com/lib/pq"
-
-	"github.com/gofreego/goutils/databases/connections/pgsql"
-	sqlutils "github.com/gofreego/goutils/databases/connections/sql"
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/appcontext"
@@ -18,53 +10,18 @@ import (
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/repository/postgresql"
 	"github.com/gofreego/openpay/internal/service"
+	"github.com/gofreego/openpay/internal/testsupport"
 	"github.com/gofreego/openpay/pkg/apperrors"
 	"github.com/gofreego/openpay/pkg/ids"
 )
 
-var (
-	repoOnce sync.Once
-	repo     *postgresql.Repository
-	repoErr  error
-)
+var repo *postgresql.Repository
 
 // testService is a service over the integration-test database, freshly emptied.
 func testService(t *testing.T) *service.Service {
 	t.Helper()
-	if os.Getenv("OPENPAY_TEST_POSTGRES") == "" {
-		t.Skip("integration test: run `make test-integration` (needs docker compose up -d postgres)")
-	}
-	repoOnce.Do(func() {
-		repo, repoErr = postgresql.NewRepository(context.Background(), &sqlutils.Config{
-			Name: sqlutils.Postgres,
-			Postgresql: sqlutils.PostgresqlConfig{Primary: pgsql.Config{
-				Host: "localhost", Port: 5432, Username: "openpay", Password: "openpay",
-				DBName: "openpay_test", SSLMode: "disable",
-			}},
-		})
-	})
-	if repoErr != nil {
-		t.Fatalf("connect to test postgres: %v", repoErr)
-	}
-	truncate(t)
+	repo = testsupport.Repository(t)
 	return service.NewService(context.Background(), &service.Config{}, repo)
-}
-
-// truncate empties the tables these tests touch, over a connection of its own
-// so the repository needs no test-only method. TRUNCATE bypasses the ledger's
-// immutability triggers, which fire on DELETE only.
-func truncate(t *testing.T) {
-	t.Helper()
-	db, err := sql.Open("postgres", "host=localhost port=5432 user=openpay password=openpay dbname=openpay_test sslmode=disable")
-	if err != nil {
-		t.Fatalf("open: %v", err)
-	}
-	defer db.Close()
-	if _, err := db.Exec(`TRUNCATE ledger_check_runs, ledger_holds, ledger_postings, ledger_journals,
-		ledger_balances, ledger_accounts, wallet_types, customers, audit_log, service_credentials,
-		products, idempotency_keys RESTART IDENTITY CASCADE`); err != nil {
-		t.Fatalf("truncate (have migrations run?): %v", err)
-	}
 }
 
 func as(perms ...string) context.Context {

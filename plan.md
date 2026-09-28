@@ -23,7 +23,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4; wallet-listing scope and nullable `customer_id` land with their tables in P3/P4/P7) |
 | 2 | Ledger Core | ✅ Complete |
-| 3 | Wallets | ☐ Not started |
+| 3 | Wallets | ◐ Wallet engine done (open, fund, grant, spend, transfer, adjust, holds, limits); APIs, events, `float_held`, expiry and aggregate limits next |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ☐ Not started |
@@ -844,17 +844,29 @@ passes repeatedly with `-race`; no code path can mutate a posting.
 
 **Goal:** wallets on top of the ledger, exercisable end-to-end without any PSP.
 
-- [ ] `wallets` table; creating a wallet provisions exactly one `ledger_account`
+- [x] `wallets` table; creating a wallet provisions exactly one `ledger_account`
       (LIABILITY) — unique on `(customer_id, wallet_type_id)`
-- [ ] Lazy wallet creation on first reference; idempotent
-- [ ] Operations: credit, debit, transfer (wallet→wallet, same currency), hold,
-      capture, release — each mapping to a ledger journal with a derived `external_id`
-- [ ] **Capability enforcement from `WalletType` (D10), in one place**: a single
+- [x] Lazy wallet creation on first reference; idempotent (race-tested: 15
+      concurrent opens → one wallet, one account)
+- [x] Operations: credit, debit, transfer (wallet→wallet, same currency), hold,
+      capture, release — each mapping to a ledger journal with a derived `external_id`.
+      In `internal/wallet`. Transfers are same-**type** only: MAIN→BONUS would mix
+      purchased and granted money. A replayed reference with a different amount is
+      refused, not silently answered with the first journal.
+      Spend and fund are engine-only for now: the public spend path is Orders (P7),
+      which carries the tax breakdown D13 requires, and fund is Payments (P4)
+- [x] **Capability enforcement from `WalletType` (D10), in one place**: a single
       `assertAllowed(walletType, operation)` guard covering fundable, grantable,
       withdrawable, transferable, overdraft, limits and velocity. Every wallet operation
-      routes through it — scattered `if walletType.X` checks are how these rules rot
-- [ ] Grant operation (promotional credit): `Dr expense:promotions`,
-      `Cr wallet` — only permitted on a `grantable` type, always reason-coded
+      routes through it — scattered `if walletType.X` checks are how these rules rot.
+      Balance-dependent limits (max balance, daily load) are checked by
+      `PostJournalChecked` **while the ledger lock is held**: checked beforehand, 20
+      concurrent grants all passed a ₹10 cap and reached ₹20 (tried and measured).
+      Daily windows use the Indian day (IST), not UTC's
+- [x] Grant operation (promotional credit): `Dr expense:promotions`,
+      `Cr wallet` — only permitted on a `grantable` type, always reason-coded.
+      A product funds grants to its own wallets only. `reason_code` is a journal
+      column, from fixed lists (`wallet.GrantReasons`, `wallet.AdjustReasons`)
 - [ ] Wallet expiry / lapse: sweeper posting expired balance to `income:breakage`
       (purchased) or back to `expense:promotions` (granted) — the write-back differs by
       funding source, which is precisely why D10 keeps them as separate types

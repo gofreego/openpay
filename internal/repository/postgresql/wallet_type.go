@@ -72,6 +72,19 @@ func (r *Repository) GetWalletTypeByPublicID(ctx context.Context, publicID strin
 	return walletType, nil
 }
 
+func (r *Repository) GetWalletTypeByID(ctx context.Context, id int64) (*dao.WalletType, error) {
+	const query = `SELECT ` + walletTypeColumns + walletTypeFrom + ` WHERE wt.id = $1`
+
+	walletType, err := scanWalletType(r.executor(ctx).QueryRowContext(ctx, query, id))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.New(apperrors.NotFound, "wallet type %d not found", id)
+		}
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to load wallet type")
+	}
+	return walletType, nil
+}
+
 // ListWalletTypes returns a product's own types together with the
 // platform-scoped ones, because both are spendable within that product and a
 // caller asking "what wallets can this customer have here?" needs both.
