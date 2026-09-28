@@ -17,7 +17,7 @@ import (
 )
 
 func (s *Service) CreateProduct(ctx context.Context, req *openpay_v1.CreateProductRequest) (*openpay_v1.CreateProductResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermProductsWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermProductsWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {
@@ -44,6 +44,20 @@ func (s *Service) CreateProduct(ctx context.Context, req *openpay_v1.CreateProdu
 			if _, err := ledger.EnsureAccounts(ctx, s.repo, ledger.ProductChart(product)); err != nil {
 				return nil, err
 			}
+			for _, walletType := range defaultWalletTypes(product) {
+				if err := s.repo.CreateWalletType(ctx, walletType); err != nil {
+					return nil, err
+				}
+				if err := s.audit(ctx, auditParams{
+					Action:       "wallet_type.created",
+					ResourceType: "wallet_type",
+					ResourceID:   walletType.PublicID,
+					ProductID:    &product.ID,
+					After:        walletType,
+				}); err != nil {
+					return nil, err
+				}
+			}
 			if err := s.audit(ctx, auditParams{
 				Action:       "product.created",
 				ResourceType: "product",
@@ -65,8 +79,15 @@ func (s *Service) GetProduct(ctx context.Context, req *openpay_v1.GetProductRequ
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	product, err := s.repo.GetProductByPublicID(ctx, req.GetId())
 	if err != nil {
+		return nil, err
+	}
+	if err := requireVisible(scope, &product.ID, "product", req.GetId()); err != nil {
 		return nil, err
 	}
 	return &openpay_v1.GetProductResponse{Product: toProtoProduct(product)}, nil
@@ -80,11 +101,16 @@ func (s *Service) ListProducts(ctx context.Context, req *openpay_v1.ListProducts
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	products, total, err := s.repo.ListProducts(ctx, &filter.Product{
 		Limit:  int(req.GetLimit()),
 		Offset: int(req.GetOffset()),
 		Search: req.GetSearch(),
 		Status: fromProtoProductStatus(req.GetStatus()),
+		Scope:  scope,
 	})
 	if err != nil {
 		return nil, err
@@ -98,7 +124,7 @@ func (s *Service) ListProducts(ctx context.Context, req *openpay_v1.ListProducts
 }
 
 func (s *Service) UpdateProduct(ctx context.Context, req *openpay_v1.UpdateProductRequest) (*openpay_v1.UpdateProductResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermProductsWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermProductsWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {

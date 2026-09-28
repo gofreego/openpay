@@ -15,6 +15,9 @@ type Product struct {
 
 	// Status is optional; empty means any.
 	Status dao.ProductStatus
+
+	// Scope is required: the repository refuses a listing without one.
+	Scope *ProductScope
 }
 
 // WithDefaults bounds the page size, so a caller cannot ask for the whole table

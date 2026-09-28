@@ -21,7 +21,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | Phase | Name | Status |
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
-| 1 | Products & Catalog | ◐ Exit criteria met; operator product scope, MAIN/BONUS seeding and scope-boundary tests still open (fee policies deferred to P4) |
+| 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4; wallet-listing scope and nullable `customer_id` land with their tables in P3/P4/P7) |
 | 2 | Ledger Core | ✅ Complete |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
@@ -659,21 +659,30 @@ to OpenPay.
         bug. The stored digest is algorithm-tagged so this can change without a migration.
       Not an interceptor in the end: `auth.RequireOperator` / `RequireService` are called
       at the top of each service method, the one point both transports pass through
-- [ ] **Operator product scope** (U-D6): resolve `x-user-perms` into an effective
+- [x] **Operator product scope** (U-D6): resolve `x-user-perms` into an effective
       product set — all products for central ops, a named set for product ops — and
       apply it as a repository-layer filter on every read. Both auth paths therefore
       converge on the same question: *which products may this caller see?*
-      **Not started** — every operator currently sees every product
-- [ ] ◐ Permission taxonomy covering both the verb and the scope (e.g.
+      Granted as permissions: `openpay:scope:all` (central ops) or
+      `openpay:scope:product:<code>` (repeatable). No scope permission sees nothing.
+      Listings pass a `filter.ProductScope` the repository **requires** — a nil scope
+      is an error, not "everything". Single-record reads outside scope return
+      NotFound (no existence oracle); an explicit filter naming another product
+      returns PermissionDenied (never a quietly empty list). Platform-level actions
+      use `auth.RequirePlatformOperator`: product/wallet-type/credential writes,
+      platform ledger accounts, the platform-wide trial balance, ledger checks
+- [x] Permission taxonomy covering both the verb and the scope (e.g.
       `openpay:payments:read` + product scope), plus the platform-only permissions that
       no product-scoped operator can hold: provider config, settlement/recon, platform
       ledger accounts, wallet type and fee policy writes.
-      Verbs exist (`internal/auth/permissions.go`); the product-scope half waits on
-      operator product scope above
-- [ ] Tests for the scope boundary specifically: a product-scoped operator requesting
+      Verb and scope are independent grants, so the permission list does not
+      multiply by the number of products
+- [x] Tests for the scope boundary specifically: a product-scoped operator requesting
       another product's payment, ledger account, or a shared customer's other-product
       wallets gets nothing — not a filtered-empty list that a later refactor can widen.
-      **Open** — depends on operator product scope, and on wallets (Phase 3)
+      `internal/service/scope_test.go`, through the real service and database; removing
+      the repository filter makes them fail. The shared-customer wallet case joins
+      them in Phase 3
 - [x] Product CRUD (admin API): code, display name, status, default currency
 - [x] `WalletType` config — the full capability set from D10: code, currency, scope,
       `fundable`, `grantable`, `withdrawable`, `transferable`, `refundable_to_source`,
@@ -692,9 +701,12 @@ to OpenPay.
       Implemented stricter than stated: `UpdateWalletType` accepts only name, status and
       limits, so currency, scope and capabilities are immutable from creation. Revisit
       if a real need to loosen a flag on an unused type appears
-- [ ] Seed the two canonical types per product so the distinction is the default path:
+- [x] Seed the two canonical types per product so the distinction is the default path:
       `MAIN` (fundable, closed-loop) and `BONUS` (grantable, expiring, non-withdrawable).
-      **Not started** — both are creatable through the API, but nothing seeds them
+      Created in `CreateProduct`'s transaction. BONUS: fixed expiry, 365 days.
+      Both `refundable_to_source`, so a refund returns to the balance that paid —
+      promotional credit can never become real money through a refund. Products
+      created before this change are not backfilled
 - [ ] `fee_policies` table (D12): mode `ABSORBED | DEDUCTED | PASSED_ON` keyed by
       `(product_id, purpose)` with a platform default row; resolution is a lookup with a
       documented precedence, not a rules engine.

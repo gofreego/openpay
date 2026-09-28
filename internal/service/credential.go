@@ -21,7 +21,7 @@ const keyIDPrefix = "opk"
 // The secret is returned once, here, and never again: only its hash is stored.
 // That is the point — a database leak hands over no working credentials.
 func (s *Service) CreateServiceCredential(ctx context.Context, req *openpay_v1.CreateServiceCredentialRequest) (*openpay_v1.CreateServiceCredentialResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermCredentialsWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermCredentialsWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {
@@ -75,7 +75,7 @@ func (s *Service) CreateServiceCredential(ctx context.Context, req *openpay_v1.C
 }
 
 func (s *Service) ListServiceCredentials(ctx context.Context, req *openpay_v1.ListServiceCredentialsRequest) (*openpay_v1.ListServiceCredentialsResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermCredentialsWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermCredentialsWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {
@@ -100,7 +100,7 @@ func (s *Service) ListServiceCredentials(ctx context.Context, req *openpay_v1.Li
 }
 
 func (s *Service) RevokeServiceCredential(ctx context.Context, req *openpay_v1.RevokeServiceCredentialRequest) (*openpay_v1.RevokeServiceCredentialResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermCredentialsWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermCredentialsWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {

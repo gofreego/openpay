@@ -78,3 +78,47 @@ func TestRequireServiceRejectsOperatorsAndAnonymous(t *testing.T) {
 		t.Errorf("bare context: error code = %q, want %q", apperrors.CodeOf(err), apperrors.Unauthenticated)
 	}
 }
+
+func TestOperatorScope(t *testing.T) {
+	cases := []struct {
+		name  string
+		perms []string
+		all   bool
+		codes []string
+	}{
+		{"central ops", []string{PermProductsRead, PermScopeAll}, true, nil},
+		{"one product", []string{PermScopeProductPrefix + "zshala"}, false, []string{"zshala"}},
+		{"two products", []string{PermScopeProductPrefix + "zshala", PermScopeProductPrefix + "bappaapp"}, false, []string{"zshala", "bappaapp"}},
+		{"verbs only", []string{PermProductsRead}, false, nil},
+		{"empty product code grants nothing", []string{PermScopeProductPrefix}, false, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			all, codes := OperatorScope(appcontext.Caller{Kind: appcontext.KindOperator, Permissions: tc.perms})
+			if all != tc.all || len(codes) != len(tc.codes) {
+				t.Fatalf("OperatorScope = %t %v, want %t %v", all, codes, tc.all, tc.codes)
+			}
+			for i := range codes {
+				if codes[i] != tc.codes[i] {
+					t.Errorf("code %d = %q, want %q", i, codes[i], tc.codes[i])
+				}
+			}
+		})
+	}
+}
+
+// A platform-level action needs the verb and the whole-estate scope; holding
+// the verb for every product individually is still not the platform.
+func TestRequirePlatformOperator(t *testing.T) {
+	if err := RequirePlatformOperator(operatorCtx(PermProductsWrite, PermScopeAll), PermProductsWrite); err != nil {
+		t.Errorf("central ops refused: %v", err)
+	}
+	err := RequirePlatformOperator(operatorCtx(PermProductsWrite, PermScopeProductPrefix+"zshala"), PermProductsWrite)
+	if !apperrors.Is(err, apperrors.PermissionDenied) {
+		t.Errorf("product ops: error code = %q, want %q", apperrors.CodeOf(err), apperrors.PermissionDenied)
+	}
+	err = RequirePlatformOperator(operatorCtx(PermScopeAll), PermProductsWrite)
+	if !apperrors.Is(err, apperrors.PermissionDenied) {
+		t.Errorf("scope without the verb: error code = %q, want %q", apperrors.CodeOf(err), apperrors.PermissionDenied)
+	}
+}

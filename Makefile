@@ -17,7 +17,8 @@ test-integration:
 	@# sql-migrator waits for a signal after finishing ("press ctrl+c to exit"),
 	@# so run it in the background and stop it once the migration is applied.
 	@sql-migrator ./migrator.test.yaml & MIG=$$!; sleep 5; kill $$MIG 2>/dev/null || true
-	OPENPAY_TEST_POSTGRES=1 go test -race ./...
+	@# -p 1: packages share openpay_test and TRUNCATE it, so run one at a time.
+	OPENPAY_TEST_POSTGRES=1 go test -race -p 1 ./...
 
 migrate:
 	@sql-migrator ./migrator.yaml & MIG=$$!; sleep 5; kill $$MIG 2>/dev/null || true

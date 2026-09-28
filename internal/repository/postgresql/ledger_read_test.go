@@ -200,7 +200,7 @@ func TestListAccountViewsCodePrefixIsLiteral(t *testing.T) {
 	account(t, repo, "income:aXb:sales", dao.AccountIncome)
 	account(t, repo, "psp:razorpay:receivable", dao.AccountAsset)
 
-	views, total, err := repo.ListAccountViews(ctx, &filter.LedgerAccount{CodePrefix: "income:a_"})
+	views, total, err := repo.ListAccountViews(ctx, &filter.LedgerAccount{CodePrefix: "income:a_", Scope: filter.AllProducts()})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestListAccountViewsCodePrefixIsLiteral(t *testing.T) {
 		t.Errorf("prefix income:a_ matched %d accounts (total %d), want only income:a_b:sales", len(views), total)
 	}
 
-	views, _, err = repo.ListAccountViews(ctx, &filter.LedgerAccount{Type: dao.AccountAsset, PlatformOnly: true})
+	views, _, err = repo.ListAccountViews(ctx, &filter.LedgerAccount{Type: dao.AccountAsset, PlatformOnly: true, Scope: filter.AllProducts()})
 	if err != nil {
 		t.Fatalf("list assets: %v", err)
 	}

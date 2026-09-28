@@ -149,7 +149,7 @@ func TestListProducts(t *testing.T) {
 	}
 
 	t.Run("all", func(t *testing.T) {
-		products, total, err := repo.ListProducts(ctx, &filter.Product{})
+		products, total, err := repo.ListProducts(ctx, &filter.Product{Scope: filter.AllProducts()})
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -159,7 +159,7 @@ func TestListProducts(t *testing.T) {
 	})
 
 	t.Run("by status", func(t *testing.T) {
-		products, total, err := repo.ListProducts(ctx, &filter.Product{Status: dao.ProductActive})
+		products, total, err := repo.ListProducts(ctx, &filter.Product{Status: dao.ProductActive, Scope: filter.AllProducts()})
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -169,7 +169,7 @@ func TestListProducts(t *testing.T) {
 	})
 
 	t.Run("by search", func(t *testing.T) {
-		products, total, err := repo.ListProducts(ctx, &filter.Product{Search: "ZSHA"})
+		products, total, err := repo.ListProducts(ctx, &filter.Product{Search: "ZSHA", Scope: filter.AllProducts()})
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -184,7 +184,7 @@ func TestListProducts(t *testing.T) {
 	// The total must describe the whole filtered set, not the page, or a UI
 	// cannot render pagination correctly.
 	t.Run("paging keeps total of the full set", func(t *testing.T) {
-		products, total, err := repo.ListProducts(ctx, &filter.Product{Limit: 2, Offset: 0})
+		products, total, err := repo.ListProducts(ctx, &filter.Product{Limit: 2, Offset: 0, Scope: filter.AllProducts()})
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -195,7 +195,7 @@ func TestListProducts(t *testing.T) {
 			t.Errorf("total = %d, want 3 (the whole set, not the page)", total)
 		}
 
-		second, total, err := repo.ListProducts(ctx, &filter.Product{Limit: 2, Offset: 2})
+		second, total, err := repo.ListProducts(ctx, &filter.Product{Limit: 2, Offset: 2, Scope: filter.AllProducts()})
 		if err != nil {
 			t.Fatalf("list: %v", err)
 		}
@@ -206,7 +206,7 @@ func TestListProducts(t *testing.T) {
 
 	// An unbounded listing would let one caller pull the whole table.
 	t.Run("limit is capped", func(t *testing.T) {
-		f := &filter.Product{Limit: 10_000}
+		f := &filter.Product{Limit: 10_000, Scope: filter.AllProducts()}
 		if _, _, err := repo.ListProducts(ctx, f); err != nil {
 			t.Fatalf("list: %v", err)
 		}

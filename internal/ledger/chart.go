@@ -175,7 +175,7 @@ func EnsureChart(ctx context.Context, repo Repository, cfg ChartConfig) (created
 	// Offset paging is safe here: listing is newest-first and products are
 	// never deleted, so a product registered mid-walk only pushes rows down a
 	// page — one is visited twice, which is harmless, and none is skipped.
-	f := &filter.Product{Limit: 100}
+	f := &filter.Product{Limit: 100, Scope: filter.AllProducts()}
 	for {
 		products, _, err := repo.ListProducts(ctx, f)
 		if err != nil {

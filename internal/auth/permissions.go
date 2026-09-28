@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gofreego/openpay/internal/appcontext"
 	"github.com/gofreego/openpay/pkg/apperrors"
@@ -10,6 +11,21 @@ import (
 // Permissions an operator can hold. They arrive in x-user-perms, issued by
 // OpenAuth, and are checked here — the console gating its own buttons is
 // cosmetic, not a boundary (plan.md U-D6).
+// Product scope: which products an operator's other permissions apply to.
+// Verbs and scope are separate on purpose — "may read payments" and "for
+// which products" are independent grants, and combining them into
+// openpay:zshala:payments:read would multiply the permission list by every
+// product (plan.md U-D6).
+const (
+	// PermScopeAll is central ops: every product, plus the platform-level
+	// accounts and operations that belong to no product.
+	PermScopeAll = "openpay:scope:all"
+	// PermScopeProductPrefix + a product code grants that one product. An
+	// operator may hold several. Codes rather than ids, because codes are
+	// what a person assigning roles in OpenAuth can read.
+	PermScopeProductPrefix = "openpay:scope:product:"
+)
+
 const (
 	PermProductsRead     = "openpay:products:read"
 	PermProductsWrite    = "openpay:products:write"
@@ -80,4 +96,36 @@ func RequireService(ctx context.Context) (productID int64, err error) {
 			"this endpoint requires a service credential")
 	}
 	return caller.ProductID, nil
+}
+
+// OperatorScope describes the product scope an operator's permissions grant:
+// every product, or the listed product codes. It says nothing about whether
+// those codes exist; resolving them is the caller's job.
+func OperatorScope(caller appcontext.Caller) (all bool, productCodes []string) {
+	for _, p := range caller.Permissions {
+		if p == PermScopeAll {
+			return true, nil
+		}
+		if code, ok := strings.CutPrefix(p, PermScopeProductPrefix); ok && code != "" {
+			productCodes = append(productCodes, code)
+		}
+	}
+	return false, productCodes
+}
+
+// RequirePlatformOperator asserts an operator holding permission and the
+// whole-estate scope. For operations that are platform-level by nature —
+// registering products, configuring wallet types, credentials, platform
+// ledger accounts — which no product-scoped operator may perform whatever
+// verbs they hold.
+func RequirePlatformOperator(ctx context.Context, permission string) error {
+	if err := RequireOperator(ctx, permission); err != nil {
+		return err
+	}
+	caller, _ := appcontext.CallerFrom(ctx)
+	if all, _ := OperatorScope(caller); !all {
+		return apperrors.New(apperrors.PermissionDenied,
+			"this is a platform-level action and requires the %q scope", PermScopeAll)
+	}
+	return nil
 }

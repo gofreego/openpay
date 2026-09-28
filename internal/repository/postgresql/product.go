@@ -71,6 +71,16 @@ func (r *Repository) ListProducts(ctx context.Context, f *filter.Product) ([]*da
 		args = append(args, f.Status)
 		where = append(where, "status = $"+strconv.Itoa(len(args)))
 	}
+	scoped, err := scopeCondition(f.Scope, "id", func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	if scoped != "" {
+		where = append(where, scoped)
+	}
 
 	clause := ""
 	if len(where) > 0 {

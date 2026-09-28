@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Service) CreateWalletType(ctx context.Context, req *openpay_v1.CreateWalletTypeRequest) (*openpay_v1.CreateWalletTypeResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermWalletTypesWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermWalletTypesWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {
@@ -160,9 +160,20 @@ func (s *Service) GetWalletType(ctx context.Context, req *openpay_v1.GetWalletTy
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	walletType, err := s.repo.GetWalletTypeByPublicID(ctx, req.GetId())
 	if err != nil {
 		return nil, err
+	}
+	// A platform-scoped type is spendable in every product, so every product's
+	// operators may read it.
+	if walletType.ProductID != nil {
+		if err := requireVisible(scope, walletType.ProductID, "wallet type", req.GetId()); err != nil {
+			return nil, err
+		}
 	}
 	return &openpay_v1.GetWalletTypeResponse{WalletType: toProtoWalletType(walletType)}, nil
 }
@@ -175,8 +186,15 @@ func (s *Service) ListWalletTypes(ctx context.Context, req *openpay_v1.ListWalle
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	product, err := s.repo.GetProductByPublicID(ctx, req.GetProductId())
 	if err != nil {
+		return nil, err
+	}
+	if err := requireProductInScope(scope, product.ID); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +211,7 @@ func (s *Service) ListWalletTypes(ctx context.Context, req *openpay_v1.ListWalle
 }
 
 func (s *Service) UpdateWalletType(ctx context.Context, req *openpay_v1.UpdateWalletTypeRequest) (*openpay_v1.UpdateWalletTypeResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermWalletTypesWrite); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermWalletTypesWrite); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {
@@ -336,4 +354,50 @@ func fromProtoWalletTypeStatus(s openpay_v1.WalletTypeStatus) dao.WalletTypeStat
 		return dao.WalletTypeArchived
 	}
 	return dao.WalletTypeActive
+}
+
+// Default wallet type codes every product is created with.
+const (
+	WalletTypeMain  = "MAIN"
+	WalletTypeBonus = "BONUS"
+)
+
+// bonusExpiryDays is how long granted balance lasts from when it was granted.
+const bonusExpiryDays = 365
+
+// defaultWalletTypes are the two types every product starts with, so that
+// keeping purchased and granted money apart is the default path rather than
+// something each product has to remember (plan.md D10).
+//
+//   - MAIN holds money the customer paid for: fundable, never expires, and
+//     closed-loop — enabling withdrawal is a separate, compliance-gated act.
+//   - BONUS holds promotional credit: grantable only, expiring, and never
+//     withdrawable. Refunds of what it paid for return to it, so a refund can
+//     never turn promotional credit into real money.
+func defaultWalletTypes(product *dao.Product) []*dao.WalletType {
+	expiry := bonusExpiryDays
+	base := func(code, name string) *dao.WalletType {
+		return &dao.WalletType{
+			PublicID:           ids.New(ids.WalletType),
+			ProductID:          &product.ID,
+			ProductPublicID:    &product.PublicID,
+			Scope:              dao.WalletScopeProduct,
+			Code:               code,
+			Name:               name,
+			Currency:           product.DefaultCurrency,
+			RefundableToSource: true,
+			ExpiryPolicy:       dao.ExpiryNone,
+			Status:             dao.WalletTypeActive,
+		}
+	}
+
+	main := base(WalletTypeMain, "Main balance")
+	main.Fundable = true
+
+	bonus := base(WalletTypeBonus, "Bonus balance")
+	bonus.Grantable = true
+	bonus.ExpiryPolicy = dao.ExpiryFixed
+	bonus.ExpiryDays = &expiry
+
+	return []*dao.WalletType{main, bonus}
 }

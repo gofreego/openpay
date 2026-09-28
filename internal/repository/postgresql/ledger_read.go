@@ -58,6 +58,13 @@ func (r *Repository) ListAccountViews(ctx context.Context, f *filter.LedgerAccou
 		args = append(args, v)
 		return "$" + strconv.Itoa(len(args))
 	}
+	scoped, err := scopeCondition(f.Scope, "a.product_id", arg)
+	if err != nil {
+		return nil, 0, err
+	}
+	if scoped != "" {
+		where = append(where, scoped)
+	}
 	switch {
 	case f.ProductID != nil:
 		where = append(where, "a.product_id = "+arg(*f.ProductID))

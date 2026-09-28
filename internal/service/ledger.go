@@ -28,8 +28,15 @@ func (s *Service) GetLedgerAccount(ctx context.Context, req *openpay_v1.GetLedge
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	view, err := s.repo.GetAccountView(ctx, req.GetId())
 	if err != nil {
+		return nil, err
+	}
+	if err := requireVisible(scope, view.Account.ProductID, "ledger account", req.GetId()); err != nil {
 		return nil, err
 	}
 	return &openpay_v1.GetLedgerAccountResponse{Account: toProtoLedgerAccount(view)}, nil
@@ -47,16 +54,29 @@ func (s *Service) ListLedgerAccounts(ctx context.Context, req *openpay_v1.ListLe
 			"product_id and platform_only are contradictory: platform accounts belong to no product")
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.GetPlatformOnly() && !scope.All() {
+		return nil, apperrors.New(apperrors.PermissionDenied,
+			"platform accounts are visible only with the %q scope", auth.PermScopeAll)
+	}
+
 	f := &filter.LedgerAccount{
 		Limit:        int(req.GetLimit()),
 		Offset:       int(req.GetOffset()),
 		PlatformOnly: req.GetPlatformOnly(),
 		Type:         fromProtoAccountType(req.GetType()),
 		CodePrefix:   req.GetCodePrefix(),
+		Scope:        scope,
 	}
 	if req.GetProductId() != "" {
 		product, err := s.repo.GetProductByPublicID(ctx, req.GetProductId())
 		if err != nil {
+			return nil, err
+		}
+		if err := requireProductInScope(scope, product.ID); err != nil {
 			return nil, err
 		}
 		f.ProductID = &product.ID
@@ -95,11 +115,18 @@ func (s *Service) GetAccountStatement(ctx context.Context, req *openpay_v1.GetAc
 		limit = 50
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	view, err := s.repo.GetAccountView(ctx, req.GetAccountId())
 	if err != nil {
 		return nil, err
 	}
 	account := view.Account
+	if err := requireVisible(scope, account.ProductID, "ledger account", req.GetAccountId()); err != nil {
+		return nil, err
+	}
 
 	// One extra row says whether an older page exists without a count query.
 	entries, err := s.repo.ListStatement(ctx, account.ID, limit+1, before)
@@ -138,8 +165,19 @@ func (s *Service) GetJournal(ctx context.Context, req *openpay_v1.GetJournalRequ
 		return nil, err
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	j, err := s.repo.GetJournalView(ctx, req.GetId())
 	if err != nil {
+		return nil, err
+	}
+	// A product's journal may post to platform accounts (a payment debits the
+	// PSP receivable), and its operators may see those legs: it is their
+	// money's movement. A platform journal — a settlement spanning products —
+	// is central-only.
+	if err := requireVisible(scope, j.ProductID, "journal", req.GetId()); err != nil {
 		return nil, err
 	}
 
@@ -182,13 +220,23 @@ func (s *Service) GetTrialBalance(ctx context.Context, req *openpay_v1.GetTrialB
 		asOf = req.GetAsOf().AsTime()
 	}
 
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var productID *int64
 	if req.GetProductId() != "" {
 		product, err := s.repo.GetProductByPublicID(ctx, req.GetProductId())
 		if err != nil {
 			return nil, err
 		}
+		if err := requireProductInScope(scope, product.ID); err != nil {
+			return nil, err
+		}
 		productID = &product.ID
+	} else if !scope.All() {
+		return nil, apperrors.New(apperrors.PermissionDenied,
+			"the platform-wide trial balance requires the %q scope; pass product_id for one product", auth.PermScopeAll)
 	}
 
 	lines, err := s.repo.TrialBalance(ctx, productID, asOf, req.GetIncludeEmpty())
@@ -228,7 +276,7 @@ func (s *Service) GetTrialBalance(ctx context.Context, req *openpay_v1.GetTrialB
 }
 
 func (s *Service) RunLedgerCheck(ctx context.Context, req *openpay_v1.RunLedgerCheckRequest) (*openpay_v1.RunLedgerCheckResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermLedgerCheck); err != nil {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermLedgerCheck); err != nil {
 		return nil, err
 	}
 
@@ -244,7 +292,9 @@ func (s *Service) RunLedgerCheck(ctx context.Context, req *openpay_v1.RunLedgerC
 }
 
 func (s *Service) ListLedgerCheckRuns(ctx context.Context, req *openpay_v1.ListLedgerCheckRunsRequest) (*openpay_v1.ListLedgerCheckRunsResponse, error) {
-	if err := auth.RequireOperator(ctx, auth.PermLedgerRead); err != nil {
+	// Platform-level: a check run covers the whole ledger, and its findings name
+	// accounts of every product.
+	if err := auth.RequirePlatformOperator(ctx, auth.PermLedgerRead); err != nil {
 		return nil, err
 	}
 	if err := validate(req); err != nil {

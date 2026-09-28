@@ -20,6 +20,9 @@ type LedgerAccount struct {
 
 	// CodePrefix matches the start of the account code, e.g. "psp:".
 	CodePrefix string
+
+	// Scope is required: the repository refuses a listing without one.
+	Scope *ProductScope
 }
 
 func (f *LedgerAccount) WithDefaults() {
