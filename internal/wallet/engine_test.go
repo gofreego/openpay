@@ -3,6 +3,7 @@ package wallet_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ type fixture struct {
 func setup(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{t: t, ctx: context.Background(), repo: testsupport.Repository(t)}
-	f.engine = wallet.New(f.repo)
+	f.engine = wallet.New(f.repo, wallet.Limits{})
 
 	f.product = f.newProduct("zshala")
 	if _, err := ledger.EnsureChart(f.ctx, f.repo, ledger.ChartConfig{Providers: []string{"mock"}}); err != nil {
@@ -412,4 +413,206 @@ func TestArchivedTypeOpensNoNewWallets(t *testing.T) {
 	}
 	_, err := f.engine.Open(f.ctx, f.customer("newcomer"), f.main)
 	wantCode(t, "new wallet of archived type", err, apperrors.WalletOperationDenied)
+}
+
+func (f *fixture) candidates(at time.Time) []dao.ExpiryCandidate {
+	f.t.Helper()
+	c, err := f.repo.ListRollingExpiryCandidates(f.ctx, at, 100)
+	if err != nil {
+		f.t.Fatalf("candidates: %v", err)
+	}
+	return c
+}
+
+func (f *fixture) accountBalance(code string) int64 {
+	f.t.Helper()
+	a, err := f.repo.GetLedgerAccountByCode(f.ctx, code)
+	if err != nil {
+		f.t.Fatalf("account %s: %v", code, err)
+	}
+	b, _ := f.repo.GetBalance(f.ctx, a.ID)
+	return b.Natural(a.Type)
+}
+
+// Dormant value lapses to where it came from: granted value back against
+// promotions, purchased value to breakage income.
+func TestRollingExpiry(t *testing.T) {
+	f := setup(t)
+	days := 30
+	expiringBonus := f.walletType(f.product, "PROMO", func(wt *dao.WalletType) {
+		wt.Grantable = true
+		wt.ExpiryPolicy = dao.ExpiryRolling
+		wt.ExpiryDays = &days
+	})
+	expiringCash := f.walletType(f.product, "VOUCHER", func(wt *dao.WalletType) {
+		wt.Fundable = true
+		wt.ExpiryPolicy = dao.ExpiryRolling
+		wt.ExpiryDays = &days
+	})
+	c := f.customer("user-1")
+	promo, voucher, main := f.open(c, expiringBonus), f.open(c, expiringCash), f.open(c, f.main)
+
+	if err := f.grant(promo, 500, "g1"); err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+	if err := f.fund(voucher, 800, "p1"); err != nil {
+		t.Fatalf("fund voucher: %v", err)
+	}
+	if err := f.fund(main, 900, "p2"); err != nil {
+		t.Fatalf("fund main: %v", err)
+	}
+
+	if got := f.candidates(time.Now().Add(29 * 24 * time.Hour)); len(got) != 0 {
+		t.Errorf("candidates before expiry = %v, want none", got)
+	}
+	due := f.candidates(time.Now().Add(31 * 24 * time.Hour))
+	if len(due) != 2 {
+		t.Fatalf("candidates after expiry = %v, want PROMO and VOUCHER (MAIN never expires)", due)
+	}
+	for _, candidate := range due {
+		if _, err := f.engine.Expire(f.ctx, candidate); err != nil {
+			t.Fatalf("expire %s: %v", candidate.WalletPublicID, err)
+		}
+		// A second sweep over the same dormant period changes nothing.
+		if _, err := f.engine.Expire(f.ctx, candidate); err != nil {
+			t.Errorf("re-expiring %s: %v", candidate.WalletPublicID, err)
+		}
+	}
+
+	if f.balance(promo) != 0 || f.balance(voucher) != 0 || f.balance(main) != 900 {
+		t.Errorf("promo %d, voucher %d, main %d; want 0, 0, 900", f.balance(promo), f.balance(voucher), f.balance(main))
+	}
+	if got := f.accountBalance(ledger.ProductPromotions("zshala")); got != 0 {
+		t.Errorf("promotions expense = %d, want 0 — the lapsed grant was never consumed", got)
+	}
+	if got := f.accountBalance(ledger.ProductBreakage("zshala")); got != 800 {
+		t.Errorf("breakage income = %d, want 800", got)
+	}
+	f.assertLedgerHealthy()
+}
+
+// Activity between finding a dormant wallet and expiring it cancels the
+// expiry: the customer just used their balance, so it is not dormant.
+func TestExpiryIsCancelledByActivity(t *testing.T) {
+	f := setup(t)
+	days := 30
+	promoType := f.walletType(f.product, "PROMO", func(wt *dao.WalletType) {
+		wt.Grantable = true
+		wt.ExpiryPolicy = dao.ExpiryRolling
+		wt.ExpiryDays = &days
+	})
+	promo := f.open(f.customer("user-1"), promoType)
+	if err := f.grant(promo, 500, "g1"); err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+
+	due := f.candidates(time.Now().Add(31 * 24 * time.Hour))
+	if len(due) != 1 {
+		t.Fatalf("candidates = %v, want one", due)
+	}
+	if err := f.spend(promo, 100, "o1"); err != nil {
+		t.Fatalf("spend: %v", err)
+	}
+
+	_, err := f.engine.Expire(f.ctx, due[0])
+	wantCode(t, "expire after activity", err, apperrors.FailedPrecondition)
+	if got := f.balance(promo); got != 400 {
+		t.Errorf("PROMO = %d, want 400 — nothing should have lapsed", got)
+	}
+
+	// A wallet with an open hold is in use, and is not a candidate at all.
+	if _, err := f.engine.Hold(f.ctx, wallet.HoldRequest{Wallet: promo, Amount: 50, Reference: "ord",
+		ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatalf("hold: %v", err)
+	}
+	if got := f.candidates(time.Now().Add(31 * 24 * time.Hour)); len(got) != 0 {
+		t.Errorf("candidates with an open hold = %v, want none", got)
+	}
+	f.assertLedgerHealthy()
+}
+
+// Per-person caps span products: one customer's MAIN in Zshala and MAIN in
+// BappaApp count together, because a customer is one person platform-wide.
+func TestCustomerLimitsSpanProducts(t *testing.T) {
+	f := setup(t)
+	f.engine = wallet.New(f.repo, wallet.Limits{MaxCustomerBalance: 1000, MaxCustomerDailyLoad: 1500})
+
+	bappa := f.newProduct("bappaapp")
+	bappaMain := f.walletType(bappa, "MAIN", func(wt *dao.WalletType) { wt.Fundable = true })
+	c := f.customer("user-1")
+	zMain, bMain := f.open(c, f.main), f.open(c, bappaMain)
+
+	if err := f.fund(zMain, 700, "p1"); err != nil {
+		t.Fatalf("fund zshala: %v", err)
+	}
+	fundBappa := func(amount int64, ref string) error {
+		_, err := f.engine.Fund(f.ctx, wallet.FundRequest{Wallet: bMain, Amount: amount, Provider: "mock",
+			ProductID: bappa.ID, ExternalID: "payment:" + ref + ":capture"})
+		return err
+	}
+	wantCode(t, "balance cap across products", fundBappa(400, "p2"), apperrors.WalletOperationDenied)
+	if err := fundBappa(300, "p3"); err != nil {
+		t.Fatalf("fund up to the cap: %v", err)
+	}
+
+	// Spending frees balance headroom but not load headroom.
+	if err := f.spend(zMain, 700, "o1"); err != nil {
+		t.Fatalf("spend: %v", err)
+	}
+	if err := f.fund(zMain, 500, "p4"); err != nil {
+		t.Fatalf("fund to 1500 loaded today: %v", err)
+	}
+	wantCode(t, "daily load cap across products", f.fund(zMain, 1, "p5"), apperrors.WalletOperationDenied)
+
+	// Granted value is not real money and is outside these caps.
+	bonus := f.open(c, f.bonus)
+	if err := f.grant(bonus, 5000, "g1"); err != nil {
+		t.Errorf("grant refused by a cap on real money: %v", err)
+	}
+}
+
+// Every movement emits exactly one event per wallet, in the same transaction;
+// a replay emits nothing, because nothing moved.
+func TestWalletEvents(t *testing.T) {
+	f := setup(t)
+	gift := f.walletType(f.product, "GIFT", func(wt *dao.WalletType) {
+		wt.Fundable = true
+		wt.Transferable = true
+	})
+	alice, bob := f.open(f.customer("alice"), gift), f.open(f.customer("bob"), gift)
+
+	if err := f.fund(alice, 1000, "p1"); err != nil {
+		t.Fatalf("fund: %v", err)
+	}
+	if err := f.fund(alice, 1000, "p1"); err != nil {
+		t.Fatalf("replayed fund: %v", err)
+	}
+	if _, err := f.engine.Transfer(f.ctx, wallet.TransferRequest{From: alice, To: bob, Amount: 300, Reference: "t1"}); err != nil {
+		t.Fatalf("transfer: %v", err)
+	}
+
+	var events []*dao.OutboxEvent
+	if err := f.repo.WithTx(f.ctx, func(ctx context.Context) error {
+		var err error
+		events, err = f.repo.ClaimUnpublishedOutboxEvents(ctx, 100)
+		return err
+	}); err != nil {
+		t.Fatalf("read outbox: %v", err)
+	}
+
+	var got []string
+	for _, e := range events {
+		got = append(got, e.Topic+":"+e.AggregateID)
+	}
+	want := []string{
+		wallet.TopicWalletCredited + ":" + alice.PublicID,
+		wallet.TopicWalletDebited + ":" + alice.PublicID,
+		wallet.TopicWalletCredited + ":" + bob.PublicID,
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("events = %v, want %v", got, want)
+	}
+	if len(events) == 3 && !strings.Contains(string(events[1].Payload), `"balance_after":700`) {
+		t.Errorf("debit payload %s, want balance_after 700", events[1].Payload)
+	}
 }

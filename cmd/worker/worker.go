@@ -1,7 +1,7 @@
 // Package worker runs OpenPay's background jobs: the outbox drainer, the
 // idempotency sweeper, the chart-of-accounts bootstrap and the ledger
-// invariant checker; later the payment status poller, hold expiry sweeper and
-// settlement ingest.
+// invariant checker, and the hold and wallet expiry sweepers; later the
+// payment status poller and settlement ingest.
 //
 // It runs alongside the HTTP and gRPC servers via AppNames, and can also be
 // deployed on its own so background work does not compete with request traffic.
@@ -18,6 +18,7 @@ import (
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
+	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/pkg/apperrors"
 
 	"github.com/gofreego/goutils/logger"
@@ -45,7 +46,17 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	drainer := outbox.NewDrainer(w.cfg.Worker.Outbox, repo, outbox.LogPublisher{})
 
-	w.done.Add(4)
+	engine := wallet.New(repo, w.cfg.Wallet)
+
+	w.done.Add(6)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "hold expiry sweeper", w.cfg.Worker.HoldSweepInterval, func() { w.expireHolds(ctx, repo) })
+	}()
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "wallet expiry sweeper", w.cfg.Worker.WalletExpiryInterval, func() { w.expireWallets(ctx, repo, engine) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.checkLedger(ctx, repo)
@@ -102,6 +113,78 @@ func (w *Worker) ensureChart(ctx context.Context, repo service.Repository) {
 			return
 		case <-time.After(retryEvery):
 		}
+	}
+}
+
+// every runs job now and then on each tick until ctx ends.
+func (w *Worker) every(ctx context.Context, name string, interval time.Duration, job func()) {
+	logger.Info(ctx, "%s started: interval=%s", name, interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		job()
+		select {
+		case <-ctx.Done():
+			logger.Info(ctx, "%s stopped", name)
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+// sweepBatch bounds one pass of a sweeper, so a backlog is worked through
+// over a few ticks rather than in one enormous burst.
+const sweepBatch = 500
+
+// expireHolds releases holds past their expiry, one transaction each, so one
+// bad hold cannot block the rest. A stranded hold is customer money nobody
+// can spend (plan.md phase 7), which is why this runs every minute.
+func (w *Worker) expireHolds(ctx context.Context, repo service.Repository) {
+	due, err := repo.ListExpiredHolds(ctx, time.Now(), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list expired holds: %v", err)
+		return
+	}
+	var expired int
+	for _, externalID := range due {
+		err := repo.WithTx(ctx, func(ctx context.Context) error {
+			_, err := repo.ExpireHold(ctx, externalID)
+			return err
+		})
+		if err != nil {
+			// Captured or released in the meantime is the benign case.
+			if !apperrors.Is(err, apperrors.FailedPrecondition) {
+				logger.Error(ctx, "failed to expire hold %s: %v", externalID, err)
+			}
+			continue
+		}
+		expired++
+	}
+	if expired > 0 {
+		logger.Info(ctx, "expired %d holds", expired)
+	}
+}
+
+// expireWallets lapses dormant rolling-expiry wallets. A wallet that moved
+// since it was found is left alone (ErrExpiryStale) until the next pass.
+func (w *Worker) expireWallets(ctx context.Context, repo service.Repository, engine *wallet.Engine) {
+	candidates, err := repo.ListRollingExpiryCandidates(ctx, time.Now(), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list expiring wallets: %v", err)
+		return
+	}
+	var expired int
+	for _, candidate := range candidates {
+		if _, err := engine.Expire(ctx, candidate); err != nil {
+			if !apperrors.Is(err, apperrors.FailedPrecondition) {
+				logger.Error(ctx, "failed to expire wallet %s: %v", candidate.WalletPublicID, err)
+			}
+			continue
+		}
+		expired++
+	}
+	if expired > 0 {
+		logger.Info(ctx, "expired %d dormant wallets", expired)
 	}
 }
 

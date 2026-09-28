@@ -32,7 +32,7 @@ func captureHold(t *testing.T, repo *Repository, holdExternalID string, j *dao.J
 	var hold *dao.Hold
 	err := repo.WithTx(context.Background(), func(ctx context.Context) error {
 		var err error
-		hold, err = repo.CaptureHold(ctx, holdExternalID, j)
+		hold, _, err = repo.CaptureHold(ctx, holdExternalID, j)
 		return err
 	})
 	return hold, err

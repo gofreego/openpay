@@ -110,52 +110,53 @@ func (r *Repository) replayHold(ctx context.Context, hold *dao.Hold) error {
 // ₹300 and cost ₹250 — and the remainder simply stops being reserved.
 //
 // Capturing is idempotent on the journal's external id: a retry with the same
-// journal returns the capture already made. Capturing with a different
+// journal returns the capture already made, with captured false so the
+// caller does not repeat its side effects. Capturing with a different
 // journal, or capturing a hold that was released, is refused.
-func (r *Repository) CaptureHold(ctx context.Context, holdExternalID string, journal *dao.Journal) (*dao.Hold, error) {
+func (r *Repository) CaptureHold(ctx context.Context, holdExternalID string, journal *dao.Journal) (hold *dao.Hold, captured bool, err error) {
 	if !InTx(ctx) {
-		return nil, apperrors.New(apperrors.Internal,
+		return nil, false, apperrors.New(apperrors.Internal,
 			"CaptureHold must run inside a transaction: the capture journal and the hold's release must commit together")
 	}
 
-	hold, err := r.lockHold(ctx, holdExternalID)
+	hold, err = r.lockHold(ctx, holdExternalID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if hold.Status == dao.HoldCaptured {
 		captured, err := r.GetJournalByExternalID(ctx, journal.ExternalID)
 		if err == nil && hold.CaptureJournalID != nil && captured.ID == *hold.CaptureJournalID {
 			*journal = *captured
-			return hold, nil
+			return hold, false, nil
 		}
-		return nil, apperrors.New(apperrors.FailedPrecondition,
+		return nil, false, apperrors.New(apperrors.FailedPrecondition,
 			"hold %q was already captured by a different journal", holdExternalID)
 	}
 	if hold.Status != dao.HoldActive {
-		return nil, apperrors.New(apperrors.FailedPrecondition,
+		return nil, false, apperrors.New(apperrors.FailedPrecondition,
 			"hold %q is %s and can no longer be captured", holdExternalID, hold.Status)
 	}
 
 	account, err := r.getLedgerAccountByID(ctx, hold.AccountID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	captured := -netNaturalChange(journal, account)
-	if captured <= 0 || captured > hold.Amount {
-		return nil, apperrors.New(apperrors.InvalidArgument,
+	taken := -netNaturalChange(journal, account)
+	if taken <= 0 || taken > hold.Amount {
+		return nil, false, apperrors.New(apperrors.InvalidArgument,
 			"capturing hold %q must take between 1 and %d from %q, the journal takes %d",
-			holdExternalID, hold.Amount, account.Code, captured)
+			holdExternalID, hold.Amount, account.Code, taken)
 	}
 
 	posted, err := r.postJournal(ctx, journal, postOptions{release: &holdRelease{accountID: hold.AccountID, amount: hold.Amount}})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !posted {
 		// The journal already exists but the hold is still active, so something
 		// else posted it. Releasing the hold against it would double-count.
-		return nil, apperrors.New(apperrors.AlreadyExists,
+		return nil, false, apperrors.New(apperrors.AlreadyExists,
 			"journal %q was already posted outside this hold's capture", journal.ExternalID)
 	}
 
@@ -165,7 +166,8 @@ func (r *Repository) CaptureHold(ctx context.Context, holdExternalID string, jou
 		WHERE id = $1
 		RETURNING ` + holdColumns
 
-	return scanHold(r.executor(ctx).QueryRowContext(ctx, capture, hold.ID, dao.HoldCaptured, journal.ID, captured))
+	hold, err = scanHold(r.executor(ctx).QueryRowContext(ctx, capture, hold.ID, dao.HoldCaptured, journal.ID, taken))
+	return hold, err == nil, err
 }
 
 // ReleaseHold frees a hold without moving any money: the checkout failed, was

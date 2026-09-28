@@ -10,6 +10,7 @@ import (
 	repo "github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/telemetry"
+	"github.com/gofreego/openpay/internal/wallet"
 
 	"github.com/gofreego/goutils/api/debug"
 	"github.com/gofreego/goutils/configutils"
@@ -26,6 +27,7 @@ type Configuration struct {
 	Service      service.Config     `yaml:"Service"`
 	Worker       Worker             `yaml:"Worker"`
 	Ledger       ledger.ChartConfig `yaml:"Ledger"`
+	Wallet       wallet.Limits      `yaml:"Wallet"`
 	Telemetry    telemetry.Config   `yaml:"Telemetry"`
 	Debug        debug.Config       `yaml:"Debug"`
 }
@@ -51,6 +53,14 @@ type Worker struct {
 	// LedgerCheckInterval controls how often the ledger invariant checks run.
 	// They also run once at startup, so a deploy is followed by a verdict.
 	LedgerCheckInterval time.Duration `yaml:"LedgerCheckInterval"`
+
+	// HoldSweepInterval controls how often expired holds are released. Short,
+	// because an expired hold is customer money locked for nothing.
+	HoldSweepInterval time.Duration `yaml:"HoldSweepInterval"`
+
+	// WalletExpiryInterval controls how often dormant rolling-expiry wallets
+	// are lapsed. Expiry is measured in days, so hourly is plenty.
+	WalletExpiryInterval time.Duration `yaml:"WalletExpiryInterval"`
 }
 
 func (w *Worker) WithDefaults() {
@@ -62,6 +72,12 @@ func (w *Worker) WithDefaults() {
 	}
 	if w.LedgerCheckInterval <= 0 {
 		w.LedgerCheckInterval = 24 * time.Hour
+	}
+	if w.HoldSweepInterval <= 0 {
+		w.HoldSweepInterval = time.Minute
+	}
+	if w.WalletExpiryInterval <= 0 {
+		w.WalletExpiryInterval = time.Hour
 	}
 }
 

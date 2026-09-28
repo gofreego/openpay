@@ -23,7 +23,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4; wallet-listing scope and nullable `customer_id` land with their tables in P3/P4/P7) |
 | 2 | Ledger Core | ✅ Complete |
-| 3 | Wallets | ◐ Wallet engine done (open, fund, grant, spend, transfer, adjust, holds, limits); APIs, events, `float_held`, expiry and aggregate limits next |
+| 3 | Wallets | ◐ Engine, expiry, customer limits and events done; wallet APIs and `float_held` next |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ☐ Not started |
@@ -867,21 +867,33 @@ passes repeatedly with `-race`; no code path can mutate a posting.
       `Cr wallet` — only permitted on a `grantable` type, always reason-coded.
       A product funds grants to its own wallets only. `reason_code` is a journal
       column, from fixed lists (`wallet.GrantReasons`, `wallet.AdjustReasons`)
-- [ ] Wallet expiry / lapse: sweeper posting expired balance to `income:breakage`
+- [x] Wallet expiry / lapse: sweeper posting expired balance to `income:breakage`
       (purchased) or back to `expense:promotions` (granted) — the write-back differs by
-      funding source, which is precisely why D10 keeps them as separate types
+      funding source, which is precisely why D10 keeps them as separate types.
+      **Rolling only.** Fixed expiry (each credit lapsing on its own date) needs
+      per-credit lots consumed oldest-first; until those exist, creating a FIXED type
+      is refused rather than configured-but-never-enforced. BONUS defaults to rolling
+      365 days. Platform-scoped types cannot expire (breakage would belong to no
+      product). Expiry is keyed on the last posting seen, re-checked under the lock,
+      and cancelled by any activity in between; wallets with open holds are skipped.
+      The worker also now sweeps expired holds every minute
 - [ ] `float_held` reporting query: Σ liability across **fundable** wallet types only —
       the "real customer money" figure finance and compliance will ask for. Report it
       per product, with `PLATFORM`-scoped wallets as their own bucket, since that
       balance belongs to no single product
-- [ ] **Customer-level aggregate limits**, distinct from the per-wallet-type limits in
+- [x] **Customer-level aggregate limits**, distinct from the per-wallet-type limits in
       D10. Because a customer is platform-wide, a per-person cap (total balance held,
       daily load, daily spend) spans their wallets across every product — and if a PPI
       licence is ever in scope (Q1), regulatory limits apply per *person*, not per
-      wallet. Build the aggregate query now even if the caps start permissive
+      wallet. Build the aggregate query now even if the caps start permissive.
+      `Wallet.MaxCustomerBalance` / `MaxCustomerDailyLoad` (0 = no cap), over fundable
+      wallets only, checked under a customer-row lock taken after the ledger locks
 - [ ] APIs: get balance, list wallets for a customer, paginated wallet statement
 - [ ] Admin adjustment API — permissioned, reason-coded, always a reversible journal
-- [ ] Outbox events: `wallet.credited`, `wallet.debited`, `wallet.low_balance`
+- [x] Outbox events: `wallet.credited`, `wallet.debited`, `wallet.low_balance`.
+      Credited/debited are written in the journal's transaction, one per wallet moved,
+      none on replay. `low_balance` is deferred: it needs a per-product threshold
+      that nothing configures yet
 
 **Exit criteria:** create product → wallet types (`MAIN` + `BONUS`) → customer →
 wallets → top-up `MAIN`, grant `BONUS` → spend from each → statements reflect both, the

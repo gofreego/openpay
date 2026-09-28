@@ -34,6 +34,33 @@ type Repository interface {
 	CustomerRepository
 	WalletTypeRepository
 	LedgerRepository
+	WalletRepository
+}
+
+type WalletRepository interface {
+	GetProductByID(ctx context.Context, id int64) (*dao.Product, error)
+	GetWalletTypeByID(ctx context.Context, id int64) (*dao.WalletType, error)
+	GetLedgerAccountByCode(ctx context.Context, code string) (*dao.LedgerAccount, error)
+	GetBalance(ctx context.Context, accountID int64) (*dao.Balance, error)
+
+	GetOrCreateWallet(ctx context.Context, wallet *dao.Wallet) (created bool, err error)
+	GetWallet(ctx context.Context, customerID, walletTypeID int64) (*dao.Wallet, error)
+	GetWalletByPublicID(ctx context.Context, publicID string) (*dao.Wallet, error)
+	ListCustomerWallets(ctx context.Context, customerID int64, scope *filter.ProductScope, includePlatform bool) ([]*dao.Wallet, error)
+	SumWalletLoadsSince(ctx context.Context, accountID int64, since time.Time) (int64, error)
+	LatestPostingID(ctx context.Context, accountID, excludingJournalID int64) (int64, error)
+	ListRollingExpiryCandidates(ctx context.Context, now time.Time, limit int) ([]dao.ExpiryCandidate, error)
+
+	LockCustomer(ctx context.Context, customerID int64) error
+	CustomerFundedBalance(ctx context.Context, customerID int64) (int64, error)
+	CustomerFundedLoadsSince(ctx context.Context, customerID int64, since time.Time) (int64, error)
+
+	PostJournalChecked(ctx context.Context, journal *dao.Journal, check func(ctx context.Context) error) (posted bool, err error)
+	PlaceHold(ctx context.Context, hold *dao.Hold) error
+	CaptureHold(ctx context.Context, holdExternalID string, journal *dao.Journal) (hold *dao.Hold, captured bool, err error)
+	ReleaseHold(ctx context.Context, holdExternalID string) (*dao.Hold, error)
+	ExpireHold(ctx context.Context, holdExternalID string) (*dao.Hold, error)
+	ListExpiredHolds(ctx context.Context, now time.Time, limit int) ([]string, error)
 }
 
 type LedgerRepository interface {

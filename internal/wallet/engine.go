@@ -2,7 +2,9 @@ package wallet
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/gofreego/openpay/internal/ledger"
@@ -23,11 +25,18 @@ type Repository interface {
 	GetBalance(ctx context.Context, accountID int64) (*dao.Balance, error)
 
 	GetOrCreateWallet(ctx context.Context, wallet *dao.Wallet) (created bool, err error)
+	GetWalletByPublicID(ctx context.Context, publicID string) (*dao.Wallet, error)
 	SumWalletLoadsSince(ctx context.Context, accountID int64, since time.Time) (int64, error)
+	LatestPostingID(ctx context.Context, accountID, excludingJournalID int64) (int64, error)
+
+	LockCustomer(ctx context.Context, customerID int64) error
+	CustomerFundedBalance(ctx context.Context, customerID int64) (int64, error)
+	CustomerFundedLoadsSince(ctx context.Context, customerID int64, since time.Time) (int64, error)
 
 	PostJournalChecked(ctx context.Context, journal *dao.Journal, check func(ctx context.Context) error) (posted bool, err error)
+	SaveOutboxEvent(ctx context.Context, event *dao.OutboxEvent) error
 	PlaceHold(ctx context.Context, hold *dao.Hold) error
-	CaptureHold(ctx context.Context, holdExternalID string, journal *dao.Journal) (*dao.Hold, error)
+	CaptureHold(ctx context.Context, holdExternalID string, journal *dao.Journal) (hold *dao.Hold, captured bool, err error)
 	ReleaseHold(ctx context.Context, holdExternalID string) (*dao.Hold, error)
 }
 
@@ -44,13 +53,25 @@ var (
 	AdjustReasons = []string{"goodwill", "error_correction", "fraud_recovery", "migration"}
 )
 
-type Engine struct {
-	repo Repository
-	now  func() time.Time
+// Limits are per-person caps spanning every fundable wallet a customer holds,
+// in every product. They are distinct from a wallet type's limits: a customer
+// is platform-wide, and if a PPI licence is ever in scope (plan.md Q1) its
+// limits apply per person, not per wallet. Zero means no cap.
+type Limits struct {
+	// MaxCustomerBalance caps the real money held for one person.
+	MaxCustomerBalance int64 `yaml:"MaxCustomerBalance"`
+	// MaxCustomerDailyLoad caps what one person may load in a day.
+	MaxCustomerDailyLoad int64 `yaml:"MaxCustomerDailyLoad"`
 }
 
-func New(repo Repository) *Engine {
-	return &Engine{repo: repo, now: time.Now}
+type Engine struct {
+	repo   Repository
+	limits Limits
+	now    func() time.Time
+}
+
+func New(repo Repository, limits Limits) *Engine {
+	return &Engine{repo: repo, limits: limits, now: time.Now}
 }
 
 // Open returns the customer's wallet of a type, creating it and its ledger
@@ -88,12 +109,13 @@ func (e *Engine) Open(ctx context.Context, customer *dao.Customer, walletType *d
 		}
 
 		wallet = &dao.Wallet{
-			PublicID:        ids.New(ids.Wallet),
-			CustomerID:      customer.ID,
-			WalletTypeID:    walletType.ID,
-			ProductID:       walletType.ProductID,
-			LedgerAccountID: account.ID,
-			Status:          dao.WalletActive,
+			PublicID:         ids.New(ids.Wallet),
+			CustomerID:       customer.ID,
+			CustomerPublicID: customer.PublicID,
+			WalletTypeID:     walletType.ID,
+			ProductID:        walletType.ProductID,
+			LedgerAccountID:  account.ID,
+			Status:           dao.WalletActive,
 		}
 		created, err := e.repo.GetOrCreateWallet(ctx, wallet)
 		if err != nil {
@@ -283,7 +305,7 @@ func (e *Engine) Transfer(ctx context.Context, req TransferRequest) (*dao.Journa
 			leg(req.To.LedgerAccountID, dao.Credit, req.Amount, walletType.Currency),
 		}
 		return e.post(ctx, journal, req.From, dao.Debit, req.Amount,
-			limitCheck{wallet: req.To, walletType: walletType, op: OpTransferIn})
+			limitCheck{wallet: req.To, walletType: walletType, op: OpTransferIn}, req.To)
 	})
 	return journal, err
 }
@@ -401,8 +423,11 @@ func (e *Engine) CaptureHold(ctx context.Context, req SpendRequest, holdReferenc
 			leg(req.Wallet.LedgerAccountID, dao.Debit, req.Amount, walletType.Currency),
 			leg(counter.ID, dao.Credit, req.Amount, walletType.Currency),
 		}
-		_, err = e.repo.CaptureHold(ctx, HoldExternalID(req.Wallet, holdReference), journal)
-		return err
+		_, captured, err := e.repo.CaptureHold(ctx, HoldExternalID(req.Wallet, holdReference), journal)
+		if err != nil || !captured {
+			return err
+		}
+		return e.emitMovements(ctx, journal, []*dao.Wallet{req.Wallet})
 	})
 	return journal, err
 }
@@ -428,12 +453,20 @@ type limitCheck struct {
 // post writes the journal, checking limits under the ledger lock, and makes
 // a replay honest: the same reference for a different amount or direction is
 // a conflict, not a silent return of the first journal.
-func (e *Engine) post(ctx context.Context, journal *dao.Journal, wallet *dao.Wallet, direction dao.Direction, amount int64, limits limitCheck) error {
+//
+// Each wallet the journal moves gets a wallet.credited or wallet.debited
+// event, recorded in the same transaction (plan.md D5): the event exists if
+// and only if the money moved. others are wallets besides the primary one
+// that the journal touches, such as a transfer's recipient.
+func (e *Engine) post(ctx context.Context, journal *dao.Journal, wallet *dao.Wallet, direction dao.Direction, amount int64, limits limitCheck, others ...*dao.Wallet) error {
 	posted, err := e.repo.PostJournalChecked(ctx, journal, func(ctx context.Context) error {
 		return e.checkLimitsAfterPosting(ctx, limits)
 	})
-	if err != nil || posted {
+	if err != nil {
 		return err
+	}
+	if posted {
+		return e.emitMovements(ctx, journal, append([]*dao.Wallet{wallet}, others...))
 	}
 	for _, p := range journal.Postings {
 		if p.AccountID == wallet.LedgerAccountID && p.Direction == direction && p.Amount == amount {
@@ -465,9 +498,8 @@ func (e *Engine) checkLimitsAfterPosting(ctx context.Context, c limitCheck) erro
 		}
 	}
 
+	startOfDay := e.startOfDay()
 	if walletType.DailyLoadLimit != nil && c.op.loads() {
-		now := e.now().In(ist)
-		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, ist)
 		loaded, err := e.repo.SumWalletLoadsSince(ctx, c.wallet.LedgerAccountID, startOfDay)
 		if err != nil {
 			return err
@@ -475,6 +507,189 @@ func (e *Engine) checkLimitsAfterPosting(ctx context.Context, c limitCheck) erro
 		if loaded > *walletType.DailyLoadLimit {
 			return denied("this would load %d into the %s wallet today, above its daily limit of %d",
 				loaded, walletType.Code, *walletType.DailyLoadLimit)
+		}
+	}
+
+	return e.checkCustomerLimits(ctx, c, startOfDay)
+}
+
+// checkCustomerLimits enforces the per-person caps. They span wallets, so the
+// customer row is locked to serialise them — after the ledger locks, which
+// every path takes first, so the order is always the same.
+func (e *Engine) checkCustomerLimits(ctx context.Context, c limitCheck, startOfDay time.Time) error {
+	if !c.walletType.Fundable || (e.limits.MaxCustomerBalance == 0 && e.limits.MaxCustomerDailyLoad == 0) {
+		return nil
+	}
+	if err := e.repo.LockCustomer(ctx, c.wallet.CustomerID); err != nil {
+		return err
+	}
+
+	if e.limits.MaxCustomerBalance > 0 {
+		held, err := e.repo.CustomerFundedBalance(ctx, c.wallet.CustomerID)
+		if err != nil {
+			return err
+		}
+		if held > e.limits.MaxCustomerBalance {
+			return denied("this would take the customer's balance across all wallets to %d, above the %d cap",
+				held, e.limits.MaxCustomerBalance)
+		}
+	}
+	if e.limits.MaxCustomerDailyLoad > 0 && c.op.loads() {
+		loaded, err := e.repo.CustomerFundedLoadsSince(ctx, c.wallet.CustomerID, startOfDay)
+		if err != nil {
+			return err
+		}
+		if loaded > e.limits.MaxCustomerDailyLoad {
+			return denied("this would load %d for the customer today across all wallets, above the %d cap",
+				loaded, e.limits.MaxCustomerDailyLoad)
+		}
+	}
+	return nil
+}
+
+func (e *Engine) startOfDay() time.Time {
+	now := e.now().In(ist)
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, ist)
+}
+
+// ErrExpiryStale is returned when a wallet moved between being found dormant
+// and being expired. Nothing is posted; the next sweep looks again.
+var ErrExpiryStale = apperrors.New(apperrors.FailedPrecondition, "wallet moved since it was found dormant")
+
+// Expire lapses a dormant wallet's whole balance (plan.md D10):
+//
+//   - purchased value (a fundable type) becomes breakage income — the customer
+//     paid and did not use it;
+//   - granted value goes back against the promotions expense it came from, so
+//     promotions report what was actually consumed, not what was issued.
+//
+// Keyed on the last posting seen, so a dormant period lapses at most once.
+// Under the ledger lock it confirms nothing else moved and the balance is now
+// exactly zero; otherwise it refuses with ErrExpiryStale and posts nothing.
+func (e *Engine) Expire(ctx context.Context, candidate dao.ExpiryCandidate) (*dao.Journal, error) {
+	var journal *dao.Journal
+	err := e.repo.WithTx(ctx, func(ctx context.Context) error {
+		w, err := e.repo.GetWalletByPublicID(ctx, candidate.WalletPublicID)
+		if err != nil {
+			return err
+		}
+		if w.ProductID == nil {
+			return apperrors.New(apperrors.FailedPrecondition, "platform wallet %s cannot expire", w.PublicID)
+		}
+		walletType, err := e.repo.GetWalletTypeByID(ctx, w.WalletTypeID)
+		if err != nil {
+			return err
+		}
+		product, err := e.repo.GetProductByID(ctx, *w.ProductID)
+		if err != nil {
+			return err
+		}
+
+		destination := ledger.ProductPromotions(product.Code)
+		if walletType.Fundable {
+			destination = ledger.ProductBreakage(product.Code)
+		}
+		counter, err := e.repo.GetLedgerAccountByCode(ctx, destination)
+		if err != nil {
+			return err
+		}
+
+		journal = newJournal("expiry:"+w.PublicID+":"+strconv.FormatInt(candidate.LastPostingID, 10),
+			dao.JournalExpiry, w.ProductID, w)
+		journal.Memo = "rolling expiry after " + strconv.Itoa(derefInt(walletType.ExpiryDays)) + " days without activity"
+		journal.Postings = []*dao.Posting{
+			leg(w.LedgerAccountID, dao.Debit, candidate.Balance, walletType.Currency),
+			leg(counter.ID, dao.Credit, candidate.Balance, walletType.Currency),
+		}
+
+		posted, err := e.repo.PostJournalChecked(ctx, journal, func(ctx context.Context) error {
+			latest, err := e.repo.LatestPostingID(ctx, w.LedgerAccountID, journal.ID)
+			if err != nil {
+				return err
+			}
+			balance, err := e.repo.GetBalance(ctx, w.LedgerAccountID)
+			if err != nil {
+				return err
+			}
+			if latest != candidate.LastPostingID || balance.RawBalance != 0 || balance.Held != 0 {
+				return ErrExpiryStale
+			}
+			return nil
+		})
+		// A spend since the wallet was found leaves less than the balance being
+		// expired, which the ledger refuses as an overdraft. That is the same
+		// finding — the wallet moved — and not an error worth logging as one.
+		if apperrors.Is(err, apperrors.InsufficientBalance) {
+			return ErrExpiryStale
+		}
+		if err != nil || !posted {
+			return err
+		}
+		return e.emitMovements(ctx, journal, []*dao.Wallet{w})
+	})
+	return journal, err
+}
+
+func derefInt(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
+// walletMovement is the payload of wallet.credited and wallet.debited.
+// Amounts are minor units; balance_after is the natural balance, so a
+// consumer showing "your balance is now" needs no sign conventions.
+type walletMovement struct {
+	WalletID     string  `json:"wallet_id"`
+	CustomerID   string  `json:"customer_id"`
+	Amount       int64   `json:"amount"`
+	Currency     string  `json:"currency"`
+	BalanceAfter int64   `json:"balance_after"`
+	JournalID    string  `json:"journal_id"`
+	JournalKind  string  `json:"journal_kind"`
+	ExternalID   string  `json:"external_id"`
+	ReasonCode   *string `json:"reason_code,omitempty"`
+}
+
+const (
+	TopicWalletCredited = "wallet.credited"
+	TopicWalletDebited  = "wallet.debited"
+)
+
+func (e *Engine) emitMovements(ctx context.Context, journal *dao.Journal, wallets []*dao.Wallet) error {
+	for _, w := range wallets {
+		for _, p := range journal.Postings {
+			if p.AccountID != w.LedgerAccountID {
+				continue
+			}
+			topic := TopicWalletCredited
+			if p.Direction == dao.Debit {
+				topic = TopicWalletDebited
+			}
+			payload, err := json.Marshal(walletMovement{
+				WalletID:     w.PublicID,
+				CustomerID:   w.CustomerPublicID,
+				Amount:       p.Amount,
+				Currency:     p.Currency,
+				BalanceAfter: p.BalanceAfter * dao.AccountLiability.NormalSign(),
+				JournalID:    journal.PublicID,
+				JournalKind:  string(journal.Kind),
+				ExternalID:   journal.ExternalID,
+				ReasonCode:   journal.ReasonCode,
+			})
+			if err != nil {
+				return apperrors.Wrap(err, apperrors.Internal, "failed to encode wallet event")
+			}
+			if err := e.repo.SaveOutboxEvent(ctx, &dao.OutboxEvent{
+				EventID:       ids.New(ids.OutboxEvent),
+				Topic:         topic,
+				AggregateType: "wallet",
+				AggregateID:   w.PublicID,
+				Payload:       payload,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

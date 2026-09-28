@@ -140,6 +140,20 @@ func checkWalletCapabilities(req *openpay_v1.CreateWalletTypeRequest) error {
 	}
 
 	policy := req.GetExpiryPolicy()
+	// Fixed expiry means each credit lapses on its own date, which needs
+	// per-credit lot tracking consumed oldest-first. That does not exist yet,
+	// and a type configured to expire that never does is worse than one that
+	// is refused.
+	if policy == openpay_v1.ExpiryPolicy_EXPIRY_POLICY_FIXED {
+		return apperrors.New(apperrors.InvalidArgument,
+			"FIXED expiry is not supported yet; use ROLLING, which lapses the balance after expiry_days without activity")
+	}
+	// Lapsed value is booked to a product's breakage or promotions account,
+	// and a platform-scoped balance belongs to no product.
+	if policy != openpay_v1.ExpiryPolicy_EXPIRY_POLICY_NONE && req.GetProductId() == "" {
+		return apperrors.New(apperrors.InvalidArgument,
+			"a platform-scoped wallet type cannot expire: its lapsed balance would belong to no product")
+	}
 	if policy == openpay_v1.ExpiryPolicy_EXPIRY_POLICY_NONE && req.GetExpiryDays() != 0 {
 		return apperrors.New(apperrors.InvalidArgument,
 			"expiry_days must be zero when expiry_policy is NONE")
@@ -362,7 +376,7 @@ const (
 	WalletTypeBonus = "BONUS"
 )
 
-// bonusExpiryDays is how long granted balance lasts from when it was granted.
+// bonusExpiryDays is how long a BONUS balance survives without any activity.
 const bonusExpiryDays = 365
 
 // defaultWalletTypes are the two types every product starts with, so that
@@ -371,8 +385,9 @@ const bonusExpiryDays = 365
 //
 //   - MAIN holds money the customer paid for: fundable, never expires, and
 //     closed-loop — enabling withdrawal is a separate, compliance-gated act.
-//   - BONUS holds promotional credit: grantable only, expiring, and never
-//     withdrawable. Refunds of what it paid for return to it, so a refund can
+//   - BONUS holds promotional credit: grantable only, never withdrawable, and
+//     lapsing after a year without activity (rolling, so any use keeps it
+//     alive). Refunds of what it paid for return to it, so a refund can
 //     never turn promotional credit into real money.
 func defaultWalletTypes(product *dao.Product) []*dao.WalletType {
 	expiry := bonusExpiryDays
@@ -396,7 +411,7 @@ func defaultWalletTypes(product *dao.Product) []*dao.WalletType {
 
 	bonus := base(WalletTypeBonus, "Bonus balance")
 	bonus.Grantable = true
-	bonus.ExpiryPolicy = dao.ExpiryFixed
+	bonus.ExpiryPolicy = dao.ExpiryRolling
 	bonus.ExpiryDays = &expiry
 
 	return []*dao.WalletType{main, bonus}

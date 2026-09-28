@@ -20,6 +20,9 @@ type Wallet struct {
 	CustomerID   int64
 	WalletTypeID int64
 
+	// CustomerPublicID is read alongside, for events and the API.
+	CustomerPublicID string
+
 	// ProductID is copied from the wallet type; nil for a platform-scoped type.
 	ProductID *int64
 
@@ -28,4 +31,15 @@ type Wallet struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// ExpiryCandidate is a wallet whose rolling expiry has passed: it has a
+// balance, no active holds, and no posting for longer than its type allows.
+type ExpiryCandidate struct {
+	WalletPublicID string
+	// LastPostingID is the most recent activity seen. Expiry is keyed on it,
+	// so each dormant period lapses at most once, and any activity since the
+	// candidate was found cancels the expiry.
+	LastPostingID int64
+	Balance       int64
 }
