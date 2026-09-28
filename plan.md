@@ -26,7 +26,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
-| 6 | Refunds, Reversals & Disputes | ✅ Complete for top-ups (tax split and destination policy with P7 orders; fee reconciliation with P8) |
+| 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
 | 8 | Settlement & Reconciliation | ☐ Not started |
 | 9 | Payouts & Withdrawals | ☐ Not started |
