@@ -23,6 +23,10 @@
       "description": "People, identified platform-wide by their OpenAuth user id"
     },
     {
+      "name": "Ledger",
+      "description": "Read-only view of the double-entry ledger, and its invariant checks"
+    },
+    {
       "name": "OpenPay"
     }
   ],
@@ -207,6 +211,308 @@
         ],
         "tags": [
           "Customers"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/accounts": {
+      "get": {
+        "summary": "List ledger accounts with balances",
+        "description": "Filter by product, platform-only, type or code prefix. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_ListLedgerAccounts",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListLedgerAccountsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "productId",
+            "description": "Only this product's accounts.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "platformOnly",
+            "description": "Only accounts belonging to no product. Cannot be combined with product_id.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "LEDGER_ACCOUNT_TYPE_UNSPECIFIED",
+              "LEDGER_ACCOUNT_TYPE_ASSET",
+              "LEDGER_ACCOUNT_TYPE_LIABILITY",
+              "LEDGER_ACCOUNT_TYPE_EQUITY",
+              "LEDGER_ACCOUNT_TYPE_INCOME",
+              "LEDGER_ACCOUNT_TYPE_EXPENSE"
+            ],
+            "default": "LEDGER_ACCOUNT_TYPE_UNSPECIFIED"
+          },
+          {
+            "name": "codePrefix",
+            "description": "Prefix of the account code, e.g. \"psp:\" or \"income:zshala:\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/accounts/{accountId}/statement": {
+      "get": {
+        "summary": "Get an account statement",
+        "description": "Postings newest first, each with the running balance after it. Cursor-paginated, so a page never shifts when new postings arrive. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_GetAccountStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetAccountStatementResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "accountId",
+            "description": "An account id or code, as for GetLedgerAccount.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "description": "next_cursor from the previous page. Empty for the newest entries.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/accounts/{id}": {
+      "get": {
+        "summary": "Get a ledger account and its balance",
+        "description": "Accepts an account id or an account code. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_GetLedgerAccount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetLedgerAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "An account id (acc_…) or an account code (anything containing ':').",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/checks": {
+      "get": {
+        "summary": "List recent ledger check runs",
+        "description": "Scheduled and manual runs, newest first. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_ListLedgerCheckRuns",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListLedgerCheckRunsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      },
+      "post": {
+        "summary": "Run the ledger invariant checks now",
+        "description": "Checks every invariant against one consistent snapshot and records the run. Reports drift; never fixes it. Requires the openpay:ledger:check permission. Takes no idempotency key: it moves no money, and running it twice is harmless.",
+        "operationId": "OpenPay_RunLedgerCheck",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RunLedgerCheckResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RunLedgerCheckRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/journals/{id}": {
+      "get": {
+        "summary": "Get a journal and its postings",
+        "description": "Accepts a journal id or its external id. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_GetJournal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetJournalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "A journal id (jrn_…) or its external id (anything containing ':').",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/trial-balance": {
+      "get": {
+        "summary": "Get the trial balance",
+        "description": "Every account's debits, credits and balance, computed from postings, optionally as of a past moment and for one product. Platform-wide debits and credits must be equal. Requires the openpay:ledger:read permission.",
+        "operationId": "OpenPay_GetTrialBalance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTrialBalanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "description": "Only this product's accounts. Empty for the whole platform.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "asOf",
+            "description": "Balances as they stood at this moment. Empty for now.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "includeEmpty",
+            "description": "Include accounts that have never been posted to.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "Ledger"
         ]
       }
     },
@@ -712,11 +1018,47 @@
       "default": "EXPIRY_POLICY_UNSPECIFIED",
       "description": " - EXPIRY_POLICY_FIXED: Expires a fixed period after the balance was credited.\n - EXPIRY_POLICY_ROLLING: Pushes expiry out on every use."
     },
+    "v1GetAccountStatementResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1LedgerAccount"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StatementEntry"
+          },
+          "description": "Newest first."
+        },
+        "nextCursor": {
+          "type": "string",
+          "description": "Pass as cursor for the next, older page. Empty on the last page."
+        }
+      }
+    },
     "v1GetCustomerResponse": {
       "type": "object",
       "properties": {
         "customer": {
           "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
+    "v1GetJournalResponse": {
+      "type": "object",
+      "properties": {
+        "journal": {
+          "$ref": "#/definitions/v1Journal"
+        }
+      }
+    },
+    "v1GetLedgerAccountResponse": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "#/definitions/v1LedgerAccount"
         }
       }
     },
@@ -728,11 +1070,277 @@
         }
       }
     },
+    "v1GetTrialBalanceResponse": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TrialBalanceLine"
+          }
+        },
+        "totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TrialBalanceTotal"
+          }
+        },
+        "asOf": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1GetWalletTypeResponse": {
       "type": "object",
       "properties": {
         "walletType": {
           "$ref": "#/definitions/v1WalletType"
+        }
+      }
+    },
+    "v1Journal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "externalId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "sourceKind": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "reversesJournalId": {
+          "type": "string",
+          "description": "The journal this one reverses, if it is a correction."
+        },
+        "memo": {
+          "type": "string"
+        },
+        "postings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1JournalPosting"
+          }
+        },
+        "postedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1JournalPosting": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "accountCode": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/definitions/v1PostingDirection"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LedgerAccount": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "description": "e.g. income:zshala:product_sales, psp:razorpay:receivable."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Empty for platform accounts, which belong to no product."
+        },
+        "type": {
+          "$ref": "#/definitions/v1LedgerAccountType"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "ownerKind": {
+          "type": "string",
+          "description": "platform, customer, provider or merchant."
+        },
+        "ownerId": {
+          "type": "string"
+        },
+        "allowNegative": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "description": "active or closed."
+        },
+        "balance": {
+          "$ref": "#/definitions/v1LedgerBalance"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1LedgerAccountType": {
+      "type": "string",
+      "enum": [
+        "LEDGER_ACCOUNT_TYPE_UNSPECIFIED",
+        "LEDGER_ACCOUNT_TYPE_ASSET",
+        "LEDGER_ACCOUNT_TYPE_LIABILITY",
+        "LEDGER_ACCOUNT_TYPE_EQUITY",
+        "LEDGER_ACCOUNT_TYPE_INCOME",
+        "LEDGER_ACCOUNT_TYPE_EXPENSE"
+      ],
+      "default": "LEDGER_ACCOUNT_TYPE_UNSPECIFIED"
+    },
+    "v1LedgerBalance": {
+      "type": "object",
+      "properties": {
+        "balance": {
+          "type": "string",
+          "format": "int64",
+          "description": "What the account holds, in its natural direction."
+        },
+        "held": {
+          "type": "string",
+          "format": "int64",
+          "description": "Reserved by active holds and not yet posted."
+        },
+        "available": {
+          "type": "string",
+          "format": "int64",
+          "description": "balance - held: what can still be spent."
+        }
+      }
+    },
+    "v1LedgerCheckFinding": {
+      "type": "object",
+      "properties": {
+        "invariant": {
+          "type": "string",
+          "description": "Which invariant, e.g. journal_unbalanced, balance_drift."
+        },
+        "subject": {
+          "type": "string",
+          "description": "What it concerns: an account code, journal external id, or currency."
+        },
+        "expected": {
+          "type": "string",
+          "format": "int64"
+        },
+        "actual": {
+          "type": "string",
+          "format": "int64"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "v1LedgerCheckRun": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1LedgerCheckStatus"
+        },
+        "trigger": {
+          "type": "string",
+          "description": "scheduled or manual."
+        },
+        "triggeredBy": {
+          "type": "string",
+          "description": "Who asked, for a manual run."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LedgerCheckFinding"
+          }
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "Set when the findings list was cut short; the ledger has more."
+        },
+        "error": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1LedgerCheckStatus": {
+      "type": "string",
+      "enum": [
+        "LEDGER_CHECK_STATUS_UNSPECIFIED",
+        "LEDGER_CHECK_STATUS_OK",
+        "LEDGER_CHECK_STATUS_DRIFT",
+        "LEDGER_CHECK_STATUS_ERROR"
+      ],
+      "default": "LEDGER_CHECK_STATUS_UNSPECIFIED",
+      "description": " - LEDGER_CHECK_STATUS_OK: Every invariant held.\n - LEDGER_CHECK_STATUS_DRIFT: At least one invariant was broken. Never fixed automatically.\n - LEDGER_CHECK_STATUS_ERROR: The check itself could not complete, so nothing is known."
+    },
+    "v1ListLedgerAccountsResponse": {
+      "type": "object",
+      "properties": {
+        "accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LedgerAccount"
+          }
+        },
+        "total": {
+          "type": "string",
+          "format": "int64",
+          "description": "Size of the whole filtered set, not of this page."
+        }
+      }
+    },
+    "v1ListLedgerCheckRunsResponse": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LedgerCheckRun"
+          },
+          "description": "Newest first."
         }
       }
     },
@@ -776,6 +1384,15 @@
           }
         }
       }
+    },
+    "v1PostingDirection": {
+      "type": "string",
+      "enum": [
+        "POSTING_DIRECTION_UNSPECIFIED",
+        "POSTING_DIRECTION_DEBIT",
+        "POSTING_DIRECTION_CREDIT"
+      ],
+      "default": "POSTING_DIRECTION_UNSPECIFIED"
     },
     "v1Product": {
       "type": "object",
@@ -824,6 +1441,17 @@
         }
       }
     },
+    "v1RunLedgerCheckRequest": {
+      "type": "object"
+    },
+    "v1RunLedgerCheckResponse": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "$ref": "#/definitions/v1LedgerCheckRun"
+        }
+      }
+    },
     "v1ServiceCredential": {
       "type": "object",
       "properties": {
@@ -858,6 +1486,104 @@
         }
       },
       "description": "ServiceCredential is how a product's backend authenticates. It never carries\nthe secret: that exists only in the response to CreateServiceCredential."
+    },
+    "v1StatementEntry": {
+      "type": "object",
+      "properties": {
+        "journalId": {
+          "type": "string"
+        },
+        "journalExternalId": {
+          "type": "string"
+        },
+        "journalKind": {
+          "type": "string"
+        },
+        "memo": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/definitions/v1PostingDirection"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "change": {
+          "type": "string",
+          "format": "int64",
+          "description": "Effect on this account's natural balance: positive when it grew."
+        },
+        "balanceAfter": {
+          "type": "string",
+          "format": "int64",
+          "description": "The account's natural balance immediately after this posting."
+        },
+        "postedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "One line of an account statement: a posting, with enough of its journal to\nsay why the money moved."
+    },
+    "v1TrialBalanceLine": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "accountCode": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/v1LedgerAccountType"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "debits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "credits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "rawBalance": {
+          "type": "string",
+          "format": "int64",
+          "description": "debits - credits."
+        },
+        "balance": {
+          "type": "string",
+          "format": "int64",
+          "description": "The balance in the account's natural direction."
+        }
+      }
+    },
+    "v1TrialBalanceTotal": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "debits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "credits": {
+          "type": "string",
+          "format": "int64"
+        },
+        "difference": {
+          "type": "string",
+          "format": "int64",
+          "description": "For the whole platform this must be zero. For one product it generally is\nnot: the other side of its revenue sits in platform accounts."
+        }
+      }
     },
     "v1UpdateProductResponse": {
       "type": "object",

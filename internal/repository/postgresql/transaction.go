@@ -79,6 +79,32 @@ func (r *Repository) WithTx(ctx context.Context, fn func(ctx context.Context) er
 	return nil
 }
 
+// withReadSnapshot runs fn in a read-only REPEATABLE READ transaction, so every
+// query in it sees the database as of one instant.
+//
+// A single statement is already consistent under READ COMMITTED; this is for
+// reports built from several. Without it, each part of a ledger check or
+// report would describe a slightly different ledger, and a finding in one
+// could not be lined up against the figures in another.
+func (r *Repository) withReadSnapshot(ctx context.Context, fn func(ctx context.Context) error) error {
+	if InTx(ctx) {
+		return fn(ctx)
+	}
+
+	tx, err := r.connManager.Primary().BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelRepeatableRead,
+		ReadOnly:  true,
+	})
+	if err != nil {
+		return customerrors.New(customerrors.ERROR_CODE_DATABASE_CONNECTION_FAILED,
+			"failed to begin snapshot transaction: %s", err.Error())
+	}
+	// Read-only: there is nothing to commit, so always roll back.
+	defer rollback(ctx, tx)
+
+	return fn(context.WithValue(ctx, txKey{}, tx))
+}
+
 // rollback undoes the transaction, logging anything other than the benign case
 // where it has already finished.
 func rollback(ctx context.Context, tx *sql.Tx) {

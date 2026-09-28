@@ -47,6 +47,10 @@ type Worker struct {
 	// IdempotencySweepBatch caps rows deleted per sweep, so pruning a backlog
 	// never becomes one enormous delete.
 	IdempotencySweepBatch int `yaml:"IdempotencySweepBatch"`
+
+	// LedgerCheckInterval controls how often the ledger invariant checks run.
+	// They also run once at startup, so a deploy is followed by a verdict.
+	LedgerCheckInterval time.Duration `yaml:"LedgerCheckInterval"`
 }
 
 func (w *Worker) WithDefaults() {
@@ -55,6 +59,9 @@ func (w *Worker) WithDefaults() {
 	}
 	if w.IdempotencySweepBatch <= 0 {
 		w.IdempotencySweepBatch = 1000
+	}
+	if w.LedgerCheckInterval <= 0 {
+		w.LedgerCheckInterval = 24 * time.Hour
 	}
 }
 

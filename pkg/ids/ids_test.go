@@ -92,7 +92,7 @@ func TestIs(t *testing.T) {
 func TestPrefixesAreDistinct(t *testing.T) {
 	all := []Prefix{
 		Customer, Product, ServiceCredential, WalletType, Wallet,
-		LedgerAccount, LedgerJournal, LedgerHold, Payment, PaymentAttempt,
+		LedgerAccount, LedgerJournal, LedgerHold, LedgerCheckRun, Payment, PaymentAttempt,
 		Order, Refund, Dispute, Settlement, Payout, Idempotency, OutboxEvent,
 		Request,
 	}

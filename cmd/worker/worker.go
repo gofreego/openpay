@@ -1,6 +1,7 @@
-// Package worker runs OpenPay's background jobs: the outbox drainer today,
-// and later the payment status poller, hold expiry sweeper, settlement ingest
-// and ledger invariant checker.
+// Package worker runs OpenPay's background jobs: the outbox drainer, the
+// idempotency sweeper, the chart-of-accounts bootstrap and the ledger
+// invariant checker; later the payment status poller, hold expiry sweeper and
+// settlement ingest.
 //
 // It runs alongside the HTTP and gRPC servers via AppNames, and can also be
 // deployed on its own so background work does not compete with request traffic.
@@ -13,6 +14,7 @@ import (
 
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/ledger"
+	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
@@ -43,7 +45,11 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	drainer := outbox.NewDrainer(w.cfg.Worker.Outbox, repo, outbox.LogPublisher{})
 
-	w.done.Add(3)
+	w.done.Add(4)
+	go func() {
+		defer w.done.Done()
+		w.checkLedger(ctx, repo)
+	}()
 	go func() {
 		defer w.done.Done()
 		w.ensureChart(ctx, repo)
@@ -95,6 +101,29 @@ func (w *Worker) ensureChart(ctx context.Context, repo service.Repository) {
 		case <-ctx.Done():
 			return
 		case <-time.After(retryEvery):
+		}
+	}
+}
+
+// checkLedger runs the ledger invariant checks at startup and then on an
+// interval. Failures are recorded and logged by ledger.RunCheck; this loop
+// only keeps it running.
+func (w *Worker) checkLedger(ctx context.Context, repo service.Repository) {
+	interval := w.cfg.Worker.LedgerCheckInterval
+	logger.Info(ctx, "ledger invariant checker started: interval=%s", interval)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		if _, err := ledger.RunCheck(ctx, repo, dao.LedgerCheckScheduled, nil); err != nil {
+			logger.Error(ctx, "failed to record ledger check run: %v", err)
+		}
+		select {
+		case <-ctx.Done():
+			logger.Info(ctx, "ledger invariant checker stopped")
+			return
+		case <-ticker.C:
 		}
 	}
 }

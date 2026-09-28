@@ -303,7 +303,7 @@ func (r *Repository) GetJournalByExternalID(ctx context.Context, externalID stri
 
 func (r *Repository) listPostings(ctx context.Context, journalID int64) ([]*dao.Posting, error) {
 	const query = `
-		SELECT p.id, p.journal_id, p.account_id, a.code, p.direction, p.amount,
+		SELECT p.id, p.journal_id, p.account_id, a.code, a.public_id, p.direction, p.amount,
 		       p.currency, p.seq, p.balance_after, p.created_at
 		FROM ledger_postings p
 		JOIN ledger_accounts a ON a.id = p.account_id
@@ -319,7 +319,7 @@ func (r *Repository) listPostings(ctx context.Context, journalID int64) ([]*dao.
 	var postings []*dao.Posting
 	for rows.Next() {
 		var p dao.Posting
-		if err := rows.Scan(&p.ID, &p.JournalID, &p.AccountID, &p.AccountCode, &p.Direction,
+		if err := rows.Scan(&p.ID, &p.JournalID, &p.AccountID, &p.AccountCode, &p.AccountPublicID, &p.Direction,
 			&p.Amount, &p.Currency, &p.Seq, &p.BalanceAfter, &p.CreatedAt); err != nil {
 			return nil, apperrors.Wrap(err, apperrors.Internal, "failed to scan posting")
 		}

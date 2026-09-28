@@ -24,6 +24,14 @@ const (
 	PermWalletTypesApproveWithdrawal = "openpay:wallet_types:approve_withdrawal"
 
 	PermCustomersRead = "openpay:customers:read"
+
+	// PermLedgerRead covers accounts, statements, journals, the trial balance
+	// and check history. It sees platform accounts, so until operator product
+	// scope exists (plan.md U-D6) it is a central-ops permission.
+	PermLedgerRead = "openpay:ledger:read"
+	// PermLedgerCheck runs the invariant checks on demand. They read the whole
+	// ledger in one snapshot, which is not free, hence its own permission.
+	PermLedgerCheck = "openpay:ledger:check"
 )
 
 // RequireOperator asserts the caller is an operator holding permission.

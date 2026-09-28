@@ -24,6 +24,7 @@ const (
 	LedgerAccount     Prefix = "acc"
 	LedgerJournal     Prefix = "jrn"
 	LedgerHold        Prefix = "hld"
+	LedgerCheckRun    Prefix = "chk"
 	Payment           Prefix = "pay"
 	PaymentAttempt    Prefix = "pat"
 	Order             Prefix = "ord"

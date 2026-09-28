@@ -1,0 +1,236 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// The ledger is read-only over the API. Money moves through payments, wallet
+// operations and adjustments, each of which posts a journal; nothing here
+// writes one (plan.md D3, U-D7).
+//
+// Every amount is in minor units (paise). Balances are "natural": positive
+// means the account holds value in the direction its type grows — an asset
+// we own, a liability we owe, income earned. Raw debit-minus-credit figures
+// are exposed only where the arithmetic needs them, on the trial balance.
+
+enum LedgerAccountType {
+  LEDGER_ACCOUNT_TYPE_UNSPECIFIED = 0;
+  LEDGER_ACCOUNT_TYPE_ASSET = 1;
+  LEDGER_ACCOUNT_TYPE_LIABILITY = 2;
+  LEDGER_ACCOUNT_TYPE_EQUITY = 3;
+  LEDGER_ACCOUNT_TYPE_INCOME = 4;
+  LEDGER_ACCOUNT_TYPE_EXPENSE = 5;
+}
+
+enum PostingDirection {
+  POSTING_DIRECTION_UNSPECIFIED = 0;
+  POSTING_DIRECTION_DEBIT = 1;
+  POSTING_DIRECTION_CREDIT = 2;
+}
+
+message LedgerBalance {
+  // What the account holds, in its natural direction.
+  int64 balance = 1;
+  // Reserved by active holds and not yet posted.
+  int64 held = 2;
+  // balance - held: what can still be spent.
+  int64 available = 3;
+}
+
+message LedgerAccount {
+  string id = 1;
+  // e.g. income:zshala:product_sales, psp:razorpay:receivable.
+  string code = 2;
+  // Empty for platform accounts, which belong to no product.
+  string product_id = 3;
+  LedgerAccountType type = 4;
+  string currency = 5;
+  // platform, customer, provider or merchant.
+  string owner_kind = 6;
+  string owner_id = 7;
+  bool allow_negative = 8;
+  // active or closed.
+  string status = 9;
+  LedgerBalance balance = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message GetLedgerAccountRequest {
+  // An account id (acc_…) or an account code (anything containing ':').
+  string id = 1 [(validate.rules).string = {min_len: 1, max_len: 300}];
+}
+
+message GetLedgerAccountResponse {
+  LedgerAccount account = 1;
+}
+
+message ListLedgerAccountsRequest {
+  int32 limit = 1 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  int32 offset = 2 [(validate.rules).int32 = {gte: 0}];
+  // Only this product's accounts.
+  string product_id = 3;
+  // Only accounts belonging to no product. Cannot be combined with product_id.
+  bool platform_only = 4;
+  LedgerAccountType type = 5 [(validate.rules).enum = {defined_only: true}];
+  // Prefix of the account code, e.g. "psp:" or "income:zshala:".
+  string code_prefix = 6 [(validate.rules).string = {max_len: 300}];
+}
+
+message ListLedgerAccountsResponse {
+  repeated LedgerAccount accounts = 1;
+  // Size of the whole filtered set, not of this page.
+  int64 total = 2;
+}
+
+// One line of an account statement: a posting, with enough of its journal to
+// say why the money moved.
+message StatementEntry {
+  string journal_id = 1;
+  string journal_external_id = 2;
+  string journal_kind = 3;
+  string memo = 4;
+  PostingDirection direction = 5;
+  int64 amount = 6;
+  // Effect on this account's natural balance: positive when it grew.
+  int64 change = 7;
+  // The account's natural balance immediately after this posting.
+  int64 balance_after = 8;
+  google.protobuf.Timestamp posted_at = 9;
+}
+
+message GetAccountStatementRequest {
+  // An account id or code, as for GetLedgerAccount.
+  string account_id = 1 [(validate.rules).string = {min_len: 1, max_len: 300}];
+  int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  // next_cursor from the previous page. Empty for the newest entries.
+  string cursor = 3 [(validate.rules).string = {max_len: 50}];
+}
+
+message GetAccountStatementResponse {
+  LedgerAccount account = 1;
+  // Newest first.
+  repeated StatementEntry entries = 2;
+  // Pass as cursor for the next, older page. Empty on the last page.
+  string next_cursor = 3;
+}
+
+message JournalPosting {
+  string account_id = 1;
+  string account_code = 2;
+  PostingDirection direction = 3;
+  int64 amount = 4;
+  string currency = 5;
+}
+
+message Journal {
+  string id = 1;
+  string external_id = 2;
+  string kind = 3;
+  string product_id = 4;
+  string source_kind = 5;
+  string source_id = 6;
+  // The journal this one reverses, if it is a correction.
+  string reverses_journal_id = 7;
+  string memo = 8;
+  repeated JournalPosting postings = 9;
+  google.protobuf.Timestamp posted_at = 10;
+}
+
+message GetJournalRequest {
+  // A journal id (jrn_…) or its external id (anything containing ':').
+  string id = 1 [(validate.rules).string = {min_len: 1, max_len: 300}];
+}
+
+message GetJournalResponse {
+  Journal journal = 1;
+}
+
+message TrialBalanceLine {
+  string account_id = 1;
+  string account_code = 2;
+  LedgerAccountType type = 3;
+  string product_id = 4;
+  string currency = 5;
+  int64 debits = 6;
+  int64 credits = 7;
+  // debits - credits.
+  int64 raw_balance = 8;
+  // The balance in the account's natural direction.
+  int64 balance = 9;
+}
+
+message TrialBalanceTotal {
+  string currency = 1;
+  int64 debits = 2;
+  int64 credits = 3;
+  // For the whole platform this must be zero. For one product it generally is
+  // not: the other side of its revenue sits in platform accounts.
+  int64 difference = 4;
+}
+
+message GetTrialBalanceRequest {
+  // Only this product's accounts. Empty for the whole platform.
+  string product_id = 1;
+  // Balances as they stood at this moment. Empty for now.
+  google.protobuf.Timestamp as_of = 2;
+  // Include accounts that have never been posted to.
+  bool include_empty = 3;
+}
+
+message GetTrialBalanceResponse {
+  repeated TrialBalanceLine lines = 1;
+  repeated TrialBalanceTotal totals = 2;
+  google.protobuf.Timestamp as_of = 3;
+}
+
+enum LedgerCheckStatus {
+  LEDGER_CHECK_STATUS_UNSPECIFIED = 0;
+  // Every invariant held.
+  LEDGER_CHECK_STATUS_OK = 1;
+  // At least one invariant was broken. Never fixed automatically.
+  LEDGER_CHECK_STATUS_DRIFT = 2;
+  // The check itself could not complete, so nothing is known.
+  LEDGER_CHECK_STATUS_ERROR = 3;
+}
+
+message LedgerCheckFinding {
+  // Which invariant, e.g. journal_unbalanced, balance_drift.
+  string invariant = 1;
+  // What it concerns: an account code, journal external id, or currency.
+  string subject = 2;
+  int64 expected = 3;
+  int64 actual = 4;
+  string detail = 5;
+}
+
+message LedgerCheckRun {
+  string id = 1;
+  LedgerCheckStatus status = 2;
+  // scheduled or manual.
+  string trigger = 3;
+  // Who asked, for a manual run.
+  string triggered_by = 4;
+  repeated LedgerCheckFinding findings = 5;
+  // Set when the findings list was cut short; the ledger has more.
+  bool truncated = 6;
+  string error = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp finished_at = 9;
+}
+
+message RunLedgerCheckRequest {}
+
+message RunLedgerCheckResponse {
+  LedgerCheckRun run = 1;
+}
+
+message ListLedgerCheckRunsRequest {
+  int32 limit = 1 [(validate.rules).int32 = {gte: 0, lte: 100}];
+}
+
+message ListLedgerCheckRunsResponse {
+  // Newest first.
+  repeated LedgerCheckRun runs = 1;
+}

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/models/dao"
@@ -39,6 +40,19 @@ type LedgerRepository interface {
 	// GetOrCreateLedgerAccount opens an account unless one with the same code
 	// exists, in which case it loads that one into account.
 	GetOrCreateLedgerAccount(ctx context.Context, account *dao.LedgerAccount) (created bool, err error)
+
+	// Read path. ref is a public id or, if it contains ':', a code or
+	// external id.
+	GetAccountView(ctx context.Context, ref string) (*dao.AccountView, error)
+	ListAccountViews(ctx context.Context, f *filter.LedgerAccount) ([]*dao.AccountView, int64, error)
+	ListStatement(ctx context.Context, accountID int64, limit int, beforePostingID int64) ([]*dao.StatementEntry, error)
+	GetJournalView(ctx context.Context, ref string) (*dao.Journal, error)
+	TrialBalance(ctx context.Context, productID *int64, asOf time.Time, includeEmpty bool) ([]*dao.TrialBalanceLine, error)
+
+	// Invariant checks (see ledger.RunCheck).
+	CheckLedgerInvariants(ctx context.Context, limit int) ([]dao.LedgerCheckFinding, bool, error)
+	RecordLedgerCheckRun(ctx context.Context, run *dao.LedgerCheckRun) error
+	ListLedgerCheckRuns(ctx context.Context, limit int) ([]*dao.LedgerCheckRun, error)
 }
 
 type CustomerRepository interface {

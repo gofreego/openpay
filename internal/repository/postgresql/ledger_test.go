@@ -16,7 +16,7 @@ func truncateLedger(t *testing.T, repo *Repository) {
 	// The immutability triggers fire on DELETE but not on TRUNCATE, which is
 	// exactly why tests can clean up while production cannot edit history.
 	if _, err := repo.connManager.Primary().ExecContext(context.Background(),
-		`TRUNCATE ledger_holds, ledger_postings, ledger_journals, ledger_balances, ledger_accounts,
+		`TRUNCATE ledger_check_runs, ledger_holds, ledger_postings, ledger_journals, ledger_balances, ledger_accounts,
 		          wallet_types, customers, audit_log, service_credentials, products
 		 RESTART IDENTITY CASCADE`); err != nil {
 		t.Fatalf("truncate ledger (have migrations run?): %v", err)

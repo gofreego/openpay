@@ -22,7 +22,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ◐ Exit criteria met; operator product scope, MAIN/BONUS seeding and scope-boundary tests still open (fee policies deferred to P4) |
-| 2 | Ledger Core | ◐ Posting engine, accounts, balances, holds and chart of accounts done; read APIs and the invariant checker next |
+| 2 | Ledger Core | ✅ Complete |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
@@ -786,19 +786,42 @@ This is the most important phase in the project. Do not rush it.
       account contradicts the chart. Chart accounts permit negative balances:
       overdraft protection guards customer wallets, whereas a chart account records
       what already happened, and refusing that posting would only lose the record
-- [ ] Read APIs: account balance, paginated statement (postings with `balance_after`),
-      trial balance (whole platform, and filtered per product)
-- [ ] **Invariant checker job** (nightly + on-demand):
+- [x] Read APIs: account balance, paginated statement (postings with `balance_after`),
+      trial balance (whole platform, and filtered per product).
+      Also account listing (by product, platform-only, type, code prefix) and journal
+      lookup, which the U2 explorer needs. Accounts and journals are addressable by
+      public id or by code / external id. Statements page by **keyset**, not offset,
+      so a page never shifts as postings arrive. The trial balance is computed from
+      postings rather than `ledger_balances` — it can answer `as_of` a past moment,
+      and it is an independent second opinion on the materialised balances.
+      Gated on `openpay:ledger:read`, which is central-ops only until operator
+      product scope exists
+- [x] **Invariant checker job** (nightly + on-demand):
       - every journal sums to zero
       - Σ postings per account == `ledger_balances.raw_balance`
       - Σ all postings across all accounts == 0
       - alert loudly on any drift; never auto-"fix"
-- [ ] Tests — this is where the effort goes:
+      - also checks: `balance_after` equals the running sum, posting currency matches
+        its account, `held` equals the sum of active holds, no non-negative account
+        is below zero available, every journal has ≥2 postings, every account has a
+        balance row
+      - all checks read one snapshot, so a run's findings describe one moment; each
+        compares both of its sides within one statement, so concurrent posting cannot
+        produce false drift
+      - every run is recorded in `ledger_check_runs` (including runs that errored,
+        so "the checker has not run" is visible); drift logs each finding at error
+        level and sets the `openpay.ledger.check.findings` gauge. Worker runs it at
+        startup and every `LedgerCheckInterval` (24h); `POST /openpay/v1/ledger/checks`
+        runs it on demand (`openpay:ledger:check`)
+- [x] Tests — this is where the effort goes:
       - property tests: random valid journals preserve all invariants
       - concurrency test: N goroutines debiting one account; assert no overdraft and
         exact final balance
       - reversal test: original + reversal nets to zero
       - deadlock test: two goroutines posting to the same account pair in opposite order
+      - plus: the checker is shown to catch each kind of corruption (edited balance,
+        one-legged posting, edited `held`, overdraft, empty journal) and to report
+        nothing on a healthy ledger under concurrent posting
 
 **Exit criteria:** invariant checker is green under a fuzz workload; concurrency test
 passes repeatedly with `-race`; no code path can mutate a posting.

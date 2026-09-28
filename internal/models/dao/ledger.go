@@ -116,6 +116,11 @@ type Journal struct {
 
 	Postings []*Posting
 
+	// Public ids of what ProductID and ReversesJournalID point at. Filled by
+	// the API read path only; the posting engine has no use for them.
+	ProductPublicID         *string
+	ReversesJournalPublicID *string
+
 	CreatedAt time.Time
 }
 
@@ -125,8 +130,9 @@ type Posting struct {
 	JournalID int64
 	AccountID int64
 
-	// AccountCode is set when reading, to save callers a join.
-	AccountCode string
+	// AccountCode and AccountPublicID are set when reading, to save callers a join.
+	AccountCode     string
+	AccountPublicID string
 
 	Direction Direction
 	// Amount is always positive; Direction carries the sign.
@@ -197,4 +203,78 @@ type Hold struct {
 	ResolvedAt *time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+}
+
+// AccountView is an account as the API shows it: with its product's public id
+// and its current balance.
+type AccountView struct {
+	Account         *LedgerAccount
+	ProductPublicID *string
+	Balance         Balance
+}
+
+// StatementEntry is one posting on an account, with enough of its journal to
+// say why the money moved.
+type StatementEntry struct {
+	Posting           *Posting
+	JournalPublicID   string
+	JournalExternalID string
+	JournalKind       JournalKind
+	JournalMemo       string
+	JournalPostedAt   time.Time
+}
+
+// TrialBalanceLine is one account's totals, computed from postings rather than
+// from the materialised balance, so the report and the balances can disagree
+// only if the ledger is broken — which is then worth seeing.
+type TrialBalanceLine struct {
+	AccountPublicID string
+	Code            string
+	Type            AccountType
+	ProductPublicID *string
+	Currency        string
+	Debits          int64
+	Credits         int64
+}
+
+// Raw is debits minus credits.
+func (l *TrialBalanceLine) Raw() int64 { return l.Debits - l.Credits }
+
+type LedgerCheckStatus string
+
+const (
+	LedgerCheckOK    LedgerCheckStatus = "ok"
+	LedgerCheckDrift LedgerCheckStatus = "drift"
+	LedgerCheckError LedgerCheckStatus = "error"
+)
+
+type LedgerCheckTrigger string
+
+const (
+	LedgerCheckScheduled LedgerCheckTrigger = "scheduled"
+	LedgerCheckManual    LedgerCheckTrigger = "manual"
+)
+
+// LedgerCheckFinding is one broken invariant.
+type LedgerCheckFinding struct {
+	// Invariant names the rule, e.g. journal_unbalanced.
+	Invariant string `json:"invariant"`
+	// Subject is what it concerns: an account code, journal external id or currency.
+	Subject  string `json:"subject"`
+	Expected int64  `json:"expected"`
+	Actual   int64  `json:"actual"`
+	Detail   string `json:"detail,omitempty"`
+}
+
+type LedgerCheckRun struct {
+	ID          int64
+	PublicID    string
+	Status      LedgerCheckStatus
+	Trigger     LedgerCheckTrigger
+	TriggeredBy *string
+	Findings    []LedgerCheckFinding
+	Truncated   bool
+	Error       *string
+	StartedAt   time.Time
+	FinishedAt  time.Time
 }

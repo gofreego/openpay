@@ -32,6 +32,13 @@ const (
 	OpenPay_UpdateWalletType_FullMethodName        = "/v1.OpenPay/UpdateWalletType"
 	OpenPay_UpsertCustomer_FullMethodName          = "/v1.OpenPay/UpsertCustomer"
 	OpenPay_GetCustomer_FullMethodName             = "/v1.OpenPay/GetCustomer"
+	OpenPay_GetLedgerAccount_FullMethodName        = "/v1.OpenPay/GetLedgerAccount"
+	OpenPay_ListLedgerAccounts_FullMethodName      = "/v1.OpenPay/ListLedgerAccounts"
+	OpenPay_GetAccountStatement_FullMethodName     = "/v1.OpenPay/GetAccountStatement"
+	OpenPay_GetJournal_FullMethodName              = "/v1.OpenPay/GetJournal"
+	OpenPay_GetTrialBalance_FullMethodName         = "/v1.OpenPay/GetTrialBalance"
+	OpenPay_RunLedgerCheck_FullMethodName          = "/v1.OpenPay/RunLedgerCheck"
+	OpenPay_ListLedgerCheckRuns_FullMethodName     = "/v1.OpenPay/ListLedgerCheckRuns"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -55,6 +62,13 @@ type OpenPayClient interface {
 	UpdateWalletType(ctx context.Context, in *UpdateWalletTypeRequest, opts ...grpc.CallOption) (*UpdateWalletTypeResponse, error)
 	UpsertCustomer(ctx context.Context, in *UpsertCustomerRequest, opts ...grpc.CallOption) (*UpsertCustomerResponse, error)
 	GetCustomer(ctx context.Context, in *GetCustomerRequest, opts ...grpc.CallOption) (*GetCustomerResponse, error)
+	GetLedgerAccount(ctx context.Context, in *GetLedgerAccountRequest, opts ...grpc.CallOption) (*GetLedgerAccountResponse, error)
+	ListLedgerAccounts(ctx context.Context, in *ListLedgerAccountsRequest, opts ...grpc.CallOption) (*ListLedgerAccountsResponse, error)
+	GetAccountStatement(ctx context.Context, in *GetAccountStatementRequest, opts ...grpc.CallOption) (*GetAccountStatementResponse, error)
+	GetJournal(ctx context.Context, in *GetJournalRequest, opts ...grpc.CallOption) (*GetJournalResponse, error)
+	GetTrialBalance(ctx context.Context, in *GetTrialBalanceRequest, opts ...grpc.CallOption) (*GetTrialBalanceResponse, error)
+	RunLedgerCheck(ctx context.Context, in *RunLedgerCheckRequest, opts ...grpc.CallOption) (*RunLedgerCheckResponse, error)
+	ListLedgerCheckRuns(ctx context.Context, in *ListLedgerCheckRunsRequest, opts ...grpc.CallOption) (*ListLedgerCheckRunsResponse, error)
 }
 
 type openPayClient struct {
@@ -195,6 +209,76 @@ func (c *openPayClient) GetCustomer(ctx context.Context, in *GetCustomerRequest,
 	return out, nil
 }
 
+func (c *openPayClient) GetLedgerAccount(ctx context.Context, in *GetLedgerAccountRequest, opts ...grpc.CallOption) (*GetLedgerAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLedgerAccountResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetLedgerAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListLedgerAccounts(ctx context.Context, in *ListLedgerAccountsRequest, opts ...grpc.CallOption) (*ListLedgerAccountsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLedgerAccountsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListLedgerAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetAccountStatement(ctx context.Context, in *GetAccountStatementRequest, opts ...grpc.CallOption) (*GetAccountStatementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAccountStatementResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetAccountStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetJournal(ctx context.Context, in *GetJournalRequest, opts ...grpc.CallOption) (*GetJournalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetJournalResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetJournal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetTrialBalance(ctx context.Context, in *GetTrialBalanceRequest, opts ...grpc.CallOption) (*GetTrialBalanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTrialBalanceResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetTrialBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) RunLedgerCheck(ctx context.Context, in *RunLedgerCheckRequest, opts ...grpc.CallOption) (*RunLedgerCheckResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunLedgerCheckResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RunLedgerCheck_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListLedgerCheckRuns(ctx context.Context, in *ListLedgerCheckRunsRequest, opts ...grpc.CallOption) (*ListLedgerCheckRunsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLedgerCheckRunsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListLedgerCheckRuns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -216,6 +300,13 @@ type OpenPayServer interface {
 	UpdateWalletType(context.Context, *UpdateWalletTypeRequest) (*UpdateWalletTypeResponse, error)
 	UpsertCustomer(context.Context, *UpsertCustomerRequest) (*UpsertCustomerResponse, error)
 	GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error)
+	GetLedgerAccount(context.Context, *GetLedgerAccountRequest) (*GetLedgerAccountResponse, error)
+	ListLedgerAccounts(context.Context, *ListLedgerAccountsRequest) (*ListLedgerAccountsResponse, error)
+	GetAccountStatement(context.Context, *GetAccountStatementRequest) (*GetAccountStatementResponse, error)
+	GetJournal(context.Context, *GetJournalRequest) (*GetJournalResponse, error)
+	GetTrialBalance(context.Context, *GetTrialBalanceRequest) (*GetTrialBalanceResponse, error)
+	RunLedgerCheck(context.Context, *RunLedgerCheckRequest) (*RunLedgerCheckResponse, error)
+	ListLedgerCheckRuns(context.Context, *ListLedgerCheckRunsRequest) (*ListLedgerCheckRunsResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -264,6 +355,27 @@ func (UnimplementedOpenPayServer) UpsertCustomer(context.Context, *UpsertCustome
 }
 func (UnimplementedOpenPayServer) GetCustomer(context.Context, *GetCustomerRequest) (*GetCustomerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCustomer not implemented")
+}
+func (UnimplementedOpenPayServer) GetLedgerAccount(context.Context, *GetLedgerAccountRequest) (*GetLedgerAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLedgerAccount not implemented")
+}
+func (UnimplementedOpenPayServer) ListLedgerAccounts(context.Context, *ListLedgerAccountsRequest) (*ListLedgerAccountsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLedgerAccounts not implemented")
+}
+func (UnimplementedOpenPayServer) GetAccountStatement(context.Context, *GetAccountStatementRequest) (*GetAccountStatementResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccountStatement not implemented")
+}
+func (UnimplementedOpenPayServer) GetJournal(context.Context, *GetJournalRequest) (*GetJournalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJournal not implemented")
+}
+func (UnimplementedOpenPayServer) GetTrialBalance(context.Context, *GetTrialBalanceRequest) (*GetTrialBalanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTrialBalance not implemented")
+}
+func (UnimplementedOpenPayServer) RunLedgerCheck(context.Context, *RunLedgerCheckRequest) (*RunLedgerCheckResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunLedgerCheck not implemented")
+}
+func (UnimplementedOpenPayServer) ListLedgerCheckRuns(context.Context, *ListLedgerCheckRunsRequest) (*ListLedgerCheckRunsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLedgerCheckRuns not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -520,6 +632,132 @@ func _OpenPay_GetCustomer_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_GetLedgerAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLedgerAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetLedgerAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetLedgerAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetLedgerAccount(ctx, req.(*GetLedgerAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListLedgerAccounts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLedgerAccountsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListLedgerAccounts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListLedgerAccounts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListLedgerAccounts(ctx, req.(*ListLedgerAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetAccountStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetAccountStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetAccountStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetAccountStatement(ctx, req.(*GetAccountStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetJournal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJournalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetJournal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetJournal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetJournal(ctx, req.(*GetJournalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetTrialBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTrialBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetTrialBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetTrialBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetTrialBalance(ctx, req.(*GetTrialBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_RunLedgerCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunLedgerCheckRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RunLedgerCheck(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RunLedgerCheck_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RunLedgerCheck(ctx, req.(*RunLedgerCheckRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListLedgerCheckRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLedgerCheckRunsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListLedgerCheckRuns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListLedgerCheckRuns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListLedgerCheckRuns(ctx, req.(*ListLedgerCheckRunsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -578,6 +816,34 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCustomer",
 			Handler:    _OpenPay_GetCustomer_Handler,
+		},
+		{
+			MethodName: "GetLedgerAccount",
+			Handler:    _OpenPay_GetLedgerAccount_Handler,
+		},
+		{
+			MethodName: "ListLedgerAccounts",
+			Handler:    _OpenPay_ListLedgerAccounts_Handler,
+		},
+		{
+			MethodName: "GetAccountStatement",
+			Handler:    _OpenPay_GetAccountStatement_Handler,
+		},
+		{
+			MethodName: "GetJournal",
+			Handler:    _OpenPay_GetJournal_Handler,
+		},
+		{
+			MethodName: "GetTrialBalance",
+			Handler:    _OpenPay_GetTrialBalance_Handler,
+		},
+		{
+			MethodName: "RunLedgerCheck",
+			Handler:    _OpenPay_RunLedgerCheck_Handler,
+		},
+		{
+			MethodName: "ListLedgerCheckRuns",
+			Handler:    _OpenPay_ListLedgerCheckRuns_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
