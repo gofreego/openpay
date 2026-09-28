@@ -47,6 +47,8 @@ type Payment struct {
 	CustomerID *int64
 	Purpose    PaymentPurpose
 	WalletID   *int64
+	// OrderID is set for an order payment.
+	OrderID *int64
 
 	Amount   int64
 	Currency string

@@ -49,8 +49,8 @@ type holdRelease struct {
 }
 
 type postOptions struct {
-	release *holdRelease
-	check   func(ctx context.Context) error
+	releases []holdRelease
+	check    func(ctx context.Context) error
 }
 
 // postJournal is PostJournal, optionally releasing a hold in the same locked
@@ -62,7 +62,6 @@ type postOptions struct {
 // posted reports whether this call wrote the journal, as opposed to finding
 // it already posted under the same external id.
 func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, opts postOptions) (posted bool, err error) {
-	release := opts.release
 	if !InTx(ctx) {
 		return false, apperrors.New(apperrors.Internal,
 			"PostJournal must run inside a transaction: a journal and its postings cannot be allowed to commit separately")
@@ -82,12 +81,12 @@ func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, opts
 		return false, nil
 	}
 
-	accounts, err := r.lockAccountsForPosting(ctx, journal, release)
+	accounts, err := r.lockAccountsForPosting(ctx, journal, opts.releases)
 	if err != nil {
 		return false, err
 	}
 
-	if release != nil {
+	for _, release := range opts.releases {
 		account := accounts[release.accountID]
 		if account.held < release.amount {
 			// held is the sum of active holds, so this means the two disagree.
@@ -183,15 +182,17 @@ func (r *Repository) insertJournal(ctx context.Context, journal *dao.Journal) (p
 //
 // A released hold's account is locked with the rest even if the journal does
 // not touch it, so its held figure is updated under the same lock.
-func (r *Repository) lockAccountsForPosting(ctx context.Context, journal *dao.Journal, release *holdRelease) (map[int64]*lockedAccount, error) {
+func (r *Repository) lockAccountsForPosting(ctx context.Context, journal *dao.Journal, releases []holdRelease) (map[int64]*lockedAccount, error) {
 	ids := make([]int64, 0, len(journal.Postings)+1)
 	for _, posting := range journal.Postings {
 		if !slices.Contains(ids, posting.AccountID) {
 			ids = append(ids, posting.AccountID)
 		}
 	}
-	if release != nil && !slices.Contains(ids, release.accountID) {
-		ids = append(ids, release.accountID)
+	for _, release := range releases {
+		if !slices.Contains(ids, release.accountID) {
+			ids = append(ids, release.accountID)
+		}
 	}
 	slices.Sort(ids)
 

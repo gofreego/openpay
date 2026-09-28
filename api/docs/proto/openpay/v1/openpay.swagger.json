@@ -31,6 +31,10 @@
       "description": "Collecting money through payment providers"
     },
     {
+      "name": "Orders",
+      "description": "What was bought, and settling it from wallets and cards"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -398,6 +402,62 @@
         ]
       }
     },
+    "/openpay/v1/items": {
+      "get": {
+        "summary": "List the product's catalogue",
+        "description": "Product backend only.",
+        "operationId": "OpenPay_ListItems",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListItemsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      },
+      "post": {
+        "summary": "Add an item to the product's catalogue",
+        "description": "Product backend only. The catalogue describes; orders carry what was actually charged.",
+        "operationId": "OpenPay_CreateItem",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateItemResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateItemRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/openpay/v1/ledger/accounts": {
       "get": {
         "summary": "List ledger accounts with balances",
@@ -697,6 +757,73 @@
         ],
         "tags": [
           "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/orders": {
+      "post": {
+        "summary": "Create and pay for an order",
+        "description": "Product backend only. Checks the amounts add up, then settles from wallets at once, or holds the wallet shares and returns a checkout for the card share. Requires an Idempotency-Key; also idempotent on external_ref.",
+        "operationId": "OpenPay_CreateOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreateOrderRequest records a purchase and starts paying for it. Called by\na product backend with an Idempotency-Key; also idempotent on external_ref.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateOrderRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/openpay/v1/orders/{id}": {
+      "get": {
+        "summary": "Get an order",
+        "description": "Product backend for its own orders, or an operator holding openpay:payments:read within scope.",
+        "operationId": "OpenPay_GetOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Orders"
         ]
       }
     },
@@ -1671,6 +1798,111 @@
         }
       }
     },
+    "v1CreateItemRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "referencePrice": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "taxClass": {
+          "type": "string"
+        }
+      }
+    },
+    "v1CreateItemResponse": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "$ref": "#/definitions/v1Item"
+        }
+      }
+    },
+    "v1CreateOrderRequest": {
+      "type": "object",
+      "properties": {
+        "externalRef": {
+          "type": "string",
+          "description": "The product's own order id."
+        },
+        "invoiceRef": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Optional for a card-only guest purchase; required to pay from wallets."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "taxBreakdownProvided": {
+          "type": "boolean",
+          "description": "With tax_breakdown_provided, subtotal - discount + tax must equal total.\nWithout it, send only total: it is booked gross and flagged."
+        },
+        "subtotal": {
+          "type": "string",
+          "format": "int64"
+        },
+        "discount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "taxRate": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrderLine"
+          },
+          "description": "If given, they must sum to the subtotal."
+        },
+        "walletTenders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WalletTender"
+          },
+          "description": "Explicit wallet shares. Or auto_tender: draw from the customer's wallets,\ngranted value first. A card pays whatever remains."
+        },
+        "autoTender": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "returnUrl": {
+          "type": "string"
+        }
+      },
+      "description": "CreateOrderRequest records a purchase and starts paying for it. Called by\na product backend with an Idempotency-Key; also idempotent on external_ref."
+    },
+    "v1CreateOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/v1Order"
+        }
+      }
+    },
     "v1CreatePaymentRequest": {
       "type": "object",
       "properties": {
@@ -2023,6 +2255,14 @@
         }
       }
     },
+    "v1GetOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/v1Order"
+        }
+      }
+    },
     "v1GetPaymentResponse": {
       "type": "object",
       "properties": {
@@ -2113,6 +2353,36 @@
         },
         "journalId": {
           "type": "string"
+        }
+      }
+    },
+    "v1Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "referencePrice": {
+          "type": "string",
+          "format": "int64",
+          "description": "For description and reporting only; an order carries what was charged."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "taxClass": {
+          "type": "string",
+          "description": "A reporting label, e.g. gst_18. Never used to compute anything."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -2353,6 +2623,18 @@
         }
       }
     },
+    "v1ListItemsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Item"
+          }
+        }
+      }
+    },
     "v1ListLedgerAccountsResponse": {
       "type": "object",
       "properties": {
@@ -2474,6 +2756,151 @@
         "created": {
           "type": "boolean",
           "description": "False when the wallet already existed."
+        }
+      }
+    },
+    "v1Order": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "externalRef": {
+          "type": "string"
+        },
+        "invoiceRef": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "string",
+          "format": "int64"
+        },
+        "discount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tax": {
+          "type": "string",
+          "format": "int64"
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "taxRate": {
+          "type": "string"
+        },
+        "taxBreakdownProvided": {
+          "type": "boolean",
+          "description": "False when the product sent a bare total: booked gross, flagged here."
+        },
+        "status": {
+          "$ref": "#/definitions/v1OrderStatus"
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrderLine"
+          }
+        },
+        "tenders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1OrderTender"
+          }
+        },
+        "gatewayAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The card share, and where to send the customer to pay it."
+        },
+        "paymentId": {
+          "type": "string"
+        },
+        "checkoutUrl": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "paidAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1OrderLine": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "description": "Optional: a catalogue item of this product."
+        },
+        "description": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "unitAmount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1OrderStatus": {
+      "type": "string",
+      "enum": [
+        "ORDER_STATUS_UNSPECIFIED",
+        "ORDER_STATUS_PENDING_PAYMENT",
+        "ORDER_STATUS_PAID",
+        "ORDER_STATUS_FAILED",
+        "ORDER_STATUS_CANCELLED"
+      ],
+      "default": "ORDER_STATUS_UNSPECIFIED",
+      "description": " - ORDER_STATUS_PENDING_PAYMENT: Waiting for the card share; wallet shares are held."
+    },
+    "v1OrderTender": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "wallet or gateway."
+        },
+        "walletId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string",
+          "description": "held, captured or released."
         }
       }
     },
@@ -3091,6 +3518,18 @@
       ],
       "default": "WALLET_STATUS_UNSPECIFIED",
       "description": " - WALLET_STATUS_FROZEN: Customer-initiated movement is refused while support investigates."
+    },
+    "v1WalletTender": {
+      "type": "object",
+      "properties": {
+        "walletId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "v1WalletType": {
       "type": "object",

@@ -13,7 +13,7 @@ import (
 	"github.com/gofreego/openpay/pkg/apperrors"
 )
 
-const paymentColumns = `p.id, p.public_id, p.product_id, p.customer_id, p.purpose, p.wallet_id,
+const paymentColumns = `p.id, p.public_id, p.product_id, p.customer_id, p.purpose, p.wallet_id, p.order_id,
 	p.amount, p.currency, p.status, p.application, p.provider, p.captured_amount, p.captured_at,
 	p.refunded_amount, p.failure_code, p.failure_reason, p.description, p.return_url, p.expires_at,
 	pr.public_id, c.public_id, w.public_id, p.created_at, p.updated_at`
@@ -25,12 +25,12 @@ const paymentFrom = ` FROM payments p
 
 func (r *Repository) CreatePayment(ctx context.Context, p *dao.Payment) error {
 	const insert = `
-		INSERT INTO payments (public_id, product_id, customer_id, purpose, wallet_id, amount, currency,
+		INSERT INTO payments (public_id, product_id, customer_id, purpose, wallet_id, order_id, amount, currency,
 		                      status, application, provider, description, return_url, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, created_at, updated_at`
 	err := r.executor(ctx).QueryRowContext(ctx, insert,
-		p.PublicID, p.ProductID, p.CustomerID, p.Purpose, p.WalletID, p.Amount, p.Currency,
+		p.PublicID, p.ProductID, p.CustomerID, p.Purpose, p.WalletID, p.OrderID, p.Amount, p.Currency,
 		p.Status, p.Application, p.Provider, p.Description, p.ReturnURL, p.ExpiresAt,
 	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *Repository) queryPayments(ctx context.Context, query string, args ...an
 
 func scanPayment(row rowScanner) (*dao.Payment, error) {
 	var p dao.Payment
-	err := row.Scan(&p.ID, &p.PublicID, &p.ProductID, &p.CustomerID, &p.Purpose, &p.WalletID,
+	err := row.Scan(&p.ID, &p.PublicID, &p.ProductID, &p.CustomerID, &p.Purpose, &p.WalletID, &p.OrderID,
 		&p.Amount, &p.Currency, &p.Status, &p.Application, &p.Provider, &p.CapturedAmount, &p.CapturedAt,
 		&p.RefundedAmount, &p.FailureCode, &p.FailureReason, &p.Description, &p.ReturnURL, &p.ExpiresAt,
 		&p.ProductPublicID, &p.CustomerPublicID, &p.WalletPublicID, &p.CreatedAt, &p.UpdatedAt)

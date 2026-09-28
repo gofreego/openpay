@@ -773,3 +773,20 @@ func (e *Engine) move(ctx context.Context, req SpendRequest, op Operation, walle
 func (e *Engine) ChargebackOut(ctx context.Context, req SpendRequest) (*dao.Journal, error) {
 	return e.move(ctx, req, OpChargeback, dao.Debit, nil)
 }
+
+// CheckSpend says whether a wallet may pay amount towards a purchase: its
+// status and per-transaction limit. The balance is the ledger's to judge.
+func (e *Engine) CheckSpend(ctx context.Context, w *dao.Wallet, amount int64) error {
+	walletType, err := e.repo.GetWalletTypeByID(ctx, w.WalletTypeID)
+	if err != nil {
+		return err
+	}
+	return assertAllowed(walletType, w, OpSpend, amount)
+}
+
+// EmitMovements records wallet.credited / wallet.debited events for a journal
+// posted outside this engine — an order's single settlement journal, which
+// moves several wallets at once. Call it in the journal's transaction.
+func (e *Engine) EmitMovements(ctx context.Context, journal *dao.Journal, wallets []*dao.Wallet) error {
+	return e.emitMovements(ctx, journal, wallets)
+}

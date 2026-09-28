@@ -57,6 +57,10 @@ const (
 	OpenPay_GetDispute_FullMethodName              = "/v1.OpenPay/GetDispute"
 	OpenPay_ListDisputes_FullMethodName            = "/v1.OpenPay/ListDisputes"
 	OpenPay_SubmitDisputeEvidence_FullMethodName   = "/v1.OpenPay/SubmitDisputeEvidence"
+	OpenPay_CreateItem_FullMethodName              = "/v1.OpenPay/CreateItem"
+	OpenPay_ListItems_FullMethodName               = "/v1.OpenPay/ListItems"
+	OpenPay_CreateOrder_FullMethodName             = "/v1.OpenPay/CreateOrder"
+	OpenPay_GetOrder_FullMethodName                = "/v1.OpenPay/GetOrder"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -105,6 +109,10 @@ type OpenPayClient interface {
 	GetDispute(ctx context.Context, in *GetDisputeRequest, opts ...grpc.CallOption) (*GetDisputeResponse, error)
 	ListDisputes(ctx context.Context, in *ListDisputesRequest, opts ...grpc.CallOption) (*ListDisputesResponse, error)
 	SubmitDisputeEvidence(ctx context.Context, in *SubmitDisputeEvidenceRequest, opts ...grpc.CallOption) (*SubmitDisputeEvidenceResponse, error)
+	CreateItem(ctx context.Context, in *CreateItemRequest, opts ...grpc.CallOption) (*CreateItemResponse, error)
+	ListItems(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*ListItemsResponse, error)
+	CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error)
+	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 }
 
 type openPayClient struct {
@@ -495,6 +503,46 @@ func (c *openPayClient) SubmitDisputeEvidence(ctx context.Context, in *SubmitDis
 	return out, nil
 }
 
+func (c *openPayClient) CreateItem(ctx context.Context, in *CreateItemRequest, opts ...grpc.CallOption) (*CreateItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateItemResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListItems(ctx context.Context, in *ListItemsRequest, opts ...grpc.CallOption) (*ListItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListItemsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) CreateOrder(ctx context.Context, in *CreateOrderRequest, opts ...grpc.CallOption) (*CreateOrderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateOrderResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreateOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrderResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -541,6 +589,10 @@ type OpenPayServer interface {
 	GetDispute(context.Context, *GetDisputeRequest) (*GetDisputeResponse, error)
 	ListDisputes(context.Context, *ListDisputesRequest) (*ListDisputesResponse, error)
 	SubmitDisputeEvidence(context.Context, *SubmitDisputeEvidenceRequest) (*SubmitDisputeEvidenceResponse, error)
+	CreateItem(context.Context, *CreateItemRequest) (*CreateItemResponse, error)
+	ListItems(context.Context, *ListItemsRequest) (*ListItemsResponse, error)
+	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
+	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -664,6 +716,18 @@ func (UnimplementedOpenPayServer) ListDisputes(context.Context, *ListDisputesReq
 }
 func (UnimplementedOpenPayServer) SubmitDisputeEvidence(context.Context, *SubmitDisputeEvidenceRequest) (*SubmitDisputeEvidenceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitDisputeEvidence not implemented")
+}
+func (UnimplementedOpenPayServer) CreateItem(context.Context, *CreateItemRequest) (*CreateItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateItem not implemented")
+}
+func (UnimplementedOpenPayServer) ListItems(context.Context, *ListItemsRequest) (*ListItemsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListItems not implemented")
+}
+func (UnimplementedOpenPayServer) CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
+}
+func (UnimplementedOpenPayServer) GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrder not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1370,6 +1434,78 @@ func _OpenPay_SubmitDisputeEvidence_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CreateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateItem(ctx, req.(*CreateItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListItems(ctx, req.(*ListItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreateOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreateOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreateOrder(ctx, req.(*CreateOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetOrder(ctx, req.(*GetOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1528,6 +1664,22 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitDisputeEvidence",
 			Handler:    _OpenPay_SubmitDisputeEvidence_Handler,
+		},
+		{
+			MethodName: "CreateItem",
+			Handler:    _OpenPay_CreateItem_Handler,
+		},
+		{
+			MethodName: "ListItems",
+			Handler:    _OpenPay_ListItems_Handler,
+		},
+		{
+			MethodName: "CreateOrder",
+			Handler:    _OpenPay_CreateOrder_Handler,
+		},
+		{
+			MethodName: "GetOrder",
+			Handler:    _OpenPay_GetOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

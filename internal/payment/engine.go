@@ -71,6 +71,7 @@ func (c *Config) WithDefaults() {
 }
 
 type Engine struct {
+	orders    OrderHook
 	repo      Repository
 	providers *provider.Registry
 	wallets   *wallet.Engine
@@ -119,6 +120,59 @@ func (e *Engine) CreateTopup(ctx context.Context, req TopupRequest) (*dao.Paymen
 	if err := e.wallets.CheckFund(ctx, req.Wallet, req.Amount); err != nil {
 		return nil, nil, err
 	}
+	product, err := e.repo.GetProductByID(ctx, req.ProductID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return e.open(ctx, &dao.Payment{
+		PublicID: ids.New(ids.Payment), ProductID: req.ProductID, ProductPublicID: product.PublicID,
+		CustomerID: &req.Customer.ID, CustomerPublicID: &req.Customer.PublicID,
+		Purpose: dao.PurposeWalletTopup, WalletID: &req.Wallet.ID, WalletPublicID: &req.Wallet.PublicID,
+		Amount: req.Amount, Currency: req.Currency,
+		Description: req.Description, ReturnURL: req.ReturnURL,
+	})
+}
+
+// OrderPaymentRequest collects an order's card share.
+type OrderPaymentRequest struct {
+	ProductID   int64
+	Customer    *dao.Customer // nil for a guest
+	OrderID     int64
+	Amount      int64
+	Currency    string
+	Description string
+	ReturnURL   string
+	// ExpiresAt matches the order's, so the two lapse together.
+	ExpiresAt time.Time
+}
+
+// CreateOrderPayment opens the gateway payment for an order. Its capture and
+// its failure are handed to the OrderHook, in the payment's own transaction.
+func (e *Engine) CreateOrderPayment(ctx context.Context, req OrderPaymentRequest) (*dao.Payment, *dao.PaymentAttempt, error) {
+	product, err := e.repo.GetProductByID(ctx, req.ProductID)
+	if err != nil {
+		return nil, nil, err
+	}
+	payment := &dao.Payment{
+		PublicID: ids.New(ids.Payment), ProductID: req.ProductID, ProductPublicID: product.PublicID,
+		Purpose: dao.PurposeOrder, OrderID: &req.OrderID,
+		Amount: req.Amount, Currency: req.Currency,
+		Description: req.Description, ReturnURL: req.ReturnURL, ExpiresAt: req.ExpiresAt,
+	}
+	if req.Customer != nil {
+		payment.CustomerID, payment.CustomerPublicID = &req.Customer.ID, &req.Customer.PublicID
+	}
+	return e.open(ctx, payment)
+}
+
+// open records a payment and its first attempt, and asks the provider for a
+// checkout. It runs in the caller's transaction.
+//
+// A provider that refuses or times out does not fail the call: the payment
+// is recorded as failed, with why, and returned — the caller asked what
+// happened and that is the answer. A timeout leaves the provider's side
+// unknown, but no checkout reached the customer, so nothing can be paid.
+func (e *Engine) open(ctx context.Context, payment *dao.Payment) (*dao.Payment, *dao.PaymentAttempt, error) {
 	chosen, reason, err := e.providers.Choose()
 	if err != nil {
 		return nil, nil, err
@@ -128,22 +182,12 @@ func (e *Engine) CreateTopup(ctx context.Context, req TopupRequest) (*dao.Paymen
 		return nil, nil, err
 	}
 
-	product, err := e.repo.GetProductByID(ctx, req.ProductID)
-	if err != nil {
-		return nil, nil, err
+	name := chosen.Name()
+	payment.Status, payment.Application, payment.Provider = dao.PaymentCreated, dao.ApplicationPending, &name
+	if payment.ExpiresAt.IsZero() {
+		payment.ExpiresAt = e.now().Add(e.cfg.TTL)
 	}
 
-	name := chosen.Name()
-	payment := &dao.Payment{
-		ProductPublicID: product.PublicID, CustomerPublicID: &req.Customer.PublicID,
-		WalletPublicID: &req.Wallet.PublicID,
-		PublicID:       ids.New(ids.Payment), ProductID: req.ProductID,
-		CustomerID: &req.Customer.ID, Purpose: dao.PurposeWalletTopup, WalletID: &req.Wallet.ID,
-		Amount: req.Amount, Currency: req.Currency,
-		Status: dao.PaymentCreated, Application: dao.ApplicationPending, Provider: &name,
-		Description: req.Description, ReturnURL: req.ReturnURL,
-		ExpiresAt: e.now().Add(e.cfg.TTL),
-	}
 	var attempt *dao.PaymentAttempt
 	err = e.repo.WithTx(ctx, func(ctx context.Context) error {
 		if err := e.repo.CreatePayment(ctx, payment); err != nil {
@@ -158,8 +202,8 @@ func (e *Engine) CreateTopup(ctx context.Context, req TopupRequest) (*dao.Paymen
 		}
 
 		result, err := p.CreatePayment(ctx, provider.CreateRequest{
-			AttemptID: attempt.PublicID, Amount: req.Amount, Currency: req.Currency,
-			Description: req.Description, ReturnURL: req.ReturnURL,
+			AttemptID: attempt.PublicID, Amount: payment.Amount, Currency: payment.Currency,
+			Description: payment.Description, ReturnURL: payment.ReturnURL,
 		})
 		if err != nil {
 			code, detail := "technical", err.Error()
@@ -188,6 +232,23 @@ func (e *Engine) CreateTopup(ctx context.Context, req TopupRequest) (*dao.Paymen
 	}
 	return payment, attempt, nil
 }
+
+// OrderHook is how an order learns what happened to its payment. Both calls
+// run inside the payment's transaction, so an order can never disagree with
+// its payment — even across a crash.
+type OrderHook interface {
+	// CaptureOrder books a captured order payment as the order's settlement.
+	// applied is false when the order can no longer take it (it already
+	// failed, or its wallet share is gone); the money is then owed back.
+	CaptureOrder(ctx context.Context, payment *dao.Payment, providerName string) (applied bool, err error)
+	// PaymentEnded tells the order its payment failed, expired or was
+	// cancelled, so it can release what it holds.
+	PaymentEnded(ctx context.Context, payment *dao.Payment) error
+}
+
+// SetOrderHook connects the order engine. Order payments are refused until
+// one is set, rather than captured with nowhere to go.
+func (e *Engine) SetOrderHook(h OrderHook) { e.orders = h }
 
 // Sync brings a payment in line with the provider's authoritative view of
 // one of its attempts. It is the only way a payment advances after creation:
@@ -271,6 +332,10 @@ func (e *Engine) applyCapture(ctx context.Context, payment *dao.Payment, attempt
 			"provider amount differs from the payment's")
 	}
 
+	if payment.Purpose == dao.PurposeOrder {
+		return e.applyOrderCapture(ctx, payment, attempt, product, externalID, captured, pp.Currency)
+	}
+
 	walletRef := *payment.WalletPublicID
 	w, err := e.repo.GetWalletByPublicID(ctx, walletRef)
 	if err != nil {
@@ -296,6 +361,30 @@ func (e *Engine) applyCapture(ctx context.Context, payment *dao.Payment, attempt
 	default:
 		return credit
 	}
+}
+
+// applyOrderCapture hands a captured order payment to its order. The order
+// posts one journal for the whole purchase — wallet shares and this card
+// share together. If it cannot take the money (it already failed, or a
+// wallet share is gone), it records that itself and the card money is owed
+// back here instead.
+func (e *Engine) applyOrderCapture(ctx context.Context, payment *dao.Payment, attempt *dao.PaymentAttempt,
+	product *dao.Product, externalID string, captured int64, currency string) error {
+	if e.orders == nil {
+		return apperrors.New(apperrors.Internal, "order payment %s captured but no order engine is connected", payment.PublicID)
+	}
+	applied, err := e.orders.CaptureOrder(ctx, payment, attempt.Provider)
+	if err != nil {
+		return err
+	}
+	if applied {
+		payment.Application = dao.ApplicationApplied
+		return nil
+	}
+	payment.Application = dao.ApplicationUnapplied
+	logger.Warn(ctx, "order payment %s captured but its order could not take it — owed back", payment.PublicID)
+	return e.post(ctx, externalID, payment, attempt.Provider, ledger.ProductRefundsPayable(product.Code),
+		captured, currency, "order could not take the payment")
 }
 
 // post books a capture that could not be applied: Dr the provider's
@@ -370,6 +459,13 @@ func (e *Engine) transition(ctx context.Context, payment *dao.Payment, to dao.Pa
 	}
 	if err := e.repo.RecordPaymentTransition(ctx, t); err != nil {
 		return err
+	}
+
+	if payment.Purpose == dao.PurposeOrder && e.orders != nil &&
+		(to == dao.PaymentFailed || to == dao.PaymentExpired || to == dao.PaymentCancelled) {
+		if err := e.orders.PaymentEnded(ctx, payment); err != nil {
+			return err
+		}
 	}
 
 	topic, ok := terminalTopics[to]

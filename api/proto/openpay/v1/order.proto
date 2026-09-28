@@ -1,0 +1,144 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Orders record what was bought and settle it. OpenPay prices nothing and
+// computes no tax: the product sends the amounts, OpenPay checks that
+// subtotal - discount + tax = total, records them, and books each to its own
+// ledger account (plan.md D13).
+
+message Item {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  // For description and reporting only; an order carries what was charged.
+  int64 reference_price = 4;
+  string currency = 5;
+  // A reporting label, e.g. gst_18. Never used to compute anything.
+  string tax_class = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message CreateItemRequest {
+  string code = 1 [(validate.rules).string = {pattern: "^[A-Za-z0-9_-]{1,50}$"}];
+  string name = 2 [(validate.rules).string = {min_len: 1, max_len: 200}];
+  int64 reference_price = 3 [(validate.rules).int64 = {gte: 0}];
+  string currency = 4 [(validate.rules).string = {in: ["INR"]}];
+  string tax_class = 5 [(validate.rules).string = {max_len: 50}];
+}
+
+message CreateItemResponse {
+  Item item = 1;
+}
+
+message ListItemsRequest {}
+
+message ListItemsResponse {
+  repeated Item items = 1;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  // Waiting for the card share; wallet shares are held.
+  ORDER_STATUS_PENDING_PAYMENT = 1;
+  ORDER_STATUS_PAID = 2;
+  ORDER_STATUS_FAILED = 3;
+  ORDER_STATUS_CANCELLED = 4;
+}
+
+message OrderLine {
+  // Optional: a catalogue item of this product.
+  string item_id = 1;
+  string description = 2 [(validate.rules).string = {max_len: 500}];
+  int32 quantity = 3 [(validate.rules).int32 = {gt: 0}];
+  int64 unit_amount = 4 [(validate.rules).int64 = {gte: 0}];
+  int64 amount = 5;
+}
+
+message WalletTender {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 2 [(validate.rules).int64 = {gt: 0}];
+}
+
+message OrderTender {
+  // wallet or gateway.
+  string kind = 1;
+  string wallet_id = 2;
+  int64 amount = 3;
+  // held, captured or released.
+  string status = 4;
+}
+
+message Order {
+  string id = 1;
+  string external_ref = 2;
+  string invoice_ref = 3;
+  string product_id = 4;
+  string customer_id = 5;
+  string currency = 6;
+  int64 subtotal = 7;
+  int64 discount = 8;
+  int64 tax = 9;
+  int64 total = 10;
+  string tax_rate = 11;
+  // False when the product sent a bare total: booked gross, flagged here.
+  bool tax_breakdown_provided = 12;
+  OrderStatus status = 13;
+  string failure_reason = 14;
+  repeated OrderLine lines = 15;
+  repeated OrderTender tenders = 16;
+  // The card share, and where to send the customer to pay it.
+  int64 gateway_amount = 17;
+  string payment_id = 18;
+  string checkout_url = 19;
+  google.protobuf.Timestamp expires_at = 20;
+  google.protobuf.Timestamp paid_at = 21;
+  google.protobuf.Timestamp created_at = 22;
+}
+
+// CreateOrderRequest records a purchase and starts paying for it. Called by
+// a product backend with an Idempotency-Key; also idempotent on external_ref.
+message CreateOrderRequest {
+  // The product's own order id.
+  string external_ref = 1 [(validate.rules).string = {min_len: 1, max_len: 200}];
+  string invoice_ref = 2 [(validate.rules).string = {max_len: 200}];
+  // Optional for a card-only guest purchase; required to pay from wallets.
+  string customer_id = 3;
+  string currency = 4 [(validate.rules).string = {in: ["INR"]}];
+
+  // With tax_breakdown_provided, subtotal - discount + tax must equal total.
+  // Without it, send only total: it is booked gross and flagged.
+  bool tax_breakdown_provided = 5;
+  int64 subtotal = 6 [(validate.rules).int64 = {gte: 0}];
+  int64 discount = 7 [(validate.rules).int64 = {gte: 0}];
+  int64 tax = 8 [(validate.rules).int64 = {gte: 0}];
+  int64 total = 9 [(validate.rules).int64 = {gt: 0}];
+  string tax_rate = 10 [(validate.rules).string = {max_len: 20}];
+
+  // If given, they must sum to the subtotal.
+  repeated OrderLine lines = 11;
+
+  // Explicit wallet shares. Or auto_tender: draw from the customer's wallets,
+  // granted value first. A card pays whatever remains.
+  repeated WalletTender wallet_tenders = 12;
+  bool auto_tender = 13;
+
+  string description = 14 [(validate.rules).string = {max_len: 200}];
+  string return_url = 15 [(validate.rules).string = {max_len: 2000}];
+}
+
+message CreateOrderResponse {
+  Order order = 1;
+}
+
+message GetOrderRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/models/dao"
+	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/repository"
@@ -51,8 +52,15 @@ func (w *Worker) Run(ctx context.Context) error {
 	w.cfg.Service.Payments.WithDefaults()
 	registry, _ := payment.Providers(w.cfg.Service.Payments)
 	payments := payment.New(repo, registry, engine, w.cfg.Service.Payments)
+	// The worker processes webhooks too, so its payment engine must know about
+	// orders: an order's card capture settles the order in the same transaction.
+	orders := order.New(repo, engine, payments, w.cfg.Service.Orders)
 
-	w.done.Add(11)
+	w.done.Add(12)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "order expiry sweeper", w.cfg.Worker.PaymentPollInterval, func() { w.expireOrders(ctx, repo, orders) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "dispute poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollDisputes(ctx, repo, payments) })
@@ -215,6 +223,22 @@ func (w *Worker) pollDisputes(ctx context.Context, repo service.Repository, paym
 	for _, d := range open {
 		if _, err := payments.PollDispute(ctx, d); err != nil {
 			logger.Warn(ctx, "failed to poll dispute %s: %v", d.PublicID, err)
+		}
+	}
+}
+
+// expireOrders resolves orders still awaiting their card share past expiry,
+// through their payment — which asks the provider first — so held wallet
+// shares are released for an unpaid order and settled for a late-paid one.
+func (w *Worker) expireOrders(ctx context.Context, repo service.Repository, orders *order.Engine) {
+	due, err := repo.ListExpiredOrders(ctx, time.Now(), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list expired orders: %v", err)
+		return
+	}
+	for _, o := range due {
+		if err := orders.Expire(ctx, o); err != nil {
+			logger.Warn(ctx, "failed to expire order %s: %v", o.PublicID, err)
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/models/filter"
+	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/wallet"
 )
@@ -16,6 +17,8 @@ type Config struct {
 	Wallet wallet.Limits `yaml:"Wallet"`
 	// Payments configures providers and payment timing.
 	Payments payment.Config `yaml:"Payments"`
+	// Orders configures how long an order's card share may take.
+	Orders order.Config `yaml:"Orders"`
 }
 
 type Repository interface {
@@ -80,6 +83,24 @@ type PaymentRepository interface {
 	ListOpenRefunds(ctx context.Context, before time.Time, limit int) ([]*dao.Refund, error)
 	SumProcessedRefunds(ctx context.Context, paymentID int64) (int64, error)
 	GetJournalByExternalID(ctx context.Context, externalID string) (*dao.Journal, error)
+
+	CreateItem(ctx context.Context, item *dao.Item) error
+	GetItemByPublicID(ctx context.Context, publicID string) (*dao.Item, error)
+	ListItems(ctx context.Context, productID int64) ([]*dao.Item, error)
+	CreateOrder(ctx context.Context, o *dao.Order) error
+	UpdateOrder(ctx context.Context, o *dao.Order) error
+	LockOrder(ctx context.Context, id int64) (*dao.Order, error)
+	GetOrderByPublicID(ctx context.Context, publicID string) (*dao.Order, error)
+	GetOrderByExternalRef(ctx context.Context, productID int64, externalRef string) (*dao.Order, error)
+	ListExpiredOrders(ctx context.Context, now time.Time, limit int) ([]*dao.Order, error)
+	CreateOrderLine(ctx context.Context, l *dao.OrderLine) error
+	ListOrderLines(ctx context.Context, orderID int64) ([]*dao.OrderLine, error)
+	CreateOrderTender(ctx context.Context, t *dao.OrderTender) error
+	UpdateOrderTender(ctx context.Context, t *dao.OrderTender) error
+	ListOrderTenders(ctx context.Context, orderID int64) ([]*dao.OrderTender, error)
+	GetOrderPayment(ctx context.Context, orderID int64) (*dao.Payment, error)
+	GetHoldByExternalID(ctx context.Context, externalID string) (*dao.Hold, error)
+	CaptureHolds(ctx context.Context, holdExternalIDs []string, journal *dao.Journal) ([]*dao.Hold, bool, error)
 
 	CreateDispute(ctx context.Context, d *dao.Dispute) error
 	UpdateDispute(ctx context.Context, d *dao.Dispute) error
@@ -238,15 +259,20 @@ type Service struct {
 	repo     Repository
 	wallets  *wallet.Engine
 	payments *payment.Engine
+	orders   *order.Engine
 	openpay_v1.UnimplementedOpenPayServer
 }
 
 func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 	wallets := wallet.New(repo, cfg.Wallet)
 	registry, _ := payment.Providers(cfg.Payments)
+	payments := payment.New(repo, registry, wallets, cfg.Payments)
 	return &Service{
 		repo:     repo,
 		wallets:  wallets,
-		payments: payment.New(repo, registry, wallets, cfg.Payments),
+		payments: payments,
+		// Connects itself to payments: order card shares are settled or
+		// failed from inside the payment's own transaction.
+		orders: order.New(repo, wallets, payments, cfg.Orders),
 	}
 }

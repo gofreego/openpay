@@ -27,7 +27,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ✅ Complete for top-ups (tax split and destination policy with P7 orders; fee reconciliation with P8) |
-| 7 | Orders & Checkout (Split Tender) | ☐ Not started |
+| 7 | Orders & Checkout (Split Tender) | ◐ Orders, split tender and settlement done; order refunds next |
 | 8 | Settlement & Reconciliation | ☐ Not started |
 | 9 | Payouts & Withdrawals | ☐ Not started |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
@@ -1097,44 +1097,57 @@ nets correctly, and a dispute lifecycle posts and reverses cleanly.
 **Goal:** "pay for Premium" — the purchase path, including paying partly from a wallet
 and partly from a card.
 
-- [ ] `items` / `plans` (reference price, currency) and `orders` + `order_line_items`.
+- [x] `items` / `plans` (reference price, currency) and `orders` + `order_line_items`.
       The item catalogue is for description and reporting — the calling product still
       passes the amounts actually charged (D13), so a price change never silently
       rewrites what a customer was billed
-- [ ] **No pricing engine** (D13). OpenPay records the breakdown the product sends —
+- [x] **No pricing engine** (D13). OpenPay records the breakdown the product sends —
       subtotal, discount, tax, total — validates that it adds up, rejects it if not, and
-      posts each component to its own ledger account. It computes no prices and no taxes
-- [ ] Flag and report orders booked without a tax breakdown, so gross-booked revenue is
-      a visible exception rather than a silent assumption
-- [ ] **One order belongs to exactly one product**: `orders.product_id NOT NULL`, and
-      every line item validated to belong to that same product. Enforce it rather than
-      assuming it — a mixed-product order is precisely the D8 failure where revenue
-      lands against the wrong product, and refund routing stops being unambiguous
-- [ ] Note the constraint is on the *order*, not on its funding: a `PLATFORM`-scoped
-      wallet (D10) may legitimately pay for a single-product order. Tender sources span
-      products; orders do not
-- [ ] **Tender plan**: an order is paid by N tenders (wallet A ₹200 + gateway ₹300)
-- [ ] **Tender ordering policy** (the D10 consequence): auto-build the plan by draining
-      granted/expiring balances first (soonest expiry → oldest grant), then purchased
-      balances, then the gateway for the remainder. Configurable per product; the
-      default should minimise breakage disputes and customer surprise
-- [ ] Split-tender saga with compensations:
+      posts each component to its own ledger account. It computes no prices and no taxes.
+      One journal per order: Dr wallets / receivable / `expense:<p>:discounts`, Cr
+      `income:<p>:product_sales` (subtotal) and `liability:gst_payable` (tax). The
+      arithmetic is also a CHECK on `orders`
+- [x] Flag and report orders booked without a tax breakdown, so gross-booked revenue is
+      a visible exception rather than a silent assumption (`tax_breakdown_provided`,
+      plus the journal memo says "booked gross")
+- [x] **One order belongs to exactly one product**: `orders.product_id NOT NULL`, and
+      every line item validated to belong to that same product
+- [x] Note the constraint is on the *order*, not on its funding: a `PLATFORM`-scoped
+      wallet (D10) may legitimately pay for a single-product order (tested)
+- [x] **Tender plan**: an order is paid by N tenders (wallet A ₹200 + gateway ₹300)
+- [x] **Tender ordering policy**: `auto_tender` draws granted-only wallets first, then
+      expiring ones, then the rest, and the card pays the remainder. Rolling expiry has
+      no per-credit date, so "soonest expiry" is approximated by "expires at all" until
+      fixed-expiry lots exist. **Not yet per-product configurable** — one policy, the
+      default; add configuration when a product needs a different one
+- [x] Split-tender saga with compensations:
       1. place holds on all wallet tenders
       2. create the gateway payment for the remainder
-      3. on success → capture holds + post one combined journal
+      3. on success → capture holds + post one combined journal (`CaptureHolds`, one
+         locked pass for several holds)
       4. on failure/expiry/timeout → release holds, fail the order
-      5. crash at any step → the resume worker completes or compensates
-- [ ] Hold expiry sweeper must never strand customer funds — test this explicitly
-- [ ] Order events: `order.paid`, `order.failed` — delivered to the owning product's
+      5. crash at any step → nothing to resume: steps 1–2 are one transaction, and 3–4
+         run inside the payment's own transaction through `payment.OrderHook`, so an
+         order can never disagree with its payment. An order that cannot take a
+         captured card share (it already failed, or a wallet share is gone) fails and
+         the card money is owed back in `refunds_payable`
+- [x] Hold expiry sweeper must never strand customer funds — test this explicitly.
+      Holds outlive their order by `HoldGrace` (1h), so the order sweeper — which asks
+      the provider first — always resolves the order before a hold can lapse under it
+- [x] Order events: `order.paid`, `order.failed` — delivered to the owning product's
       backend (internal callback or event queue; no public webhook infrastructure needed
       for in-house consumers)
-- [ ] **No subscriptions.** Every payment is one-off. A time-limited purchase like
+- [x] **No subscriptions.** Every payment is one-off. A time-limited purchase like
       "Premium for a month" is a single order here; the **product** owns the entitlement
       period, tracks when it lapses, and asks the customer to buy again. Resist adding a
       `subscriptions` table merely to record an expiry date — that belongs to whoever
       owns the entitlement, for the same reason tax belongs to whoever owns pricing (D13)
-- [ ] Payment purpose stays `WALLET_TOPUP | ORDER`; no renewal purpose, no mandate
+- [x] Payment purpose stays `WALLET_TOPUP | ORDER`; no renewal purpose, no mandate
       storage, no dunning or retry schedules
+- [ ] Order refunds, carrying their own tax split (D13) and following a per-product
+      destination policy (back to source vs. to wallet) — deferred here from Phase 6
+- [ ] Cancelling a pending order from the product side; FULFILLED state (the product
+      owns entitlement, so possibly never)
 
 **Exit criteria:** an order paid ₹200 wallet + ₹300 card results in one balanced
 journal; killing the process mid-saga leaves no stuck holds after the sweeper runs.

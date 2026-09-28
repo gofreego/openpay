@@ -12,6 +12,7 @@ import "proto/openpay/v1/credential.proto";
 import "proto/openpay/v1/ledger.proto";
 import "proto/openpay/v1/wallet.proto";
 import "proto/openpay/v1/payment.proto";
+import "proto/openpay/v1/order.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -43,6 +44,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Payments"
       description: "Collecting money through payment providers"
+    },
+    {
+      name: "Orders"
+      description: "What was bought, and settling it from wallets and cards"
     },
     {
       name: "Ledger"
@@ -539,6 +544,54 @@ service OpenPay {
             tags: "Payments"
             summary: "Submit evidence for a dispute"
             description: "Only while the dispute is open. Central ops only: requires openpay:disputes:manage and openpay:scope:all."
+        };
+    }
+
+    // ---- Orders ----
+
+    rpc CreateItem (CreateItemRequest) returns (CreateItemResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/items"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "Add an item to the product's catalogue"
+            description: "Product backend only. The catalogue describes; orders carry what was actually charged."
+        };
+    }
+
+    rpc ListItems (ListItemsRequest) returns (ListItemsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/items"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "List the product's catalogue"
+            description: "Product backend only."
+        };
+    }
+
+    rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/orders"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "Create and pay for an order"
+            description: "Product backend only. Checks the amounts add up, then settles from wallets at once, or holds the wallet shares and returns a checkout for the card share. Requires an Idempotency-Key; also idempotent on external_ref."
+        };
+    }
+
+    rpc GetOrder (GetOrderRequest) returns (GetOrderResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/orders/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "Get an order"
+            description: "Product backend for its own orders, or an operator holding openpay:payments:read within scope."
         };
     }
 }

@@ -28,6 +28,7 @@ const (
 	Payment           Prefix = "pay"
 	PaymentAttempt    Prefix = "pat"
 	Order             Prefix = "ord"
+	Item              Prefix = "itm"
 	Refund            Prefix = "ref"
 	Dispute           Prefix = "dsp"
 	Settlement        Prefix = "stl"
