@@ -21,8 +21,8 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | Phase | Name | Status |
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
-| 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4, where payments consume them) |
-| 2 | Ledger Core | ◐ Posting engine, accounts and balances done; holds, chart bootstrap, statements and the invariant checker next |
+| 1 | Products & Catalog | ◐ Exit criteria met; operator product scope, MAIN/BONUS seeding and scope-boundary tests still open (fee policies deferred to P4) |
+| 2 | Ledger Core | ◐ Posting engine, accounts, balances and holds done; chart bootstrap, read APIs and the invariant checker next |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
@@ -644,8 +644,8 @@ transaction, idempotently, with an outbox event published and consumed.
 **Goal:** products can be registered and configured, and their backends can authenticate
 to OpenPay.
 
-- [ ] Tables: `products`, `service_credentials`, `customers`, `wallet_types`
-- [ ] Two distinct auth paths, both resolved in one interceptor:
+- [x] Tables: `products`, `service_credentials`, `customers`, `wallet_types`
+- [x] Two distinct auth paths, both resolved in one interceptor:
       - **Operator** (admin console) — trust `x-user-id` / `x-user-perms` injected by
         opengate; map permissions to RPC-level checks
       - **Service** (a product's backend calling us) — `key_id` + hashed secret,
@@ -656,35 +656,45 @@ to OpenPay.
         hash speed. argon2id measured ~25ms, paid on *every* authenticated call rather
         than once at login — latency and memory churn for no added security, and the
         usual fix (caching verified credentials) trades it for a revocation-invalidation
-        bug. The stored digest is algorithm-tagged so this can change without a migration
+        bug. The stored digest is algorithm-tagged so this can change without a migration.
+      Not an interceptor in the end: `auth.RequireOperator` / `RequireService` are called
+      at the top of each service method, the one point both transports pass through
 - [ ] **Operator product scope** (U-D6): resolve `x-user-perms` into an effective
       product set — all products for central ops, a named set for product ops — and
       apply it as a repository-layer filter on every read. Both auth paths therefore
       converge on the same question: *which products may this caller see?*
-- [ ] Permission taxonomy covering both the verb and the scope (e.g.
+      **Not started** — every operator currently sees every product
+- [ ] ◐ Permission taxonomy covering both the verb and the scope (e.g.
       `openpay:payments:read` + product scope), plus the platform-only permissions that
       no product-scoped operator can hold: provider config, settlement/recon, platform
-      ledger accounts, wallet type and fee policy writes
+      ledger accounts, wallet type and fee policy writes.
+      Verbs exist (`internal/auth/permissions.go`); the product-scope half waits on
+      operator product scope above
 - [ ] Tests for the scope boundary specifically: a product-scoped operator requesting
       another product's payment, ledger account, or a shared customer's other-product
-      wallets gets nothing — not a filtered-empty list that a later refactor can widen
-- [ ] Product CRUD (admin API): code, display name, status, default currency
-- [ ] `WalletType` config — the full capability set from D10: code, currency, scope,
+      wallets gets nothing — not a filtered-empty list that a later refactor can widen.
+      **Open** — depends on operator product scope, and on wallets (Phase 3)
+- [x] Product CRUD (admin API): code, display name, status, default currency
+- [x] `WalletType` config — the full capability set from D10: code, currency, scope,
       `fundable`, `grantable`, `withdrawable`, `transferable`, `refundable_to_source`,
       `expiry_policy`, `allow_negative`, limits
-- [ ] Config validation rejecting incoherent combinations up front, e.g.
+- [x] Config validation rejecting incoherent combinations up front, e.g.
       `withdrawable && !fundable` (cashing out money nobody paid in), or
       `grantable && withdrawable` without an explicit override — promotional balance
       that can be converted to cash is a fraud target, not a feature
-- [ ] **Compliance gate on `withdrawable`** (D10): elevated permission, a recorded
+- [x] **Compliance gate on `withdrawable`** (D10): elevated permission, a recorded
       approval row (who, when, reference to the sign-off), and a loud UI warning.
       Never a plain checkbox
-- [ ] Guard rails on `WalletType` mutation: currency, scope, and the fundable/grantable
+- [x] Guard rails on `WalletType` mutation: currency, scope, and the fundable/grantable
       distinction become immutable once any wallet of that type exists — enforce in code
       and state it in the API docs. Tightening limits stays allowed; loosening the
-      capability flags does not
+      capability flags does not.
+      Implemented stricter than stated: `UpdateWalletType` accepts only name, status and
+      limits, so currency, scope and capabilities are immutable from creation. Revisit
+      if a real need to loosen a flag on an unused type appears
 - [ ] Seed the two canonical types per product so the distinction is the default path:
-      `MAIN` (fundable, closed-loop) and `BONUS` (grantable, expiring, non-withdrawable)
+      `MAIN` (fundable, closed-loop) and `BONUS` (grantable, expiring, non-withdrawable).
+      **Not started** — both are creatable through the API, but nothing seeds them
 - [ ] `fee_policies` table (D12): mode `ABSORBED | DEDUCTED | PASSED_ON` keyed by
       `(product_id, purpose)` with a platform default row; resolution is a lookup with a
       documented precedence, not a rules engine.
@@ -692,22 +702,30 @@ to OpenPay.
       consumer cannot be verified, and `ABSORBED` is the launch default anyway (Q2)
 - [ ] `PASSED_ON` is compliance-gated the same way `withdrawable` is (surcharging
       restrictions) — elevated permission plus a recorded approval
-- [ ] `customers` carries **no `product_id`** — one row per person, platform-wide, keyed
+- [x] `customers` carries **no `product_id`** — one row per person, platform-wide, keyed
       by `external_ref` (the OpenAuth user id) UNIQUE. Upsert on it; idempotent by
       construction
-- [ ] `merged_into_customer_id` nullable self-reference for the merge tombstone; every
+- [x] `merged_into_customer_id` nullable self-reference for the merge tombstone; every
       customer lookup follows it so a merged id keeps resolving to the survivor
 - [ ] `customer_id` is **nullable** on payments and orders — a one-off guest purchase
-      needs no customer record; anything holding a balance does
+      needs no customer record; anything holding a balance does.
+      Lands with those tables (Phases 4 and 7)
 - [ ] **Product-scoped wallet reads** (D8): a service credential resolves to one product,
       and any wallet listing for a customer returns that product's wallets plus
       `PLATFORM`-scoped ones — never another product's. Cover this with an explicit
-      test, since it is the one place a shared customer can leak data
-- [ ] Customer merge (design now, implement when first needed): transfer balances **by
+      test, since it is the one place a shared customer can leak data.
+      `ListWalletTypes` already returns product + `PLATFORM` types; the wallet listing
+      itself lands in Phase 3
+- [x] Customer merge (design now, implement when first needed): transfer balances **by
       journal** not by `UPDATE`, leave the losing record as a resolving tombstone rather
-      than deleting it, and make the whole operation auditable and reversible
-- [ ] Audit log table + interceptor: who changed what, when, from where
-- [ ] Admin-facing list/filter endpoints following the existing `models/filter` pattern
+      than deleting it, and make the whole operation auditable and reversible.
+      Designed: tombstone schema and merge-following lookups exist; the merge operation
+      itself is not built
+- [x] Audit log table + interceptor: who changed what, when, from where.
+      Written by the service method inside the change's own transaction (`s.audit`),
+      with before/after state, rather than by an interceptor that cannot see either
+- [x] Admin-facing list/filter endpoints following the existing `models/filter` pattern
+      (products, wallet types, credentials)
 
 **Exit criteria:** a product, two wallet types, and a customer can be created via API;
 every write appears in the audit log; a revoked service credential is rejected; an
@@ -728,7 +746,8 @@ This is the most important phase in the project. Do not rush it.
       - `ledger_postings` (journal_id, account_id, direction, amount>0, currency, seq,
         balance_after) — immutable
       - `ledger_balances` (account_id PK, raw_balance, held, version)
-      - `ledger_holds` (account_id, amount, status, expires_at, external_id UNIQUE)
+      - `ledger_holds` (account_id, amount, status, expires_at, external_id UNIQUE) —
+        added in migration 000006 with the holds work below
 - [x] Posting engine `PostJournal(ctx, journal)`. Append-only is enforced by
       database triggers rejecting UPDATE and DELETE on journals and postings, so it
       holds against a console session or a well-meant 3am fix, not only against our
@@ -740,8 +759,18 @@ This is the most important phase in the project. Do not rush it.
       - enforces `allow_negative` on the resulting available balance
       - writes journal + postings + balance updates in one transaction
       - is idempotent on `external_id`
-- [ ] Holds: `PlaceHold` / `CaptureHold` / `ReleaseHold`;
-      `available = natural_balance − held`
+- [x] Holds: `PlaceHold` / `CaptureHold` / `ReleaseHold`;
+      `available = natural_balance − held`.
+      - placing is idempotent on `external_id`; the same id for a different account or
+        amount is refused rather than replayed
+      - capture posts the journal **and** frees the reservation in the same locked
+        pass — otherwise a wallet holding exactly the captured amount is refused for
+        lacking money its own hold is reserving. Partial capture frees the remainder
+      - the posting engine's overdraft check now uses available, not natural, and only
+        on postings that reduce a balance: a credit is never refused
+      - a resolved hold cannot be reopened or deleted (database triggers)
+      - `ExpireHold` + `ListExpiredHolds` are ready for the sweeper; the worker job
+        itself lands with its first consumer (Phase 3/7)
 - [ ] Chart-of-accounts bootstrap, split by scope:
       - **platform-level, created once**: PSP receivable per provider, bank, PSP fee
         expense, tax payable, suspense per provider

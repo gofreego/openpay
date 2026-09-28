@@ -22,31 +22,60 @@ import (
 // external id returns the journal already posted rather than posting it again,
 // which is what makes a retried payment capture safe.
 func (r *Repository) PostJournal(ctx context.Context, journal *dao.Journal) error {
+	_, err := r.postJournal(ctx, journal, nil)
+	return err
+}
+
+// holdRelease frees a hold's reservation as part of posting a journal.
+type holdRelease struct {
+	accountID int64
+	amount    int64
+}
+
+// postJournal is PostJournal, optionally releasing a hold in the same locked
+// pass. Capturing a hold needs this: the reservation must be freed before the
+// overdraft check, or a wallet holding exactly the captured amount would be
+// refused for lacking money that the hold itself is reserving. Doing it under
+// the same ascending-id locks keeps the deadlock guarantee intact.
+//
+// posted reports whether this call wrote the journal, as opposed to finding
+// it already posted under the same external id.
+func (r *Repository) postJournal(ctx context.Context, journal *dao.Journal, release *holdRelease) (posted bool, err error) {
 	if !InTx(ctx) {
-		return apperrors.New(apperrors.Internal,
+		return false, apperrors.New(apperrors.Internal,
 			"PostJournal must run inside a transaction: a journal and its postings cannot be allowed to commit separately")
 	}
 	if err := validateJournal(journal); err != nil {
-		return err
+		return false, err
 	}
 
 	// Claim the external id first. If another journal already owns it, this
 	// work has been done and must not be repeated.
 	posted, existing, err := r.insertJournal(ctx, journal)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !posted {
 		*journal = *existing
-		return nil
+		return false, nil
 	}
 
-	accounts, err := r.lockAccountsForPosting(ctx, journal)
+	accounts, err := r.lockAccountsForPosting(ctx, journal, release)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return r.writePostings(ctx, journal, accounts)
+	if release != nil {
+		account := accounts[release.accountID]
+		if account.held < release.amount {
+			// held is the sum of active holds, so this means the two disagree.
+			return false, apperrors.New(apperrors.Internal,
+				"account %q holds %d but a hold of %d is being released", account.code, account.held, release.amount)
+		}
+		account.held -= release.amount
+	}
+
+	return true, r.writePostings(ctx, journal, accounts)
 }
 
 // validateJournal checks what must be true of any journal before the database
@@ -121,12 +150,18 @@ func (r *Repository) insertJournal(ctx context.Context, journal *dao.Journal) (p
 // of accounts in opposite orders would each hold what the other needs, so rows
 // are always locked by ascending account id — an order both transactions agree
 // on without knowing about each other.
-func (r *Repository) lockAccountsForPosting(ctx context.Context, journal *dao.Journal) (map[int64]*lockedAccount, error) {
-	ids := make([]int64, 0, len(journal.Postings))
+//
+// A released hold's account is locked with the rest even if the journal does
+// not touch it, so its held figure is updated under the same lock.
+func (r *Repository) lockAccountsForPosting(ctx context.Context, journal *dao.Journal, release *holdRelease) (map[int64]*lockedAccount, error) {
+	ids := make([]int64, 0, len(journal.Postings)+1)
 	for _, posting := range journal.Postings {
 		if !slices.Contains(ids, posting.AccountID) {
 			ids = append(ids, posting.AccountID)
 		}
+	}
+	if release != nil && !slices.Contains(ids, release.accountID) {
+		ids = append(ids, release.accountID)
 	}
 	slices.Sort(ids)
 
@@ -191,7 +226,7 @@ func (r *Repository) writePostings(ctx context.Context, journal *dao.Journal, ac
 
 	const updateBalance = `
 		UPDATE ledger_balances
-		SET raw_balance = $2, version = version + 1, updated_at = NOW()
+		SET raw_balance = $2, held = $3, version = version + 1, updated_at = NOW()
 		WHERE account_id = $1`
 
 	for seq, posting := range journal.Postings {
@@ -209,13 +244,17 @@ func (r *Repository) writePostings(ctx context.Context, journal *dao.Journal, ac
 		account.rawBalance += posting.Signed()
 
 		// Overdraft is checked against the natural balance, because "negative"
-		// means owing value for an asset and holding it for a liability.
-		if !account.allowNegative {
+		// means owing value for an asset and holding it for a liability — and
+		// against what is available after holds, because reserved money is
+		// already promised elsewhere. Only a posting that reduces the balance
+		// is checked: a credit must never be refused for arriving at an account
+		// that is short.
+		if !account.allowNegative && posting.Signed()*account.accountType.NormalSign() < 0 {
 			natural := account.rawBalance * account.accountType.NormalSign()
-			if natural < 0 {
+			if available := natural - account.held; available < 0 {
 				return apperrors.New(apperrors.InsufficientBalance,
-					"account %q would go to %d, and it does not permit a negative balance",
-					account.code, natural)
+					"account %q would have %d available (balance %d, held %d), and it does not permit a negative balance",
+					account.code, available, natural, account.held)
 			}
 		}
 
@@ -234,7 +273,7 @@ func (r *Repository) writePostings(ctx context.Context, journal *dao.Journal, ac
 	// Balances are written once per account after all its postings, so an
 	// account appearing twice in one journal ends at the right figure.
 	for _, account := range accounts {
-		if _, err := r.executor(ctx).ExecContext(ctx, updateBalance, account.id, account.rawBalance); err != nil {
+		if _, err := r.executor(ctx).ExecContext(ctx, updateBalance, account.id, account.rawBalance, account.held); err != nil {
 			return apperrors.Wrap(err, apperrors.Internal, "failed to update balance for %q", account.code)
 		}
 	}

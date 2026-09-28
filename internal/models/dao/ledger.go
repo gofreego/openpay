@@ -164,3 +164,37 @@ func (b *Balance) Natural(accountType AccountType) int64 {
 func (b *Balance) Available(accountType AccountType) int64 {
 	return b.Natural(accountType) - b.Held
 }
+
+type HoldStatus string
+
+const (
+	HoldActive   HoldStatus = "active"
+	HoldCaptured HoldStatus = "captured"
+	HoldReleased HoldStatus = "released"
+	HoldExpired  HoldStatus = "expired"
+)
+
+// Hold reserves part of an account's balance without moving it. Only the
+// capture journal moves money; releasing a hold posts nothing.
+type Hold struct {
+	ID       int64
+	PublicID string
+
+	// ExternalID makes placing a hold idempotent, as with journals.
+	ExternalID string
+
+	AccountID int64
+	Amount    int64
+	Currency  string
+	Status    HoldStatus
+	ExpiresAt time.Time
+
+	// Set once captured: the journal that moved the money and how much of the
+	// hold it took.
+	CaptureJournalID *int64
+	CapturedAmount   *int64
+
+	ResolvedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}

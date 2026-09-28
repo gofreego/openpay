@@ -92,6 +92,19 @@ func (r *Repository) GetLedgerAccountByCode(ctx context.Context, code string) (*
 	return account, nil
 }
 
+func (r *Repository) getLedgerAccountByID(ctx context.Context, id int64) (*dao.LedgerAccount, error) {
+	const query = `SELECT ` + ledgerAccountColumns + ` FROM ledger_accounts WHERE id = $1`
+
+	account, err := scanLedgerAccount(r.executor(ctx).QueryRowContext(ctx, query, id))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.New(apperrors.NotFound, "ledger account %d not found", id)
+		}
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to load ledger account")
+	}
+	return account, nil
+}
+
 // GetBalance returns an account's materialised position.
 func (r *Repository) GetBalance(ctx context.Context, accountID int64) (*dao.Balance, error) {
 	const query = `
