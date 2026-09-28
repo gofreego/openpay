@@ -57,7 +57,8 @@ func Truncate(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer db.Close()
-	if _, err := db.Exec(`TRUNCATE wallets, ledger_check_runs, ledger_holds, ledger_postings, ledger_journals,
+	if _, err := db.Exec(`TRUNCATE provider_request_log, provider_events, payment_transitions, payment_attempts, payments,
+		wallets, ledger_check_runs, ledger_holds, ledger_postings, ledger_journals,
 		ledger_balances, ledger_accounts, wallet_types, customers, audit_log, service_credentials,
 		products, idempotency_keys, outbox_events RESTART IDENTITY CASCADE`); err != nil {
 		t.Fatalf("truncate (have migrations run?): %v", err)
@@ -74,6 +75,20 @@ func Exec(t *testing.T, query string, args ...any) {
 	}
 	defer db.Close()
 	if _, err := db.Exec(query, args...); err != nil {
+		t.Fatalf("%s: %v", query, err)
+	}
+}
+
+// Query reads one row into dest, for tests that inspect state the
+// repository has no reason to expose.
+func Query(t *testing.T, query string, dest ...any) {
+	t.Helper()
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=openpay password=openpay dbname=openpay_test sslmode=disable")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer db.Close()
+	if err := db.QueryRow(query).Scan(dest...); err != nil {
 		t.Fatalf("%s: %v", query, err)
 	}
 }

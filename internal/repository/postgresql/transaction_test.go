@@ -224,3 +224,33 @@ func TestExecutorOutsideTransactionUsesPool(t *testing.T) {
 		t.Error("executor returned a transaction outside WithTx")
 	}
 }
+
+// A savepoint undoes only its own writes; the transaction around it commits
+// what came before and after.
+func TestWithSavepointUndoesOnlyItsOwnWrites(t *testing.T) {
+	repo := testRepository(t)
+	setupTables(t, repo)
+	ctx := context.Background()
+
+	err := repo.WithTx(ctx, func(ctx context.Context) error {
+		if err := insert(ctx, repo, "tx_test_a", "before"); err != nil {
+			return err
+		}
+		failed := repo.WithSavepoint(ctx, func(ctx context.Context) error {
+			if err := insert(ctx, repo, "tx_test_a", "inside"); err != nil {
+				return err
+			}
+			return errors.New("refused after writing")
+		})
+		if failed == nil {
+			t.Error("savepoint swallowed its error")
+		}
+		return insert(ctx, repo, "tx_test_a", "after")
+	})
+	if err != nil {
+		t.Fatalf("transaction: %v", err)
+	}
+	if got := count(t, repo, "tx_test_a"); got != 2 {
+		t.Errorf("rows = %d, want 2: the savepoint's write should be gone, the others kept", got)
+	}
+}

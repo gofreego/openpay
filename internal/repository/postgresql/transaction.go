@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
+	"sync/atomic"
 
 	"github.com/gofreego/goutils/customerrors"
 	"github.com/gofreego/goutils/logger"
@@ -77,6 +79,45 @@ func (r *Repository) WithTx(ctx context.Context, fn func(ctx context.Context) er
 			"failed to commit transaction: %s", err.Error())
 	}
 	return nil
+}
+
+var savepointSeq atomic.Int64
+
+// WithSavepoint runs fn inside the current transaction such that a failure
+// undoes only fn's writes, and the transaction carries on.
+//
+// Joining the outer transaction, as a nested WithTx does, is not enough when
+// the caller means to recover from fn's error: an operation that fails after
+// writing — a wallet credit refused by a limit checked under the lock, once
+// its postings exist — would otherwise leave those rows behind in a
+// transaction that goes on to commit.
+func (r *Repository) WithSavepoint(ctx context.Context, fn func(ctx context.Context) error) (err error) {
+	if !InTx(ctx) {
+		return customerrors.New(customerrors.ERROR_CODE_DATABASE_CONNECTION_FAILED,
+			"a savepoint needs an enclosing transaction")
+	}
+	name := "sp_" + strconv.FormatInt(savepointSeq.Add(1), 10)
+	if _, err := r.executor(ctx).ExecContext(ctx, "SAVEPOINT "+name); err != nil {
+		return customerrors.New(customerrors.ERROR_CODE_DATABASE_CONNECTION_FAILED,
+			"failed to create savepoint: %s", err.Error())
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			_, _ = r.executor(ctx).ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+name)
+			panic(p)
+		}
+	}()
+
+	if err := fn(ctx); err != nil {
+		if _, rbErr := r.executor(ctx).ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+name); rbErr != nil {
+			return customerrors.New(customerrors.ERROR_CODE_DATABASE_CONNECTION_FAILED,
+				"failed to roll back to savepoint after %v: %s", err, rbErr.Error())
+		}
+		return err
+	}
+	_, err = r.executor(ctx).ExecContext(ctx, "RELEASE SAVEPOINT "+name)
+	return err
 }
 
 // withReadSnapshot runs fn in a read-only REPEATABLE READ transaction, so every

@@ -176,7 +176,7 @@ func TestGrantThroughTheAPI(t *testing.T) {
 func TestAdjustIsCentralOnly(t *testing.T) {
 	w := setupWallets(t)
 	req := &openpay_v1.AdjustWalletRequest{WalletId: w.zshalaMain.GetId(), Amount: 700,
-		Direction: openpay_v1.PostingDirection_POSTING_DIRECTION_CREDIT,
+		Direction:  openpay_v1.PostingDirection_POSTING_DIRECTION_CREDIT,
 		ReasonCode: "goodwill", Memo: "delayed delivery, ticket 881"}
 
 	_, err := w.svc.AdjustWallet(as(auth.PermWalletsAdjust, auth.PermScopeProductPrefix+"zshala"), req)

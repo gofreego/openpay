@@ -710,3 +710,19 @@ func newJournal(externalID string, kind dao.JournalKind, productID *int64, walle
 func leg(accountID int64, direction dao.Direction, amount int64, currency string) *dao.Posting {
 	return &dao.Posting{AccountID: accountID, Direction: direction, Amount: amount, Currency: currency}
 }
+
+// CheckFund says whether a wallet could be funded with amount, before any
+// money is collected. It checks what is knowable up front — capability,
+// status, per-transaction limit — so a customer is not sent to a checkout
+// for a top-up that will certainly be refused.
+//
+// Balance-dependent limits can still refuse the credit when the payment is
+// captured; the payment engine handles that by owing the money back rather
+// than losing it.
+func (e *Engine) CheckFund(ctx context.Context, w *dao.Wallet, amount int64) error {
+	walletType, err := e.repo.GetWalletTypeByID(ctx, w.WalletTypeID)
+	if err != nil {
+		return err
+	}
+	return assertAllowed(walletType, w, OpFund, amount)
+}
