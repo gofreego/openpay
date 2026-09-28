@@ -20,12 +20,16 @@ var transitions = map[dao.PaymentStatus][]dao.PaymentStatus{
 	dao.PaymentCreated:           {dao.PaymentPending, dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
 	dao.PaymentPending:           {dao.PaymentAuthorized, dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
 	dao.PaymentAuthorized:        {dao.PaymentCaptured, dao.PaymentFailed, dao.PaymentExpired, dao.PaymentCancelled},
-	dao.PaymentCaptured:          {dao.PaymentSettled, dao.PaymentPartiallyRefunded, dao.PaymentRefunded},
-	dao.PaymentSettled:           {dao.PaymentPartiallyRefunded, dao.PaymentRefunded},
-	dao.PaymentPartiallyRefunded: {dao.PaymentRefunded},
-	dao.PaymentFailed:            {dao.PaymentCaptured},
-	dao.PaymentExpired:           {dao.PaymentCaptured},
-	dao.PaymentCancelled:         {dao.PaymentCaptured},
+	dao.PaymentCaptured:          {dao.PaymentSettled, dao.PaymentPartiallyRefunded, dao.PaymentRefunded, dao.PaymentDisputed},
+	dao.PaymentSettled:           {dao.PaymentPartiallyRefunded, dao.PaymentRefunded, dao.PaymentDisputed},
+	dao.PaymentPartiallyRefunded: {dao.PaymentRefunded, dao.PaymentDisputed},
+	// A fully refunded payment can still be charged back: the bank does not
+	// ask us first. The refund is the evidence that wins it.
+	dao.PaymentRefunded:  {dao.PaymentDisputed},
+	dao.PaymentDisputed:  {dao.PaymentDisputeWon, dao.PaymentDisputeLost},
+	dao.PaymentFailed:    {dao.PaymentCaptured},
+	dao.PaymentExpired:   {dao.PaymentCaptured},
+	dao.PaymentCancelled: {dao.PaymentCaptured},
 }
 
 func canTransition(from, to dao.PaymentStatus) bool {

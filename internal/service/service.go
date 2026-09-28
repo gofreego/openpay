@@ -80,6 +80,14 @@ type PaymentRepository interface {
 	ListOpenRefunds(ctx context.Context, before time.Time, limit int) ([]*dao.Refund, error)
 	SumProcessedRefunds(ctx context.Context, paymentID int64) (int64, error)
 	GetJournalByExternalID(ctx context.Context, externalID string) (*dao.Journal, error)
+
+	CreateDispute(ctx context.Context, d *dao.Dispute) error
+	UpdateDispute(ctx context.Context, d *dao.Dispute) error
+	LockDispute(ctx context.Context, id int64) (*dao.Dispute, error)
+	GetDisputeByPublicID(ctx context.Context, publicID string) (*dao.Dispute, error)
+	GetDisputeByProviderRef(ctx context.Context, providerName, providerDisputeID string) (*dao.Dispute, error)
+	ListDisputes(ctx context.Context, scope *filter.ProductScope, status dao.DisputeStatus, limit int) ([]*dao.Dispute, error)
+	ListOpenDisputes(ctx context.Context, before time.Time, limit int) ([]*dao.Dispute, error)
 }
 
 type WalletRepository interface {

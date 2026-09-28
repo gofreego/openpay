@@ -767,3 +767,9 @@ func (e *Engine) move(ctx context.Context, req SpendRequest, op Operation, walle
 	})
 	return journal, err
 }
+
+// ChargebackOut takes contested money out of a wallet into the product's
+// disputed account while a chargeback is decided.
+func (e *Engine) ChargebackOut(ctx context.Context, req SpendRequest) (*dao.Journal, error) {
+	return e.move(ctx, req, OpChargeback, dao.Debit, nil)
+}

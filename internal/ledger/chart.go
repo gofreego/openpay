@@ -68,6 +68,14 @@ func ProductAdjustments(product string) string {
 	return "expense:" + product + ":adjustments"
 }
 
+// ProductDisputed holds contested money while a chargeback is decided: no
+// longer the customer's to spend, not yet the PSP's to keep.
+func ProductDisputed(product string) string { return "liability:" + product + ":disputed" }
+
+// ProductChargebacks is what lost disputes cost when the customer had
+// already spent the money: the part no wallet could give back.
+func ProductChargebacks(product string) string { return "expense:" + product + ":chargebacks" }
+
 // PlatformScope stands in for the product segment of a platform-scoped
 // wallet's account code, which belongs to no product.
 const PlatformScope = "platform"
@@ -148,6 +156,8 @@ func ProductChart(product *dao.Product) []*dao.LedgerAccount {
 		chartAccount(ProductPSPFees(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
 		chartAccount(ProductRefundsPayable(code), dao.AccountLiability, dao.OwnerMerchant, owner, id),
 		chartAccount(ProductAdjustments(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
+		chartAccount(ProductDisputed(code), dao.AccountLiability, dao.OwnerMerchant, owner, id),
+		chartAccount(ProductChargebacks(code), dao.AccountExpense, dao.OwnerMerchant, owner, id),
 	}
 }
 

@@ -507,4 +507,38 @@ service OpenPay {
             description: "Requires openpay:payments:read within scope."
         };
     }
+
+    rpc GetDispute (GetDisputeRequest) returns (GetDisputeResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/disputes/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Get a dispute"
+            description: "Requires openpay:payments:read within scope."
+        };
+    }
+
+    rpc ListDisputes (ListDisputesRequest) returns (ListDisputesResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/disputes"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "List disputes"
+            description: "The disputes queue, nearest evidence deadline first. Requires openpay:payments:read within scope."
+        };
+    }
+
+    rpc SubmitDisputeEvidence (SubmitDisputeEvidenceRequest) returns (SubmitDisputeEvidenceResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/disputes/{id}/evidence"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Submit evidence for a dispute"
+            description: "Only while the dispute is open. Central ops only: requires openpay:disputes:manage and openpay:scope:all."
+        };
+    }
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -264,6 +265,9 @@ var paymentStatuses = map[dao.PaymentStatus]openpay_v1.PaymentStatus{
 
 	dao.PaymentPartiallyRefunded: openpay_v1.PaymentStatus_PAYMENT_STATUS_PARTIALLY_REFUNDED,
 	dao.PaymentRefunded:          openpay_v1.PaymentStatus_PAYMENT_STATUS_REFUNDED,
+	dao.PaymentDisputed:          openpay_v1.PaymentStatus_PAYMENT_STATUS_DISPUTED,
+	dao.PaymentDisputeWon:        openpay_v1.PaymentStatus_PAYMENT_STATUS_DISPUTE_WON,
+	dao.PaymentDisputeLost:       openpay_v1.PaymentStatus_PAYMENT_STATUS_DISPUTE_LOST,
 }
 
 func toProtoPaymentStatus(s dao.PaymentStatus) openpay_v1.PaymentStatus {
@@ -384,4 +388,124 @@ func toProtoRefund(r *dao.Refund) *openpay_v1.Refund {
 		out.ProcessedAt = timestamppb.New(*r.ProcessedAt)
 	}
 	return out
+}
+
+func (s *Service) GetDispute(ctx context.Context, req *openpay_v1.GetDisputeRequest) (*openpay_v1.GetDisputeResponse, error) {
+	if err := auth.RequireOperator(ctx, auth.PermPaymentsRead); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	d, err := s.visibleDispute(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	return &openpay_v1.GetDisputeResponse{Dispute: toProtoDispute(d)}, nil
+}
+
+func (s *Service) visibleDispute(ctx context.Context, id string) (*dao.Dispute, error) {
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	d, err := s.repo.GetDisputeByPublicID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireVisible(scope, &d.ProductID, "dispute", id); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+func (s *Service) ListDisputes(ctx context.Context, req *openpay_v1.ListDisputesRequest) (*openpay_v1.ListDisputesResponse, error) {
+	if err := auth.RequireOperator(ctx, auth.PermPaymentsRead); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	scope, err := s.callerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	limit := int(req.GetLimit())
+	if limit <= 0 {
+		limit = 50
+	}
+	disputes, err := s.repo.ListDisputes(ctx, scope, fromProtoDisputeStatus(req.GetStatus()), limit)
+	if err != nil {
+		return nil, err
+	}
+	response := &openpay_v1.ListDisputesResponse{}
+	for _, d := range disputes {
+		response.Disputes = append(response.Disputes, toProtoDispute(d))
+	}
+	return response, nil
+}
+
+func (s *Service) SubmitDisputeEvidence(ctx context.Context, req *openpay_v1.SubmitDisputeEvidenceRequest) (*openpay_v1.SubmitDisputeEvidenceResponse, error) {
+	if err := auth.RequirePlatformOperator(ctx, auth.PermDisputesManage); err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	d, err := s.visibleDispute(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	// No idempotency key: only an open dispute takes evidence, so a retry
+	// after success is refused rather than submitted twice.
+	caller, _ := appcontext.CallerFrom(ctx)
+	var updated *dao.Dispute
+	err = s.repo.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		if updated, err = s.payments.SubmitDisputeEvidence(ctx, d.ID, req.GetEvidence(), caller.UserID); err != nil {
+			return err
+		}
+		return s.audit(ctx, auditParams{
+			Action: "dispute.evidence_submitted", ResourceType: "dispute", ResourceID: d.PublicID,
+			ProductID: &d.ProductID, After: map[string]any{"evidence_bytes": len(req.GetEvidence())},
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &openpay_v1.SubmitDisputeEvidenceResponse{Dispute: toProtoDispute(updated)}, nil
+}
+
+var disputeStatuses = map[dao.DisputeStatus]openpay_v1.DisputeStatus{
+	dao.DisputeOpen:        openpay_v1.DisputeStatus_DISPUTE_STATUS_OPEN,
+	dao.DisputeUnderReview: openpay_v1.DisputeStatus_DISPUTE_STATUS_UNDER_REVIEW,
+	dao.DisputeWon:         openpay_v1.DisputeStatus_DISPUTE_STATUS_WON,
+	dao.DisputeLost:        openpay_v1.DisputeStatus_DISPUTE_STATUS_LOST,
+}
+
+func fromProtoDisputeStatus(s openpay_v1.DisputeStatus) dao.DisputeStatus {
+	for daoStatus, protoStatus := range disputeStatuses {
+		if protoStatus == s {
+			return daoStatus
+		}
+	}
+	return ""
+}
+
+func toProtoDispute(d *dao.Dispute) *openpay_v1.Dispute {
+	ts := func(t *time.Time) *timestamppb.Timestamp {
+		if t == nil {
+			return nil
+		}
+		return timestamppb.New(*t)
+	}
+	return &openpay_v1.Dispute{
+		Id: d.PublicID, PaymentId: d.PaymentPublicID, Amount: d.Amount, Currency: d.Currency,
+		Reason: d.Reason, Status: disputeStatuses[d.Status],
+		FromWallet: d.FromWallet, FromUnapplied: d.FromUnapplied, FromExpense: d.FromExpense,
+		EvidenceDueBy: ts(d.EvidenceDueBy), Evidence: deref(d.Evidence),
+		EvidenceSubmittedBy: deref(d.EvidenceSubmittedBy), EvidenceSubmittedAt: ts(d.EvidenceSubmittedAt),
+		ResolvedAt: ts(d.ResolvedAt), CreatedAt: timestamppb.New(d.CreatedAt),
+	}
 }

@@ -26,7 +26,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
-| 6 | Refunds, Reversals & Disputes | ◐ Refunds done; disputes next |
+| 6 | Refunds, Reversals & Disputes | ✅ Complete for top-ups (tax split and destination policy with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ☐ Not started |
 | 8 | Settlement & Reconciliation | ☐ Not started |
 | 9 | Payouts & Withdrawals | ☐ Not started |
@@ -1068,11 +1068,24 @@ special-casing.
       webhooks are hints like payment ones — the refund is fetched and synced.
       Unapplied payments (wallet refused the credit) are refunded from
       `refunds_payable` directly
-- [ ] `disputes` / chargebacks: ingest, move funds to a `liability:disputed` holding
-      account, evidence submission, win/loss resolution journals
-- [ ] Reconciliation of refund/dispute fees
-- [ ] Tests: refund of a wallet-funded purchase; partial refunds summing to the whole;
-      refund arriving after a dispute
+- [x] `disputes` / chargebacks: ingest, move funds to a `liability:disputed` holding
+      account, evidence submission, win/loss resolution journals.
+      Held from the wallet up to what is still there and still outstanding on that
+      payment (captured − refunded); from `refunds_payable` for an unapplied payment;
+      the rest from `expense:<product>:chargebacks` — money already spent, our loss
+      unless won. Each part is recorded on the dispute, and a win puts it back exactly
+      (wallet part by a reversing journal). Lost: Dr disputed, Cr the receivable.
+      A disputed payment cannot be refunded; a refunded one can still be disputed.
+      Evidence is central-ops only; the disputes queue is ordered by evidence deadline;
+      a poller covers lost dispute webhooks
+- [ ] Reconciliation of refund/dispute fees — **Phase 8**: fees exist only in
+      settlement reports
+- [x] Tests: refund of a wallet-funded purchase; partial refunds summing to the whole;
+      refund arriving after a dispute.
+      Partial refunds summing to the whole, concurrent over-refund, spent top-up,
+      failed and timed-out refunds, unapplied refunds; disputes lost, won, after the
+      money was spent (both outcomes), after a full refund, and duplicate webhooks.
+      Refunds of wallet-funded *purchases* arrive with orders (P7)
 
 **Exit criteria:** a captured payment can be fully and partially refunded, the ledger
 nets correctly, and a dispute lifecycle posts and reverses cleanly.

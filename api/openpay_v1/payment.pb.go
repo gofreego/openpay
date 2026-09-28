@@ -38,6 +38,9 @@ const (
 	PaymentStatus_PAYMENT_STATUS_CANCELLED          PaymentStatus = 8
 	PaymentStatus_PAYMENT_STATUS_PARTIALLY_REFUNDED PaymentStatus = 9
 	PaymentStatus_PAYMENT_STATUS_REFUNDED           PaymentStatus = 10
+	PaymentStatus_PAYMENT_STATUS_DISPUTED           PaymentStatus = 11
+	PaymentStatus_PAYMENT_STATUS_DISPUTE_WON        PaymentStatus = 12
+	PaymentStatus_PAYMENT_STATUS_DISPUTE_LOST       PaymentStatus = 13
 )
 
 // Enum value maps for PaymentStatus.
@@ -54,6 +57,9 @@ var (
 		8:  "PAYMENT_STATUS_CANCELLED",
 		9:  "PAYMENT_STATUS_PARTIALLY_REFUNDED",
 		10: "PAYMENT_STATUS_REFUNDED",
+		11: "PAYMENT_STATUS_DISPUTED",
+		12: "PAYMENT_STATUS_DISPUTE_WON",
+		13: "PAYMENT_STATUS_DISPUTE_LOST",
 	}
 	PaymentStatus_value = map[string]int32{
 		"PAYMENT_STATUS_UNSPECIFIED":        0,
@@ -67,6 +73,9 @@ var (
 		"PAYMENT_STATUS_CANCELLED":          8,
 		"PAYMENT_STATUS_PARTIALLY_REFUNDED": 9,
 		"PAYMENT_STATUS_REFUNDED":           10,
+		"PAYMENT_STATUS_DISPUTED":           11,
+		"PAYMENT_STATUS_DISPUTE_WON":        12,
+		"PAYMENT_STATUS_DISPUTE_LOST":       13,
 	}
 )
 
@@ -261,6 +270,63 @@ func (x RefundStatus) Number() protoreflect.EnumNumber {
 // Deprecated: Use RefundStatus.Descriptor instead.
 func (RefundStatus) EnumDescriptor() ([]byte, []int) {
 	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{3}
+}
+
+type DisputeStatus int32
+
+const (
+	DisputeStatus_DISPUTE_STATUS_UNSPECIFIED DisputeStatus = 0
+	// Awaiting our evidence.
+	DisputeStatus_DISPUTE_STATUS_OPEN DisputeStatus = 1
+	// Evidence submitted; the network is deciding.
+	DisputeStatus_DISPUTE_STATUS_UNDER_REVIEW DisputeStatus = 2
+	DisputeStatus_DISPUTE_STATUS_WON          DisputeStatus = 3
+	DisputeStatus_DISPUTE_STATUS_LOST         DisputeStatus = 4
+)
+
+// Enum value maps for DisputeStatus.
+var (
+	DisputeStatus_name = map[int32]string{
+		0: "DISPUTE_STATUS_UNSPECIFIED",
+		1: "DISPUTE_STATUS_OPEN",
+		2: "DISPUTE_STATUS_UNDER_REVIEW",
+		3: "DISPUTE_STATUS_WON",
+		4: "DISPUTE_STATUS_LOST",
+	}
+	DisputeStatus_value = map[string]int32{
+		"DISPUTE_STATUS_UNSPECIFIED":  0,
+		"DISPUTE_STATUS_OPEN":         1,
+		"DISPUTE_STATUS_UNDER_REVIEW": 2,
+		"DISPUTE_STATUS_WON":          3,
+		"DISPUTE_STATUS_LOST":         4,
+	}
+)
+
+func (x DisputeStatus) Enum() *DisputeStatus {
+	p := new(DisputeStatus)
+	*p = x
+	return p
+}
+
+func (x DisputeStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DisputeStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_openpay_v1_payment_proto_enumTypes[4].Descriptor()
+}
+
+func (DisputeStatus) Type() protoreflect.EnumType {
+	return &file_proto_openpay_v1_payment_proto_enumTypes[4]
+}
+
+func (x DisputeStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DisputeStatus.Descriptor instead.
+func (DisputeStatus) EnumDescriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{4}
 }
 
 type PaymentAttempt struct {
@@ -1529,6 +1595,450 @@ func (x *SyncPaymentResponse) GetPayment() *Payment {
 	return nil
 }
 
+// A chargeback: the customer's bank taking a payment back. Opened by the bank,
+// never by us; while it is decided, the contested money is held out of the
+// customer's wallet.
+type Dispute struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PaymentId string                 `protobuf:"bytes,2,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty"`
+	Amount    int64                  `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	Currency  string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	// The card network's reason, verbatim.
+	Reason string        `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	Status DisputeStatus `protobuf:"varint,6,opt,name=status,proto3,enum=v1.DisputeStatus" json:"status,omitempty"`
+	// Where the held money came from. from_expense is what the customer had
+	// already spent: our loss unless the dispute is won.
+	FromWallet          int64                  `protobuf:"varint,7,opt,name=from_wallet,json=fromWallet,proto3" json:"from_wallet,omitempty"`
+	FromUnapplied       int64                  `protobuf:"varint,8,opt,name=from_unapplied,json=fromUnapplied,proto3" json:"from_unapplied,omitempty"`
+	FromExpense         int64                  `protobuf:"varint,9,opt,name=from_expense,json=fromExpense,proto3" json:"from_expense,omitempty"`
+	EvidenceDueBy       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=evidence_due_by,json=evidenceDueBy,proto3" json:"evidence_due_by,omitempty"`
+	Evidence            string                 `protobuf:"bytes,11,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	EvidenceSubmittedBy string                 `protobuf:"bytes,12,opt,name=evidence_submitted_by,json=evidenceSubmittedBy,proto3" json:"evidence_submitted_by,omitempty"`
+	EvidenceSubmittedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=evidence_submitted_at,json=evidenceSubmittedAt,proto3" json:"evidence_submitted_at,omitempty"`
+	ResolvedAt          *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *Dispute) Reset() {
+	*x = Dispute{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Dispute) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Dispute) ProtoMessage() {}
+
+func (x *Dispute) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Dispute.ProtoReflect.Descriptor instead.
+func (*Dispute) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *Dispute) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Dispute) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+func (x *Dispute) GetAmount() int64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *Dispute) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *Dispute) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *Dispute) GetStatus() DisputeStatus {
+	if x != nil {
+		return x.Status
+	}
+	return DisputeStatus_DISPUTE_STATUS_UNSPECIFIED
+}
+
+func (x *Dispute) GetFromWallet() int64 {
+	if x != nil {
+		return x.FromWallet
+	}
+	return 0
+}
+
+func (x *Dispute) GetFromUnapplied() int64 {
+	if x != nil {
+		return x.FromUnapplied
+	}
+	return 0
+}
+
+func (x *Dispute) GetFromExpense() int64 {
+	if x != nil {
+		return x.FromExpense
+	}
+	return 0
+}
+
+func (x *Dispute) GetEvidenceDueBy() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvidenceDueBy
+	}
+	return nil
+}
+
+func (x *Dispute) GetEvidence() string {
+	if x != nil {
+		return x.Evidence
+	}
+	return ""
+}
+
+func (x *Dispute) GetEvidenceSubmittedBy() string {
+	if x != nil {
+		return x.EvidenceSubmittedBy
+	}
+	return ""
+}
+
+func (x *Dispute) GetEvidenceSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvidenceSubmittedAt
+	}
+	return nil
+}
+
+func (x *Dispute) GetResolvedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResolvedAt
+	}
+	return nil
+}
+
+func (x *Dispute) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type GetDisputeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDisputeRequest) Reset() {
+	*x = GetDisputeRequest{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDisputeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDisputeRequest) ProtoMessage() {}
+
+func (x *GetDisputeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDisputeRequest.ProtoReflect.Descriptor instead.
+func (*GetDisputeRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetDisputeRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type GetDisputeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Dispute       *Dispute               `protobuf:"bytes,1,opt,name=dispute,proto3" json:"dispute,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDisputeResponse) Reset() {
+	*x = GetDisputeResponse{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDisputeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDisputeResponse) ProtoMessage() {}
+
+func (x *GetDisputeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDisputeResponse.ProtoReflect.Descriptor instead.
+func (*GetDisputeResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetDisputeResponse) GetDispute() *Dispute {
+	if x != nil {
+		return x.Dispute
+	}
+	return nil
+}
+
+// ListDisputesRequest is the disputes queue, nearest evidence deadline first.
+type ListDisputesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        DisputeStatus          `protobuf:"varint,1,opt,name=status,proto3,enum=v1.DisputeStatus" json:"status,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDisputesRequest) Reset() {
+	*x = ListDisputesRequest{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDisputesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDisputesRequest) ProtoMessage() {}
+
+func (x *ListDisputesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDisputesRequest.ProtoReflect.Descriptor instead.
+func (*ListDisputesRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListDisputesRequest) GetStatus() DisputeStatus {
+	if x != nil {
+		return x.Status
+	}
+	return DisputeStatus_DISPUTE_STATUS_UNSPECIFIED
+}
+
+func (x *ListDisputesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListDisputesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Disputes      []*Dispute             `protobuf:"bytes,1,rep,name=disputes,proto3" json:"disputes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDisputesResponse) Reset() {
+	*x = ListDisputesResponse{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDisputesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDisputesResponse) ProtoMessage() {}
+
+func (x *ListDisputesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDisputesResponse.ProtoReflect.Descriptor instead.
+func (*ListDisputesResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ListDisputesResponse) GetDisputes() []*Dispute {
+	if x != nil {
+		return x.Disputes
+	}
+	return nil
+}
+
+type SubmitDisputeEvidenceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// What answers the chargeback: delivery proof, the refund already made, …
+	Evidence      string `protobuf:"bytes,2,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitDisputeEvidenceRequest) Reset() {
+	*x = SubmitDisputeEvidenceRequest{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitDisputeEvidenceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitDisputeEvidenceRequest) ProtoMessage() {}
+
+func (x *SubmitDisputeEvidenceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitDisputeEvidenceRequest.ProtoReflect.Descriptor instead.
+func (*SubmitDisputeEvidenceRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SubmitDisputeEvidenceRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SubmitDisputeEvidenceRequest) GetEvidence() string {
+	if x != nil {
+		return x.Evidence
+	}
+	return ""
+}
+
+type SubmitDisputeEvidenceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Dispute       *Dispute               `protobuf:"bytes,1,opt,name=dispute,proto3" json:"dispute,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitDisputeEvidenceResponse) Reset() {
+	*x = SubmitDisputeEvidenceResponse{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitDisputeEvidenceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitDisputeEvidenceResponse) ProtoMessage() {}
+
+func (x *SubmitDisputeEvidenceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitDisputeEvidenceResponse.ProtoReflect.Descriptor instead.
+func (*SubmitDisputeEvidenceResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SubmitDisputeEvidenceResponse) GetDispute() *Dispute {
+	if x != nil {
+		return x.Dispute
+	}
+	return nil
+}
+
 var File_proto_openpay_v1_payment_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_payment_proto_rawDesc = "" +
@@ -1649,7 +2159,43 @@ const file_proto_openpay_v1_payment_proto_rawDesc = "" +
 	"\x12SyncPaymentRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\"<\n" +
 	"\x13SyncPaymentResponse\x12%\n" +
-	"\apayment\x18\x01 \x01(\v2\v.v1.PaymentR\apayment*\xd8\x02\n" +
+	"\apayment\x18\x01 \x01(\v2\v.v1.PaymentR\apayment\"\xf6\x04\n" +
+	"\aDispute\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"payment_id\x18\x02 \x01(\tR\tpaymentId\x12\x16\n" +
+	"\x06amount\x18\x03 \x01(\x03R\x06amount\x12\x1a\n" +
+	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\x12)\n" +
+	"\x06status\x18\x06 \x01(\x0e2\x11.v1.DisputeStatusR\x06status\x12\x1f\n" +
+	"\vfrom_wallet\x18\a \x01(\x03R\n" +
+	"fromWallet\x12%\n" +
+	"\x0efrom_unapplied\x18\b \x01(\x03R\rfromUnapplied\x12!\n" +
+	"\ffrom_expense\x18\t \x01(\x03R\vfromExpense\x12B\n" +
+	"\x0fevidence_due_by\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\revidenceDueBy\x12\x1a\n" +
+	"\bevidence\x18\v \x01(\tR\bevidence\x122\n" +
+	"\x15evidence_submitted_by\x18\f \x01(\tR\x13evidenceSubmittedBy\x12N\n" +
+	"\x15evidence_submitted_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\x13evidenceSubmittedAt\x12;\n" +
+	"\vresolved_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"resolvedAt\x129\n" +
+	"\n" +
+	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\",\n" +
+	"\x11GetDisputeRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\";\n" +
+	"\x12GetDisputeResponse\x12%\n" +
+	"\adispute\x18\x01 \x01(\v2\v.v1.DisputeR\adispute\"k\n" +
+	"\x13ListDisputesRequest\x123\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x11.v1.DisputeStatusB\b\xfaB\x05\x82\x01\x02\x10\x01R\x06status\x12\x1f\n" +
+	"\x05limit\x18\x02 \x01(\x05B\t\xfaB\x06\x1a\x04\x18d(\x00R\x05limit\"?\n" +
+	"\x14ListDisputesResponse\x12'\n" +
+	"\bdisputes\x18\x01 \x03(\v2\v.v1.DisputeR\bdisputes\"_\n" +
+	"\x1cSubmitDisputeEvidenceRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\x12&\n" +
+	"\bevidence\x18\x02 \x01(\tB\n" +
+	"\xfaB\ar\x05\x10\x01\x18\x90NR\bevidence\"F\n" +
+	"\x1dSubmitDisputeEvidenceResponse\x12%\n" +
+	"\adispute\x18\x01 \x01(\v2\v.v1.DisputeR\adispute*\xb6\x03\n" +
 	"\rPaymentStatus\x12\x1e\n" +
 	"\x1aPAYMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_CREATED\x10\x01\x12\x1a\n" +
@@ -1662,7 +2208,10 @@ const file_proto_openpay_v1_payment_proto_rawDesc = "" +
 	"\x18PAYMENT_STATUS_CANCELLED\x10\b\x12%\n" +
 	"!PAYMENT_STATUS_PARTIALLY_REFUNDED\x10\t\x12\x1b\n" +
 	"\x17PAYMENT_STATUS_REFUNDED\x10\n" +
-	"*n\n" +
+	"\x12\x1b\n" +
+	"\x17PAYMENT_STATUS_DISPUTED\x10\v\x12\x1e\n" +
+	"\x1aPAYMENT_STATUS_DISPUTE_WON\x10\f\x12\x1f\n" +
+	"\x1bPAYMENT_STATUS_DISPUTE_LOST\x10\r*n\n" +
 	"\x0ePaymentPurpose\x12\x1f\n" +
 	"\x1bPAYMENT_PURPOSE_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cPAYMENT_PURPOSE_WALLET_TOPUP\x10\x01\x12\x19\n" +
@@ -1678,7 +2227,13 @@ const file_proto_openpay_v1_payment_proto_rawDesc = "" +
 	"\x17REFUND_STATUS_INITIATED\x10\x01\x12\x19\n" +
 	"\x15REFUND_STATUS_PENDING\x10\x02\x12\x1b\n" +
 	"\x17REFUND_STATUS_PROCESSED\x10\x03\x12\x18\n" +
-	"\x14REFUND_STATUS_FAILED\x10\x04B\x0eZ\f./openpay_v1b\x06proto3"
+	"\x14REFUND_STATUS_FAILED\x10\x04*\x9a\x01\n" +
+	"\rDisputeStatus\x12\x1e\n" +
+	"\x1aDISPUTE_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13DISPUTE_STATUS_OPEN\x10\x01\x12\x1f\n" +
+	"\x1bDISPUTE_STATUS_UNDER_REVIEW\x10\x02\x12\x16\n" +
+	"\x12DISPUTE_STATUS_WON\x10\x03\x12\x17\n" +
+	"\x13DISPUTE_STATUS_LOST\x10\x04B\x0eZ\f./openpay_v1b\x06proto3"
 
 var (
 	file_proto_openpay_v1_payment_proto_rawDescOnce sync.Once
@@ -1692,63 +2247,80 @@ func file_proto_openpay_v1_payment_proto_rawDescGZIP() []byte {
 	return file_proto_openpay_v1_payment_proto_rawDescData
 }
 
-var file_proto_openpay_v1_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_proto_openpay_v1_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_proto_openpay_v1_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_proto_openpay_v1_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_proto_openpay_v1_payment_proto_goTypes = []any{
-	(PaymentStatus)(0),            // 0: v1.PaymentStatus
-	(PaymentPurpose)(0),           // 1: v1.PaymentPurpose
-	(PaymentApplication)(0),       // 2: v1.PaymentApplication
-	(RefundStatus)(0),             // 3: v1.RefundStatus
-	(*PaymentAttempt)(nil),        // 4: v1.PaymentAttempt
-	(*PaymentTransition)(nil),     // 5: v1.PaymentTransition
-	(*Payment)(nil),               // 6: v1.Payment
-	(*Refund)(nil),                // 7: v1.Refund
-	(*CreateRefundRequest)(nil),   // 8: v1.CreateRefundRequest
-	(*CreateRefundResponse)(nil),  // 9: v1.CreateRefundResponse
-	(*GetRefundRequest)(nil),      // 10: v1.GetRefundRequest
-	(*GetRefundResponse)(nil),     // 11: v1.GetRefundResponse
-	(*ListRefundsRequest)(nil),    // 12: v1.ListRefundsRequest
-	(*ListRefundsResponse)(nil),   // 13: v1.ListRefundsResponse
-	(*CreatePaymentRequest)(nil),  // 14: v1.CreatePaymentRequest
-	(*CreatePaymentResponse)(nil), // 15: v1.CreatePaymentResponse
-	(*GetPaymentRequest)(nil),     // 16: v1.GetPaymentRequest
-	(*GetPaymentResponse)(nil),    // 17: v1.GetPaymentResponse
-	(*ListPaymentsRequest)(nil),   // 18: v1.ListPaymentsRequest
-	(*ListPaymentsResponse)(nil),  // 19: v1.ListPaymentsResponse
-	(*SyncPaymentRequest)(nil),    // 20: v1.SyncPaymentRequest
-	(*SyncPaymentResponse)(nil),   // 21: v1.SyncPaymentResponse
-	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
+	(PaymentStatus)(0),                    // 0: v1.PaymentStatus
+	(PaymentPurpose)(0),                   // 1: v1.PaymentPurpose
+	(PaymentApplication)(0),               // 2: v1.PaymentApplication
+	(RefundStatus)(0),                     // 3: v1.RefundStatus
+	(DisputeStatus)(0),                    // 4: v1.DisputeStatus
+	(*PaymentAttempt)(nil),                // 5: v1.PaymentAttempt
+	(*PaymentTransition)(nil),             // 6: v1.PaymentTransition
+	(*Payment)(nil),                       // 7: v1.Payment
+	(*Refund)(nil),                        // 8: v1.Refund
+	(*CreateRefundRequest)(nil),           // 9: v1.CreateRefundRequest
+	(*CreateRefundResponse)(nil),          // 10: v1.CreateRefundResponse
+	(*GetRefundRequest)(nil),              // 11: v1.GetRefundRequest
+	(*GetRefundResponse)(nil),             // 12: v1.GetRefundResponse
+	(*ListRefundsRequest)(nil),            // 13: v1.ListRefundsRequest
+	(*ListRefundsResponse)(nil),           // 14: v1.ListRefundsResponse
+	(*CreatePaymentRequest)(nil),          // 15: v1.CreatePaymentRequest
+	(*CreatePaymentResponse)(nil),         // 16: v1.CreatePaymentResponse
+	(*GetPaymentRequest)(nil),             // 17: v1.GetPaymentRequest
+	(*GetPaymentResponse)(nil),            // 18: v1.GetPaymentResponse
+	(*ListPaymentsRequest)(nil),           // 19: v1.ListPaymentsRequest
+	(*ListPaymentsResponse)(nil),          // 20: v1.ListPaymentsResponse
+	(*SyncPaymentRequest)(nil),            // 21: v1.SyncPaymentRequest
+	(*SyncPaymentResponse)(nil),           // 22: v1.SyncPaymentResponse
+	(*Dispute)(nil),                       // 23: v1.Dispute
+	(*GetDisputeRequest)(nil),             // 24: v1.GetDisputeRequest
+	(*GetDisputeResponse)(nil),            // 25: v1.GetDisputeResponse
+	(*ListDisputesRequest)(nil),           // 26: v1.ListDisputesRequest
+	(*ListDisputesResponse)(nil),          // 27: v1.ListDisputesResponse
+	(*SubmitDisputeEvidenceRequest)(nil),  // 28: v1.SubmitDisputeEvidenceRequest
+	(*SubmitDisputeEvidenceResponse)(nil), // 29: v1.SubmitDisputeEvidenceResponse
+	(*timestamppb.Timestamp)(nil),         // 30: google.protobuf.Timestamp
 }
 var file_proto_openpay_v1_payment_proto_depIdxs = []int32{
-	22, // 0: v1.PaymentAttempt.created_at:type_name -> google.protobuf.Timestamp
+	30, // 0: v1.PaymentAttempt.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 1: v1.PaymentTransition.from:type_name -> v1.PaymentStatus
 	0,  // 2: v1.PaymentTransition.to:type_name -> v1.PaymentStatus
-	22, // 3: v1.PaymentTransition.at:type_name -> google.protobuf.Timestamp
+	30, // 3: v1.PaymentTransition.at:type_name -> google.protobuf.Timestamp
 	1,  // 4: v1.Payment.purpose:type_name -> v1.PaymentPurpose
 	0,  // 5: v1.Payment.status:type_name -> v1.PaymentStatus
 	2,  // 6: v1.Payment.application:type_name -> v1.PaymentApplication
-	22, // 7: v1.Payment.expires_at:type_name -> google.protobuf.Timestamp
-	22, // 8: v1.Payment.created_at:type_name -> google.protobuf.Timestamp
-	22, // 9: v1.Payment.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 10: v1.Payment.attempts:type_name -> v1.PaymentAttempt
-	5,  // 11: v1.Payment.transitions:type_name -> v1.PaymentTransition
+	30, // 7: v1.Payment.expires_at:type_name -> google.protobuf.Timestamp
+	30, // 8: v1.Payment.created_at:type_name -> google.protobuf.Timestamp
+	30, // 9: v1.Payment.updated_at:type_name -> google.protobuf.Timestamp
+	5,  // 10: v1.Payment.attempts:type_name -> v1.PaymentAttempt
+	6,  // 11: v1.Payment.transitions:type_name -> v1.PaymentTransition
 	3,  // 12: v1.Refund.status:type_name -> v1.RefundStatus
-	22, // 13: v1.Refund.processed_at:type_name -> google.protobuf.Timestamp
-	22, // 14: v1.Refund.created_at:type_name -> google.protobuf.Timestamp
-	7,  // 15: v1.CreateRefundResponse.refund:type_name -> v1.Refund
-	7,  // 16: v1.GetRefundResponse.refund:type_name -> v1.Refund
-	7,  // 17: v1.ListRefundsResponse.refunds:type_name -> v1.Refund
+	30, // 13: v1.Refund.processed_at:type_name -> google.protobuf.Timestamp
+	30, // 14: v1.Refund.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 15: v1.CreateRefundResponse.refund:type_name -> v1.Refund
+	8,  // 16: v1.GetRefundResponse.refund:type_name -> v1.Refund
+	8,  // 17: v1.ListRefundsResponse.refunds:type_name -> v1.Refund
 	1,  // 18: v1.CreatePaymentRequest.purpose:type_name -> v1.PaymentPurpose
-	6,  // 19: v1.CreatePaymentResponse.payment:type_name -> v1.Payment
-	6,  // 20: v1.GetPaymentResponse.payment:type_name -> v1.Payment
+	7,  // 19: v1.CreatePaymentResponse.payment:type_name -> v1.Payment
+	7,  // 20: v1.GetPaymentResponse.payment:type_name -> v1.Payment
 	0,  // 21: v1.ListPaymentsRequest.status:type_name -> v1.PaymentStatus
-	6,  // 22: v1.ListPaymentsResponse.payments:type_name -> v1.Payment
-	6,  // 23: v1.SyncPaymentResponse.payment:type_name -> v1.Payment
-	24, // [24:24] is the sub-list for method output_type
-	24, // [24:24] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	7,  // 22: v1.ListPaymentsResponse.payments:type_name -> v1.Payment
+	7,  // 23: v1.SyncPaymentResponse.payment:type_name -> v1.Payment
+	4,  // 24: v1.Dispute.status:type_name -> v1.DisputeStatus
+	30, // 25: v1.Dispute.evidence_due_by:type_name -> google.protobuf.Timestamp
+	30, // 26: v1.Dispute.evidence_submitted_at:type_name -> google.protobuf.Timestamp
+	30, // 27: v1.Dispute.resolved_at:type_name -> google.protobuf.Timestamp
+	30, // 28: v1.Dispute.created_at:type_name -> google.protobuf.Timestamp
+	23, // 29: v1.GetDisputeResponse.dispute:type_name -> v1.Dispute
+	4,  // 30: v1.ListDisputesRequest.status:type_name -> v1.DisputeStatus
+	23, // 31: v1.ListDisputesResponse.disputes:type_name -> v1.Dispute
+	23, // 32: v1.SubmitDisputeEvidenceResponse.dispute:type_name -> v1.Dispute
+	33, // [33:33] is the sub-list for method output_type
+	33, // [33:33] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_proto_openpay_v1_payment_proto_init() }
@@ -1761,8 +2333,8 @@ func file_proto_openpay_v1_payment_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_openpay_v1_payment_proto_rawDesc), len(file_proto_openpay_v1_payment_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   18,
+			NumEnums:      5,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

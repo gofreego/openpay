@@ -254,6 +254,126 @@
         ]
       }
     },
+    "/openpay/v1/disputes": {
+      "get": {
+        "summary": "List disputes",
+        "description": "The disputes queue, nearest evidence deadline first. Requires openpay:payments:read within scope.",
+        "operationId": "OpenPay_ListDisputes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListDisputesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": " - DISPUTE_STATUS_OPEN: Awaiting our evidence.\n - DISPUTE_STATUS_UNDER_REVIEW: Evidence submitted; the network is deciding.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DISPUTE_STATUS_UNSPECIFIED",
+              "DISPUTE_STATUS_OPEN",
+              "DISPUTE_STATUS_UNDER_REVIEW",
+              "DISPUTE_STATUS_WON",
+              "DISPUTE_STATUS_LOST"
+            ],
+            "default": "DISPUTE_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/disputes/{id}": {
+      "get": {
+        "summary": "Get a dispute",
+        "description": "Requires openpay:payments:read within scope.",
+        "operationId": "OpenPay_GetDispute",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDisputeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/disputes/{id}/evidence": {
+      "post": {
+        "summary": "Submit evidence for a dispute",
+        "description": "Only while the dispute is open. Central ops only: requires openpay:disputes:manage and openpay:scope:all.",
+        "operationId": "OpenPay_SubmitDisputeEvidence",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitDisputeEvidenceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPaySubmitDisputeEvidenceBody"
+            }
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
     "/openpay/v1/float-held": {
       "get": {
         "summary": "Get the real customer money held",
@@ -643,7 +763,10 @@
               "PAYMENT_STATUS_EXPIRED",
               "PAYMENT_STATUS_CANCELLED",
               "PAYMENT_STATUS_PARTIALLY_REFUNDED",
-              "PAYMENT_STATUS_REFUNDED"
+              "PAYMENT_STATUS_REFUNDED",
+              "PAYMENT_STATUS_DISPUTED",
+              "PAYMENT_STATUS_DISPUTE_WON",
+              "PAYMENT_STATUS_DISPUTE_LOST"
             ],
             "default": "PAYMENT_STATUS_UNSPECIFIED"
           }
@@ -1457,6 +1580,15 @@
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
     },
+    "OpenPaySubmitDisputeEvidenceBody": {
+      "type": "object",
+      "properties": {
+        "evidence": {
+          "type": "string",
+          "title": "What answers the chargeback: delivery proof, the refund already made, …"
+        }
+      }
+    },
     "OpenPaySyncPaymentBody": {
       "type": "object",
       "description": "SyncPaymentRequest asks the provider for a payment's state now, rather than\nwaiting for a webhook or the poller."
@@ -1718,6 +1850,79 @@
       "default": "CUSTOMER_STATUS_UNSPECIFIED",
       "description": " - CUSTOMER_STATUS_MERGED: A duplicate that now resolves to another record. Lookups follow it, so an\nid stored before a merge keeps working."
     },
+    "v1Dispute": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "paymentId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "description": "The card network's reason, verbatim."
+        },
+        "status": {
+          "$ref": "#/definitions/v1DisputeStatus"
+        },
+        "fromWallet": {
+          "type": "string",
+          "format": "int64",
+          "description": "Where the held money came from. from_expense is what the customer had\nalready spent: our loss unless the dispute is won."
+        },
+        "fromUnapplied": {
+          "type": "string",
+          "format": "int64"
+        },
+        "fromExpense": {
+          "type": "string",
+          "format": "int64"
+        },
+        "evidenceDueBy": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "evidenceSubmittedBy": {
+          "type": "string"
+        },
+        "evidenceSubmittedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "A chargeback: the customer's bank taking a payment back. Opened by the bank,\nnever by us; while it is decided, the contested money is held out of the\ncustomer's wallet."
+    },
+    "v1DisputeStatus": {
+      "type": "string",
+      "enum": [
+        "DISPUTE_STATUS_UNSPECIFIED",
+        "DISPUTE_STATUS_OPEN",
+        "DISPUTE_STATUS_UNDER_REVIEW",
+        "DISPUTE_STATUS_WON",
+        "DISPUTE_STATUS_LOST"
+      ],
+      "default": "DISPUTE_STATUS_UNSPECIFIED",
+      "description": " - DISPUTE_STATUS_OPEN: Awaiting our evidence.\n - DISPUTE_STATUS_UNDER_REVIEW: Evidence submitted; the network is deciding."
+    },
     "v1ExpiryPolicy": {
       "type": "string",
       "enum": [
@@ -1775,6 +1980,14 @@
       "properties": {
         "customer": {
           "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
+    "v1GetDisputeResponse": {
+      "type": "object",
+      "properties": {
+        "dispute": {
+          "$ref": "#/definitions/v1Dispute"
         }
       }
     },
@@ -2128,6 +2341,18 @@
         }
       }
     },
+    "v1ListDisputesResponse": {
+      "type": "object",
+      "properties": {
+        "disputes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Dispute"
+          }
+        }
+      }
+    },
     "v1ListLedgerAccountsResponse": {
       "type": "object",
       "properties": {
@@ -2404,7 +2629,10 @@
         "PAYMENT_STATUS_EXPIRED",
         "PAYMENT_STATUS_CANCELLED",
         "PAYMENT_STATUS_PARTIALLY_REFUNDED",
-        "PAYMENT_STATUS_REFUNDED"
+        "PAYMENT_STATUS_REFUNDED",
+        "PAYMENT_STATUS_DISPUTED",
+        "PAYMENT_STATUS_DISPUTE_WON",
+        "PAYMENT_STATUS_DISPUTE_LOST"
       ],
       "default": "PAYMENT_STATUS_UNSPECIFIED",
       "description": " - PAYMENT_STATUS_PENDING: Waiting for the customer at the provider's checkout."
@@ -2634,6 +2862,14 @@
         }
       },
       "description": "One line of an account statement: a posting, with enough of its journal to\nsay why the money moved."
+    },
+    "v1SubmitDisputeEvidenceResponse": {
+      "type": "object",
+      "properties": {
+        "dispute": {
+          "$ref": "#/definitions/v1Dispute"
+        }
+      }
     },
     "v1SyncPaymentResponse": {
       "type": "object",

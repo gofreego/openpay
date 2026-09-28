@@ -95,6 +95,22 @@ func (l *logged) FetchRefund(ctx context.Context, id string) (*provider.Refund, 
 	return res, err
 }
 
+func (l *logged) FetchDispute(ctx context.Context, id string) (*provider.Dispute, error) {
+	started := time.Now()
+	res, err := l.Provider.FetchDispute(ctx, id)
+	l.record(ctx, "fetch_dispute", id, nil, res, err, started)
+	return res, err
+}
+
+func (l *logged) SubmitDisputeEvidence(ctx context.Context, id, evidence string) error {
+	started := time.Now()
+	err := l.Provider.SubmitDisputeEvidence(ctx, id, evidence)
+	// The evidence itself may carry customer details; the dispute row keeps
+	// it, the request log only its size.
+	l.record(ctx, "submit_dispute_evidence", id, map[string]int{"evidence_bytes": len(evidence)}, nil, err, started)
+	return err
+}
+
 // VerifyWebhook is inbound, not a call we made; the raw event is kept in
 // provider_events instead.
 func (l *logged) VerifyWebhook(headers http.Header, body []byte) (*provider.Event, error) {

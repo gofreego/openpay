@@ -41,6 +41,11 @@ const (
 	// — it is the customer's own money coming back — so, like OpAdjust, it
 	// skips every capability, status and limit rule.
 	OpRestore Operation = "restore"
+	// OpChargeback takes contested money out when a customer's bank disputes
+	// a top-up. The bank has already taken it back, so no capability or
+	// status rule can stop it; only the overdraft rule stands, and the caller
+	// takes no more than is available.
+	OpChargeback Operation = "chargeback"
 	// OpAdjust is an operator correction. It bypasses capability and limit
 	// rules on purpose — it is how a wallet those rules got wrong is put
 	// right — and is instead gated by permission, reason code and audit.
@@ -80,7 +85,7 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 	if amount <= 0 {
 		return apperrors.New(apperrors.InvalidArgument, "amount must be positive, got %d", amount)
 	}
-	if op == OpAdjust || op == OpRestore {
+	if op == OpAdjust || op == OpRestore || op == OpChargeback {
 		return nil
 	}
 	if wallet.Status != dao.WalletActive {

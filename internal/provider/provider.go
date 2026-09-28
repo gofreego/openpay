@@ -118,6 +118,27 @@ type Capabilities struct {
 	ManualCapture bool
 }
 
+// DisputeStatus is a provider dispute's state in OpenPay's vocabulary.
+type DisputeStatus string
+
+const (
+	DisputeOpen        DisputeStatus = "open"
+	DisputeUnderReview DisputeStatus = "under_review"
+	DisputeWon         DisputeStatus = "won"
+	DisputeLost        DisputeStatus = "lost"
+)
+
+// Dispute is the provider's authoritative view of a chargeback.
+type Dispute struct {
+	ProviderDisputeID string
+	ProviderPaymentID string
+	Status            DisputeStatus
+	Amount            int64
+	Currency          string
+	Reason            string
+	EvidenceDueBy     *time.Time
+}
+
 // Provider is one PSP. Implementations must be safe for concurrent use, and
 // every mutating call must be idempotent at the provider (their own
 // idempotency keys) so a retry after a timeout cannot move money twice.
@@ -135,6 +156,11 @@ type Provider interface {
 	// how it ended.
 	Refund(ctx context.Context, req RefundRequest) (*Refund, error)
 	FetchRefund(ctx context.Context, providerRefundID string) (*Refund, error)
+
+	// Disputes are opened by the customer's bank, never by us: we learn of
+	// them by webhook, fetch them, and answer with evidence.
+	FetchDispute(ctx context.Context, providerDisputeID string) (*Dispute, error)
+	SubmitDisputeEvidence(ctx context.Context, providerDisputeID, evidence string) error
 
 	// VerifyWebhook authenticates a webhook and normalizes it. An invalid
 	// signature is an Unauthenticated error; nothing from such a request may

@@ -6,6 +6,7 @@ import (
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 
 	"github.com/gofreego/openpay/internal/provider/mock"
@@ -25,11 +26,17 @@ import (
 //     poller recover a lost one.
 //   - POST refunds/{providerRefundID}?outcome=process|fail finishes a refund
 //     the same way.
+//   - POST disputes/open/{providerPaymentID}?amount=N charges a payment back;
+//     POST disputes/{providerDisputeID}?outcome=won|lost decides it.
 func MockCheckoutHandler(prefix, webhookPath string, m *mock.Provider, webhooks http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, prefix)
 		if refundID, ok := strings.CutPrefix(id, "refunds/"); ok {
 			mockRefund(w, r, refundID, webhookPath, m, webhooks)
+			return
+		}
+		if rest, ok := strings.CutPrefix(id, "disputes/"); ok {
+			mockDispute(w, r, rest, webhookPath, m, webhooks)
 			return
 		}
 		p, err := m.FetchPayment(r.Context(), id)
@@ -107,4 +114,46 @@ func mockRefund(w http.ResponseWriter, r *http.Request, id, webhookPath string, 
 	webhooks.ServeHTTP(rec, req)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"refund":%q,"event":%q,"webhook":"delivered, answered %d"}`, id, eventType, rec.Code)
+}
+
+func mockDispute(w http.ResponseWriter, r *http.Request, rest, webhookPath string, m *mock.Provider, webhooks http.Handler) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var disputeID, eventType string
+	if paymentID, ok := strings.CutPrefix(rest, "open/"); ok {
+		p, err := m.FetchPayment(r.Context(), paymentID)
+		if err != nil {
+			http.Error(w, "unknown mock payment", http.StatusNotFound)
+			return
+		}
+		amount := p.Amount
+		if a, err := strconv.ParseInt(r.URL.Query().Get("amount"), 10, 64); err == nil && a > 0 {
+			amount = a
+		}
+		disputeID, eventType = m.OpenDispute(paymentID, amount, "fraud"), "dispute.created"
+	} else {
+		if _, err := m.FetchDispute(r.Context(), rest); err != nil {
+			http.Error(w, "unknown mock dispute", http.StatusNotFound)
+			return
+		}
+		switch r.URL.Query().Get("outcome") {
+		case "won":
+			m.ResolveDispute(rest, true)
+		case "lost":
+			m.ResolveDispute(rest, false)
+		default:
+			http.Error(w, "outcome must be won or lost", http.StatusBadRequest)
+			return
+		}
+		disputeID, eventType = rest, "dispute.closed"
+	}
+	headers, body := m.DisputeWebhook(disputeID, eventType)
+	req := httptest.NewRequest(http.MethodPost, webhookPath, bytes.NewReader(body)).WithContext(r.Context())
+	req.Header = headers
+	rec := httptest.NewRecorder()
+	webhooks.ServeHTTP(rec, req)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"dispute":%q,"event":%q,"webhook":"delivered, answered %d"}`, disputeID, eventType, rec.Code)
 }

@@ -107,18 +107,18 @@ type PaymentTransition struct {
 
 // ProviderEvent is a webhook exactly as received, plus its processing state.
 type ProviderEvent struct {
-	ID                int64
-	Provider          string
-	EventID           string
-	EventType         string
-	ObjectKind        string
-	ObjectID          *string
-	Payload           []byte
-	ReceivedAt        time.Time
-	ProcessedAt       *time.Time
-	Attempts          int
-	NextAttemptAt     time.Time
-	LastError         *string
+	ID            int64
+	Provider      string
+	EventID       string
+	EventType     string
+	ObjectKind    string
+	ObjectID      *string
+	Payload       []byte
+	ReceivedAt    time.Time
+	ProcessedAt   *time.Time
+	Attempts      int
+	NextAttemptAt time.Time
+	LastError     *string
 }
 
 // ProviderRequest is one call to a provider, for the request log.
@@ -184,6 +184,54 @@ type Refund struct {
 	ProcessedAt *time.Time
 
 	// PaymentPublicID is read alongside, for the API.
+	PaymentPublicID string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+const (
+	PaymentDisputed    PaymentStatus = "disputed"
+	PaymentDisputeWon  PaymentStatus = "dispute_won"
+	PaymentDisputeLost PaymentStatus = "dispute_lost"
+)
+
+type DisputeStatus string
+
+const (
+	DisputeOpen        DisputeStatus = "open"
+	DisputeUnderReview DisputeStatus = "under_review"
+	DisputeWon         DisputeStatus = "won"
+	DisputeLost        DisputeStatus = "lost"
+)
+
+func (s DisputeStatus) IsResolved() bool { return s == DisputeWon || s == DisputeLost }
+
+// Dispute is a chargeback: a customer's bank taking a payment back.
+type Dispute struct {
+	ID                int64
+	PublicID          string
+	PaymentID         int64
+	ProductID         int64
+	Provider          string
+	ProviderDisputeID string
+	Amount            int64
+	Currency          string
+	Reason            string
+	Status            DisputeStatus
+
+	// Where the contested money came from when the dispute opened; a win puts
+	// each part back. They sum to Amount.
+	FromWallet    int64
+	FromUnapplied int64
+	FromExpense   int64
+
+	EvidenceDueBy       *time.Time
+	Evidence            *string
+	EvidenceSubmittedBy *string
+	EvidenceSubmittedAt *time.Time
+	ResolvedAt          *time.Time
+
 	PaymentPublicID string
 
 	CreatedAt time.Time

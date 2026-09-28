@@ -50,6 +50,9 @@ const (
 	// top-up is close to cashing out a closed-loop balance, so it is
 	// platform-level and reason-coded until orders give products their own.
 	PermRefundsCreate = "openpay:refunds:create"
+	// PermDisputesManage answers chargebacks with evidence: platform-level,
+	// since a dispute response speaks for the company to the card network.
+	PermDisputesManage = "openpay:disputes:manage"
 
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"

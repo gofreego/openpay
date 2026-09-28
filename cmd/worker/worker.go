@@ -52,7 +52,11 @@ func (w *Worker) Run(ctx context.Context) error {
 	registry, _ := payment.Providers(w.cfg.Service.Payments)
 	payments := payment.New(repo, registry, engine, w.cfg.Service.Payments)
 
-	w.done.Add(10)
+	w.done.Add(11)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "dispute poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollDisputes(ctx, repo, payments) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "refund poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollRefunds(ctx, repo, payments) })
@@ -196,6 +200,21 @@ func (w *Worker) pollRefunds(ctx context.Context, repo service.Repository, payme
 	for _, r := range open {
 		if _, err := payments.PollRefund(ctx, r); err != nil {
 			logger.Warn(ctx, "failed to poll refund %s: %v", r.PublicID, err)
+		}
+	}
+}
+
+// pollDisputes fetches unresolved disputes whose webhook may have been lost.
+// A missed "lost" would leave contested money held forever.
+func (w *Worker) pollDisputes(ctx context.Context, repo service.Repository, payments *payment.Engine) {
+	open, err := repo.ListOpenDisputes(ctx, time.Now().Add(-w.cfg.Service.Payments.PollAfter), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list open disputes: %v", err)
+		return
+	}
+	for _, d := range open {
+		if _, err := payments.PollDispute(ctx, d); err != nil {
+			logger.Warn(ctx, "failed to poll dispute %s: %v", d.PublicID, err)
 		}
 	}
 }

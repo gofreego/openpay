@@ -23,6 +23,9 @@ enum PaymentStatus {
   PAYMENT_STATUS_CANCELLED = 8;
   PAYMENT_STATUS_PARTIALLY_REFUNDED = 9;
   PAYMENT_STATUS_REFUNDED = 10;
+  PAYMENT_STATUS_DISPUTED = 11;
+  PAYMENT_STATUS_DISPUTE_WON = 12;
+  PAYMENT_STATUS_DISPUTE_LOST = 13;
 }
 
 enum PaymentPurpose {
@@ -199,4 +202,66 @@ message SyncPaymentRequest {
 
 message SyncPaymentResponse {
   Payment payment = 1;
+}
+
+enum DisputeStatus {
+  DISPUTE_STATUS_UNSPECIFIED = 0;
+  // Awaiting our evidence.
+  DISPUTE_STATUS_OPEN = 1;
+  // Evidence submitted; the network is deciding.
+  DISPUTE_STATUS_UNDER_REVIEW = 2;
+  DISPUTE_STATUS_WON = 3;
+  DISPUTE_STATUS_LOST = 4;
+}
+
+// A chargeback: the customer's bank taking a payment back. Opened by the bank,
+// never by us; while it is decided, the contested money is held out of the
+// customer's wallet.
+message Dispute {
+  string id = 1;
+  string payment_id = 2;
+  int64 amount = 3;
+  string currency = 4;
+  // The card network's reason, verbatim.
+  string reason = 5;
+  DisputeStatus status = 6;
+  // Where the held money came from. from_expense is what the customer had
+  // already spent: our loss unless the dispute is won.
+  int64 from_wallet = 7;
+  int64 from_unapplied = 8;
+  int64 from_expense = 9;
+  google.protobuf.Timestamp evidence_due_by = 10;
+  string evidence = 11;
+  string evidence_submitted_by = 12;
+  google.protobuf.Timestamp evidence_submitted_at = 13;
+  google.protobuf.Timestamp resolved_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+}
+
+message GetDisputeRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetDisputeResponse {
+  Dispute dispute = 1;
+}
+
+// ListDisputesRequest is the disputes queue, nearest evidence deadline first.
+message ListDisputesRequest {
+  DisputeStatus status = 1 [(validate.rules).enum = {defined_only: true}];
+  int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}];
+}
+
+message ListDisputesResponse {
+  repeated Dispute disputes = 1;
+}
+
+message SubmitDisputeEvidenceRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  // What answers the chargeback: delivery proof, the refund already made, …
+  string evidence = 2 [(validate.rules).string = {min_len: 1, max_len: 10000}];
+}
+
+message SubmitDisputeEvidenceResponse {
+  Dispute dispute = 1;
 }

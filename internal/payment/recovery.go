@@ -140,6 +140,8 @@ func (e *Engine) processEvent(ctx context.Context, event *dao.ProviderEvent) err
 	switch provider.ObjectKind(event.ObjectKind) {
 	case provider.ObjectRefund:
 		return e.processRefundEvent(ctx, event.Provider, *event.ObjectID, reference)
+	case provider.ObjectDispute:
+		return e.processDisputeEvent(ctx, event.Provider, *event.ObjectID)
 	case provider.ObjectPayment:
 		attempt, err := e.attemptFor(ctx, event.Provider, *event.ObjectID)
 		if err != nil {

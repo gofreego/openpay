@@ -48,6 +48,8 @@ type Provider struct {
 	// provider's idempotency key would.
 	byAttempt map[string]string
 
+	disputes map[string]*provider.Dispute
+
 	refunds map[string]*provider.Refund
 	// byRefundID makes Refund idempotent on our refund id.
 	byRefundID map[string]string
@@ -67,6 +69,7 @@ func New(secret, checkoutURL string) *Provider {
 		payments:    map[string]*payment{},
 		byAttempt:   map[string]string{},
 		refunds:     map[string]*provider.Refund{},
+		disputes:    map[string]*provider.Dispute{},
 		byRefundID:  map[string]string{},
 	}
 }
@@ -326,4 +329,57 @@ func (m *Provider) webhookFor(kind provider.ObjectKind, objectID, eventType stri
 	headers := http.Header{}
 	headers.Set(SignatureHeader, hex.EncodeToString(m.sign(body)))
 	return headers, body
+}
+
+func (m *Provider) FetchDispute(_ context.Context, providerDisputeID string) (*provider.Dispute, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.disputes[providerDisputeID]
+	if !ok {
+		return nil, apperrors.New(apperrors.NotFound, "mock dispute %q not found", providerDisputeID)
+	}
+	out := *d
+	return &out, nil
+}
+
+func (m *Provider) SubmitDisputeEvidence(_ context.Context, providerDisputeID, evidence string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.disputes[providerDisputeID]
+	if !ok {
+		return apperrors.New(apperrors.NotFound, "mock dispute %q not found", providerDisputeID)
+	}
+	if d.Status != provider.DisputeOpen {
+		return apperrors.New(apperrors.FailedPrecondition, "mock dispute %q is %s, not open", providerDisputeID, d.Status)
+	}
+	d.Status = provider.DisputeUnderReview
+	return nil
+}
+
+// OpenDispute is the customer's bank charging a payment back.
+func (m *Provider) OpenDispute(providerPaymentID string, amount int64, reason string) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id := "mockdsp_" + ids.New(ids.Dispute)[4:]
+	due := time.Now().Add(7 * 24 * time.Hour).UTC()
+	m.disputes[id] = &provider.Dispute{ProviderDisputeID: id, ProviderPaymentID: providerPaymentID,
+		Status: provider.DisputeOpen, Amount: amount, Currency: "INR", Reason: reason, EvidenceDueBy: &due}
+	return id
+}
+
+// ResolveDispute is the network's decision.
+func (m *Provider) ResolveDispute(providerDisputeID string, won bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if d, ok := m.disputes[providerDisputeID]; ok {
+		d.Status = provider.DisputeLost
+		if won {
+			d.Status = provider.DisputeWon
+		}
+	}
+}
+
+// DisputeWebhook builds a signed webhook about a dispute.
+func (m *Provider) DisputeWebhook(providerDisputeID, eventType string) (http.Header, []byte) {
+	return m.webhookFor(provider.ObjectDispute, providerDisputeID, eventType)
 }

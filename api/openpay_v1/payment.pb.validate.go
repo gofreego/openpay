@@ -2632,3 +2632,1000 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = SyncPaymentResponseValidationError{}
+
+// Validate checks the field values on Dispute with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Dispute) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Dispute with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in DisputeMultiError, or nil if none found.
+func (m *Dispute) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Dispute) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Id
+
+	// no validation rules for PaymentId
+
+	// no validation rules for Amount
+
+	// no validation rules for Currency
+
+	// no validation rules for Reason
+
+	// no validation rules for Status
+
+	// no validation rules for FromWallet
+
+	// no validation rules for FromUnapplied
+
+	// no validation rules for FromExpense
+
+	if all {
+		switch v := interface{}(m.GetEvidenceDueBy()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "EvidenceDueBy",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "EvidenceDueBy",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetEvidenceDueBy()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return DisputeValidationError{
+				field:  "EvidenceDueBy",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	// no validation rules for Evidence
+
+	// no validation rules for EvidenceSubmittedBy
+
+	if all {
+		switch v := interface{}(m.GetEvidenceSubmittedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "EvidenceSubmittedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "EvidenceSubmittedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetEvidenceSubmittedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return DisputeValidationError{
+				field:  "EvidenceSubmittedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetResolvedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "ResolvedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "ResolvedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetResolvedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return DisputeValidationError{
+				field:  "ResolvedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if all {
+		switch v := interface{}(m.GetCreatedAt()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "CreatedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DisputeValidationError{
+					field:  "CreatedAt",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetCreatedAt()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return DisputeValidationError{
+				field:  "CreatedAt",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return DisputeMultiError(errors)
+	}
+
+	return nil
+}
+
+// DisputeMultiError is an error wrapping multiple validation errors returned
+// by Dispute.ValidateAll() if the designated constraints aren't met.
+type DisputeMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DisputeMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DisputeMultiError) AllErrors() []error { return m }
+
+// DisputeValidationError is the validation error returned by Dispute.Validate
+// if the designated constraints aren't met.
+type DisputeValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e DisputeValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e DisputeValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e DisputeValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e DisputeValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e DisputeValidationError) ErrorName() string { return "DisputeValidationError" }
+
+// Error satisfies the builtin error interface
+func (e DisputeValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sDispute.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = DisputeValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = DisputeValidationError{}
+
+// Validate checks the field values on GetDisputeRequest with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *GetDisputeRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetDisputeRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetDisputeRequestMultiError, or nil if none found.
+func (m *GetDisputeRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetDisputeRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetId()) < 1 {
+		err := GetDisputeRequestValidationError{
+			field:  "Id",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return GetDisputeRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetDisputeRequestMultiError is an error wrapping multiple validation errors
+// returned by GetDisputeRequest.ValidateAll() if the designated constraints
+// aren't met.
+type GetDisputeRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetDisputeRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetDisputeRequestMultiError) AllErrors() []error { return m }
+
+// GetDisputeRequestValidationError is the validation error returned by
+// GetDisputeRequest.Validate if the designated constraints aren't met.
+type GetDisputeRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetDisputeRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetDisputeRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetDisputeRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetDisputeRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetDisputeRequestValidationError) ErrorName() string {
+	return "GetDisputeRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetDisputeRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetDisputeRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetDisputeRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetDisputeRequestValidationError{}
+
+// Validate checks the field values on GetDisputeResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetDisputeResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetDisputeResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetDisputeResponseMultiError, or nil if none found.
+func (m *GetDisputeResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetDisputeResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetDispute()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetDisputeResponseValidationError{
+					field:  "Dispute",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetDisputeResponseValidationError{
+					field:  "Dispute",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetDispute()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetDisputeResponseValidationError{
+				field:  "Dispute",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return GetDisputeResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetDisputeResponseMultiError is an error wrapping multiple validation errors
+// returned by GetDisputeResponse.ValidateAll() if the designated constraints
+// aren't met.
+type GetDisputeResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetDisputeResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetDisputeResponseMultiError) AllErrors() []error { return m }
+
+// GetDisputeResponseValidationError is the validation error returned by
+// GetDisputeResponse.Validate if the designated constraints aren't met.
+type GetDisputeResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetDisputeResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetDisputeResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetDisputeResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetDisputeResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetDisputeResponseValidationError) ErrorName() string {
+	return "GetDisputeResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetDisputeResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetDisputeResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetDisputeResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetDisputeResponseValidationError{}
+
+// Validate checks the field values on ListDisputesRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ListDisputesRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListDisputesRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListDisputesRequestMultiError, or nil if none found.
+func (m *ListDisputesRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListDisputesRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if _, ok := DisputeStatus_name[int32(m.GetStatus())]; !ok {
+		err := ListDisputesRequestValidationError{
+			field:  "Status",
+			reason: "value must be one of the defined enum values",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if val := m.GetLimit(); val < 0 || val > 100 {
+		err := ListDisputesRequestValidationError{
+			field:  "Limit",
+			reason: "value must be inside range [0, 100]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ListDisputesRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// ListDisputesRequestMultiError is an error wrapping multiple validation
+// errors returned by ListDisputesRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ListDisputesRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListDisputesRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListDisputesRequestMultiError) AllErrors() []error { return m }
+
+// ListDisputesRequestValidationError is the validation error returned by
+// ListDisputesRequest.Validate if the designated constraints aren't met.
+type ListDisputesRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ListDisputesRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ListDisputesRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ListDisputesRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ListDisputesRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ListDisputesRequestValidationError) ErrorName() string {
+	return "ListDisputesRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ListDisputesRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sListDisputesRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ListDisputesRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ListDisputesRequestValidationError{}
+
+// Validate checks the field values on ListDisputesResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ListDisputesResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListDisputesResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListDisputesResponseMultiError, or nil if none found.
+func (m *ListDisputesResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListDisputesResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	for idx, item := range m.GetDisputes() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ListDisputesResponseValidationError{
+						field:  fmt.Sprintf("Disputes[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ListDisputesResponseValidationError{
+						field:  fmt.Sprintf("Disputes[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ListDisputesResponseValidationError{
+					field:  fmt.Sprintf("Disputes[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return ListDisputesResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// ListDisputesResponseMultiError is an error wrapping multiple validation
+// errors returned by ListDisputesResponse.ValidateAll() if the designated
+// constraints aren't met.
+type ListDisputesResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListDisputesResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListDisputesResponseMultiError) AllErrors() []error { return m }
+
+// ListDisputesResponseValidationError is the validation error returned by
+// ListDisputesResponse.Validate if the designated constraints aren't met.
+type ListDisputesResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ListDisputesResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ListDisputesResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ListDisputesResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ListDisputesResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ListDisputesResponseValidationError) ErrorName() string {
+	return "ListDisputesResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ListDisputesResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sListDisputesResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ListDisputesResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ListDisputesResponseValidationError{}
+
+// Validate checks the field values on SubmitDisputeEvidenceRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *SubmitDisputeEvidenceRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on SubmitDisputeEvidenceRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// SubmitDisputeEvidenceRequestMultiError, or nil if none found.
+func (m *SubmitDisputeEvidenceRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *SubmitDisputeEvidenceRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetId()) < 1 {
+		err := SubmitDisputeEvidenceRequestValidationError{
+			field:  "Id",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetEvidence()); l < 1 || l > 10000 {
+		err := SubmitDisputeEvidenceRequestValidationError{
+			field:  "Evidence",
+			reason: "value length must be between 1 and 10000 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return SubmitDisputeEvidenceRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// SubmitDisputeEvidenceRequestMultiError is an error wrapping multiple
+// validation errors returned by SubmitDisputeEvidenceRequest.ValidateAll() if
+// the designated constraints aren't met.
+type SubmitDisputeEvidenceRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SubmitDisputeEvidenceRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SubmitDisputeEvidenceRequestMultiError) AllErrors() []error { return m }
+
+// SubmitDisputeEvidenceRequestValidationError is the validation error returned
+// by SubmitDisputeEvidenceRequest.Validate if the designated constraints
+// aren't met.
+type SubmitDisputeEvidenceRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e SubmitDisputeEvidenceRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e SubmitDisputeEvidenceRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e SubmitDisputeEvidenceRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e SubmitDisputeEvidenceRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e SubmitDisputeEvidenceRequestValidationError) ErrorName() string {
+	return "SubmitDisputeEvidenceRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e SubmitDisputeEvidenceRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sSubmitDisputeEvidenceRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = SubmitDisputeEvidenceRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = SubmitDisputeEvidenceRequestValidationError{}
+
+// Validate checks the field values on SubmitDisputeEvidenceResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *SubmitDisputeEvidenceResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on SubmitDisputeEvidenceResponse with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the result is a list of violation errors wrapped in
+// SubmitDisputeEvidenceResponseMultiError, or nil if none found.
+func (m *SubmitDisputeEvidenceResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *SubmitDisputeEvidenceResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetDispute()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, SubmitDisputeEvidenceResponseValidationError{
+					field:  "Dispute",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, SubmitDisputeEvidenceResponseValidationError{
+					field:  "Dispute",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetDispute()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return SubmitDisputeEvidenceResponseValidationError{
+				field:  "Dispute",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return SubmitDisputeEvidenceResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// SubmitDisputeEvidenceResponseMultiError is an error wrapping multiple
+// validation errors returned by SubmitDisputeEvidenceResponse.ValidateAll()
+// if the designated constraints aren't met.
+type SubmitDisputeEvidenceResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SubmitDisputeEvidenceResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SubmitDisputeEvidenceResponseMultiError) AllErrors() []error { return m }
+
+// SubmitDisputeEvidenceResponseValidationError is the validation error
+// returned by SubmitDisputeEvidenceResponse.Validate if the designated
+// constraints aren't met.
+type SubmitDisputeEvidenceResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e SubmitDisputeEvidenceResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e SubmitDisputeEvidenceResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e SubmitDisputeEvidenceResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e SubmitDisputeEvidenceResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e SubmitDisputeEvidenceResponseValidationError) ErrorName() string {
+	return "SubmitDisputeEvidenceResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e SubmitDisputeEvidenceResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sSubmitDisputeEvidenceResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = SubmitDisputeEvidenceResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = SubmitDisputeEvidenceResponseValidationError{}

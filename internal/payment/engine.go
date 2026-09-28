@@ -39,6 +39,7 @@ type Repository interface {
 	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
 
 	RefundRepository
+	DisputeRepository
 }
 
 // Config tunes payment timing.
