@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/gofreego/openpay/internal/configs"
+	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
+	"github.com/gofreego/openpay/pkg/apperrors"
 
 	"github.com/gofreego/goutils/logger"
 )
@@ -41,7 +43,11 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	drainer := outbox.NewDrainer(w.cfg.Worker.Outbox, repo, outbox.LogPublisher{})
 
-	w.done.Add(2)
+	w.done.Add(3)
+	go func() {
+		defer w.done.Done()
+		w.ensureChart(ctx, repo)
+	}()
 	go func() {
 		defer w.done.Done()
 		drainer.Run(ctx)
@@ -61,6 +67,36 @@ func (w *Worker) Shutdown(ctx context.Context) {
 	}
 	w.done.Wait()
 	logger.Info(ctx, "worker stopped")
+}
+
+// ensureChart creates any missing chart-of-accounts entries: the platform
+// accounts, one set per configured provider and bank, and those of products
+// registered before their chart was created at registration.
+//
+// It retries rather than giving up, because a brief database outage at startup
+// should delay the chart, not leave it half-built until the next deploy. An
+// account that exists but contradicts the chart is not retried: that is a
+// finding for a person, and retrying would only repeat it.
+func (w *Worker) ensureChart(ctx context.Context, repo service.Repository) {
+	const retryEvery = 30 * time.Second
+	for {
+		created, err := ledger.EnsureChart(ctx, repo, w.cfg.Ledger)
+		if err == nil {
+			logger.Info(ctx, "chart of accounts up to date: %d accounts created", created)
+			return
+		}
+		if apperrors.Is(err, apperrors.FailedPrecondition) {
+			logger.Error(ctx, "chart of accounts conflicts with the ledger, not retrying: %v", err)
+			return
+		}
+		logger.Error(ctx, "failed to ensure chart of accounts, retrying in %s: %v", retryEvery, err)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(retryEvery):
+		}
+	}
 }
 
 func (w *Worker) sweepIdempotencyKeys(ctx context.Context, repo service.Repository) {

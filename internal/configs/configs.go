@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/outbox"
 	repo "github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
@@ -24,6 +25,7 @@ type Configuration struct {
 	Repository   repo.Config        `yaml:"Repository"`
 	Service      service.Config     `yaml:"Service"`
 	Worker       Worker             `yaml:"Worker"`
+	Ledger       ledger.ChartConfig `yaml:"Ledger"`
 	Telemetry    telemetry.Config   `yaml:"Telemetry"`
 	Debug        debug.Config       `yaml:"Debug"`
 }

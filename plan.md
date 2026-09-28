@@ -22,7 +22,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 |------:|------|--------|
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ◐ Exit criteria met; operator product scope, MAIN/BONUS seeding and scope-boundary tests still open (fee policies deferred to P4) |
-| 2 | Ledger Core | ◐ Posting engine, accounts, balances and holds done; chart bootstrap, read APIs and the invariant checker next |
+| 2 | Ledger Core | ◐ Posting engine, accounts, balances, holds and chart of accounts done; read APIs and the invariant checker next |
 | 3 | Wallets | ☐ Not started |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
@@ -771,12 +771,21 @@ This is the most important phase in the project. Do not rush it.
       - a resolved hold cannot be reopened or deleted (database triggers)
       - `ExpireHold` + `ListExpiredHolds` are ready for the sweeper; the worker job
         itself lands with its first consumer (Phase 3/7)
-- [ ] Chart-of-accounts bootstrap, split by scope:
+- [x] Chart-of-accounts bootstrap, split by scope:
       - **platform-level, created once**: PSP receivable per provider, bank, PSP fee
         expense, tax payable, suspense per provider
       - **product-level, created on product registration**: income, discounts,
         breakage, refunds-payable, `expense:promotions` (the funding side of every
         granted balance, per D10)
+      Built in `internal/ledger`, which is also the only place account codes are
+      spelled. Beyond the list above: per-product `psp_fees` and `fee_recovery` (D12),
+      platform `input_tax_credit` (D13) and `equity:opening_balance`. Product accounts
+      are created in `CreateProduct`'s transaction; the worker runs `EnsureChart` at
+      startup for platform accounts (providers and banks come from `Ledger` config),
+      backfilling older products, and refuses — without retrying — when an existing
+      account contradicts the chart. Chart accounts permit negative balances:
+      overdraft protection guards customer wallets, whereas a chart account records
+      what already happened, and refusing that posting would only lose the record
 - [ ] Read APIs: account balance, paginated statement (postings with `balance_after`),
       trial balance (whole platform, and filtered per product)
 - [ ] **Invariant checker job** (nightly + on-demand):

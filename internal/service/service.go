@@ -32,6 +32,13 @@ type Repository interface {
 	AuditRepository
 	CustomerRepository
 	WalletTypeRepository
+	LedgerRepository
+}
+
+type LedgerRepository interface {
+	// GetOrCreateLedgerAccount opens an account unless one with the same code
+	// exists, in which case it loads that one into account.
+	GetOrCreateLedgerAccount(ctx context.Context, account *dao.LedgerAccount) (created bool, err error)
 }
 
 type CustomerRepository interface {

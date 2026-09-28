@@ -19,64 +19,72 @@ const ledgerAccountColumns = `id, public_id, code, product_id, type, currency,
 // cannot be locked — two concurrent first postings to a new account would then
 // both create one.
 func (r *Repository) CreateLedgerAccount(ctx context.Context, account *dao.LedgerAccount) error {
-	const insertAccount = `
-		INSERT INTO ledger_accounts (public_id, code, product_id, type, currency,
-		                             owner_kind, owner_id, allow_negative, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, created_at, updated_at`
-
-	const insertBalance = `INSERT INTO ledger_balances (account_id) VALUES ($1)`
-
-	err := r.executor(ctx).QueryRowContext(ctx, insertAccount,
-		account.PublicID, account.Code, account.ProductID, account.Type, account.Currency,
-		account.OwnerKind, account.OwnerID, account.AllowNegative, account.Status,
-	).Scan(&account.ID, &account.CreatedAt, &account.UpdatedAt)
+	created, err := r.insertLedgerAccount(ctx, account)
 	if err != nil {
-		if isUniqueViolation(err) {
-			return apperrors.Wrap(err, apperrors.AlreadyExists,
-				"ledger account %q already exists", account.Code)
-		}
-		if isForeignKeyViolation(err) {
-			return apperrors.Wrap(err, apperrors.NotFound, "product does not exist")
-		}
-		return apperrors.Wrap(err, apperrors.Internal, "failed to create ledger account")
+		return err
 	}
-
-	if _, err := r.executor(ctx).ExecContext(ctx, insertBalance, account.ID); err != nil {
-		return apperrors.Wrap(err, apperrors.Internal, "failed to create balance row for %q", account.Code)
+	if !created {
+		return apperrors.New(apperrors.AlreadyExists, "ledger account %q already exists", account.Code)
 	}
 	return nil
 }
 
-// GetOrCreateLedgerAccount opens an account if it is not already there.
+// GetOrCreateLedgerAccount opens an account if it is not already there, and
+// otherwise loads the existing one into account.
 //
-// Wallets and provider accounts are created on first use, and two concurrent
-// first uses are ordinary. The unique constraint decides the winner; the loser
-// reads the winner's row rather than failing.
-func (r *Repository) GetOrCreateLedgerAccount(ctx context.Context, account *dao.LedgerAccount) error {
+// Wallets and chart accounts are created on first use, and two concurrent
+// first uses are ordinary. ON CONFLICT decides the winner without raising an
+// error — which matters, because a unique violation inside a transaction
+// aborts it, and the loser could then not even read the winner's row.
+func (r *Repository) GetOrCreateLedgerAccount(ctx context.Context, account *dao.LedgerAccount) (created bool, err error) {
+	created, err = r.insertLedgerAccount(ctx, account)
+	if err != nil || created {
+		return created, err
+	}
+
 	existing, err := r.GetLedgerAccountByCode(ctx, account.Code)
-	if err == nil {
-		*account = *existing
-		return nil
-	}
-	if !apperrors.Is(err, apperrors.NotFound) {
-		return err
-	}
-
-	err = r.CreateLedgerAccount(ctx, account)
-	if err == nil {
-		return nil
-	}
-	if !apperrors.Is(err, apperrors.AlreadyExists) {
-		return err
-	}
-
-	existing, err = r.GetLedgerAccountByCode(ctx, account.Code)
 	if err != nil {
-		return err
+		return false, err
 	}
 	*account = *existing
-	return nil
+	return false, nil
+}
+
+// insertLedgerAccount writes the account and its balance row in one
+// transaction, joining the caller's if there is one. created is false when an
+// account with the same code already exists; nothing is written then.
+func (r *Repository) insertLedgerAccount(ctx context.Context, account *dao.LedgerAccount) (created bool, err error) {
+	const insertAccount = `
+		INSERT INTO ledger_accounts (public_id, code, product_id, type, currency,
+		                             owner_kind, owner_id, allow_negative, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (code) DO NOTHING
+		RETURNING id, created_at, updated_at`
+
+	const insertBalance = `INSERT INTO ledger_balances (account_id) VALUES ($1)`
+
+	err = r.WithTx(ctx, func(ctx context.Context) error {
+		err := r.executor(ctx).QueryRowContext(ctx, insertAccount,
+			account.PublicID, account.Code, account.ProductID, account.Type, account.Currency,
+			account.OwnerKind, account.OwnerID, account.AllowNegative, account.Status,
+		).Scan(&account.ID, &account.CreatedAt, &account.UpdatedAt)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			if isForeignKeyViolation(err) {
+				return apperrors.Wrap(err, apperrors.NotFound, "product does not exist")
+			}
+			return apperrors.Wrap(err, apperrors.Internal, "failed to create ledger account")
+		}
+		created = true
+
+		if _, err := r.executor(ctx).ExecContext(ctx, insertBalance, account.ID); err != nil {
+			return apperrors.Wrap(err, apperrors.Internal, "failed to create balance row for %q", account.Code)
+		}
+		return nil
+	})
+	return created, err
 }
 
 func (r *Repository) GetLedgerAccountByCode(ctx context.Context, code string) (*dao.LedgerAccount, error) {

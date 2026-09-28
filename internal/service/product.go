@@ -9,6 +9,7 @@ import (
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/appcontext"
 	"github.com/gofreego/openpay/internal/auth"
+	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/models/filter"
 	"github.com/gofreego/openpay/pkg/apperrors"
@@ -36,6 +37,11 @@ func (s *Service) CreateProduct(ctx context.Context, req *openpay_v1.CreateProdu
 			}
 
 			if err := s.repo.CreateProduct(ctx, product); err != nil {
+				return nil, err
+			}
+			// In the same transaction: a product that exists without its income
+			// and promotion accounts would fail its first sale, not its creation.
+			if _, err := ledger.EnsureAccounts(ctx, s.repo, ledger.ProductChart(product)); err != nil {
 				return nil, err
 			}
 			if err := s.audit(ctx, auditParams{

@@ -42,6 +42,16 @@ Worker:
     BatchSize: 100
   IdempotencySweepInterval: 1h
   IdempotencySweepBatch: 1000
+# Platform chart of accounts: each provider gets a receivable and a suspense
+# account, each bank a current account. Adding one here creates its accounts
+# the next time the worker starts; removing one never deletes anything.
+Ledger:
+  Providers:
+  - razorpay
+  - cashfree
+  - mock
+  Banks:
+  - hdfc
 Telemetry:
   Enabled: true
   ServiceName: openpay
