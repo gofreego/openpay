@@ -10,6 +10,7 @@ import "proto/openpay/v1/wallet_type.proto";
 import "proto/openpay/v1/customer.proto";
 import "proto/openpay/v1/credential.proto";
 import "proto/openpay/v1/ledger.proto";
+import "proto/openpay/v1/wallet.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -33,6 +34,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Customers"
       description: "People, identified platform-wide by their OpenAuth user id"
+    },
+    {
+      name: "Wallets"
+      description: "Customer balances, each backed by one ledger account"
     },
     {
       name: "Ledger"
@@ -317,6 +322,102 @@ service OpenPay {
             tags: "Ledger"
             summary: "List recent ledger check runs"
             description: "Scheduled and manual runs, newest first. Requires the openpay:ledger:read permission."
+        };
+    }
+
+    // ---- Wallets ----
+    // Product backends see their own product's wallets and platform-scoped
+    // ones; operators see what their product scope grants.
+
+    rpc OpenWallet (OpenWalletRequest) returns (OpenWalletResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/wallets"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Open a customer's wallet"
+            description: "Returns the customer's wallet of a type, creating it on first reference. Product backend only. Naturally idempotent; no Idempotency-Key."
+        };
+    }
+
+    rpc GetWallet (GetWalletRequest) returns (GetWalletResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/wallets/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Get a wallet and its balance"
+            description: "Product backend, or an operator holding openpay:wallets:read."
+        };
+    }
+
+    rpc ListCustomerWallets (ListCustomerWalletsRequest) returns (ListCustomerWalletsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/customers/{customer_id}/wallets"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "List a customer's wallets"
+            description: "A product backend sees its own product's wallets and platform-scoped ones — never another product's. An operator sees their scope; platform wallets need openpay:scope:all."
+        };
+    }
+
+    rpc GetWalletStatement (GetWalletStatementRequest) returns (GetWalletStatementResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/wallets/{wallet_id}/statement"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Get a wallet statement"
+            description: "Newest first, cursor-paginated, each line with its change and running balance."
+        };
+    }
+
+    rpc GrantWallet (GrantWalletRequest) returns (GrantWalletResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/wallets/{wallet_id}/grants"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Grant promotional value"
+            description: "Grantable wallet types only, funded by the product's promotions expense and reason-coded. Requires an Idempotency-Key. Product backend, or an operator holding openpay:wallets:grant."
+        };
+    }
+
+    rpc TransferWallet (TransferWalletRequest) returns (TransferWalletResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/wallets/{from_wallet_id}/transfers"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Transfer to another customer"
+            description: "Between wallets of the same, transferable type. Product backend only. Requires an Idempotency-Key."
+        };
+    }
+
+    rpc AdjustWallet (AdjustWalletRequest) returns (AdjustWalletResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/wallets/{wallet_id}/adjustments"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Adjust a wallet"
+            description: "Operator correction against the product's adjustments expense, reason-coded and explained. Bypasses capability and limit rules but never permits an overdraft. Requires openpay:wallets:adjust and openpay:scope:all, and an Idempotency-Key."
+        };
+    }
+
+    rpc GetFloatHeld (GetFloatHeldRequest) returns (GetFloatHeldResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/float-held"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Wallets"
+            summary: "Get the real customer money held"
+            description: "Balances of fundable wallets only, per product, with platform-scoped wallets as their own line. Requires openpay:wallets:read; platform lines need openpay:scope:all."
         };
     }
 }

@@ -23,7 +23,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 0 | Foundations & Platform Primitives | ✅ Complete |
 | 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4; wallet-listing scope and nullable `customer_id` land with their tables in P3/P4/P7) |
 | 2 | Ledger Core | ✅ Complete |
-| 3 | Wallets | ◐ Engine, expiry, customer limits and events done; wallet APIs and `float_held` next |
+| 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
 | 4 | Payment Orchestration + Mock Provider | ☐ Not started |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ☐ Not started |
@@ -877,10 +877,11 @@ passes repeatedly with `-race`; no code path can mutate a posting.
       product). Expiry is keyed on the last posting seen, re-checked under the lock,
       and cancelled by any activity in between; wallets with open holds are skipped.
       The worker also now sweeps expired holds every minute
-- [ ] `float_held` reporting query: Σ liability across **fundable** wallet types only —
+- [x] `float_held` reporting query: Σ liability across **fundable** wallet types only —
       the "real customer money" figure finance and compliance will ask for. Report it
       per product, with `PLATFORM`-scoped wallets as their own bucket, since that
-      balance belongs to no single product
+      balance belongs to no single product.
+      `GET /openpay/v1/float-held`, scoped like every read; platform line central-only
 - [x] **Customer-level aggregate limits**, distinct from the per-wallet-type limits in
       D10. Because a customer is platform-wide, a per-person cap (total balance held,
       daily load, daily spend) spans their wallets across every product — and if a PPI
@@ -888,8 +889,15 @@ passes repeatedly with `-race`; no code path can mutate a posting.
       wallet. Build the aggregate query now even if the caps start permissive.
       `Wallet.MaxCustomerBalance` / `MaxCustomerDailyLoad` (0 = no cap), over fundable
       wallets only, checked under a customer-row lock taken after the ledger locks
-- [ ] APIs: get balance, list wallets for a customer, paginated wallet statement
-- [ ] Admin adjustment API — permissioned, reason-coded, always a reversible journal
+- [x] APIs: get balance, list wallets for a customer, paginated wallet statement.
+      Plus open (lazy, naturally idempotent), grant and transfer. Grant, transfer and
+      adjust require an `Idempotency-Key`, which is also the journal reference. The
+      D8 test deferred from Phase 1 lives here: one customer with wallets in two
+      products, and every route to the other product's wallet returns NotFound
+      (`internal/service/wallet_test.go`; fails if the service scope is widened)
+- [x] Admin adjustment API — permissioned, reason-coded, always a reversible journal.
+      `openpay:wallets:adjust` + `openpay:scope:all`; memo required; audited with the
+      balance before and after; bypasses capability and limit rules, never overdraft
 - [x] Outbox events: `wallet.credited`, `wallet.debited`, `wallet.low_balance`.
       Credited/debited are written in the journal's transaction, one per wallet moved,
       none on replay. `low_balance` is deferred: it needs a per-product threshold

@@ -34,6 +34,7 @@ func as(perms ...string) context.Context {
 var readPerms = []string{
 	auth.PermProductsRead, auth.PermWalletTypesRead, auth.PermLedgerRead,
 	auth.PermProductsWrite, auth.PermWalletTypesWrite, auth.PermLedgerCheck, auth.PermCredentialsWrite,
+	auth.PermWalletsRead, auth.PermWalletsGrant,
 }
 
 func central() context.Context { return as(append(readPerms, auth.PermScopeAll)...) }

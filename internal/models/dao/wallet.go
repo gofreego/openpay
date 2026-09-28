@@ -43,3 +43,13 @@ type ExpiryCandidate struct {
 	LastPostingID int64
 	Balance       int64
 }
+
+// FloatLine is the real customer money held for one product (or, with a nil
+// product, in platform-scoped wallets).
+type FloatLine struct {
+	ProductID       *int64
+	ProductPublicID *string
+	Currency        string
+	Amount          int64
+	Wallets         int64
+}

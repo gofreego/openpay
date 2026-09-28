@@ -41,6 +41,12 @@ const (
 
 	PermCustomersRead = "openpay:customers:read"
 
+	PermWalletsRead  = "openpay:wallets:read"
+	PermWalletsGrant = "openpay:wallets:grant"
+	// PermWalletsAdjust moves money that no payment or grant explains, so it
+	// is platform-level: adjustments stay with central ops (plan.md U-D6).
+	PermWalletsAdjust = "openpay:wallets:adjust"
+
 	// PermLedgerRead covers accounts, statements, journals, the trial balance
 	// and check history. It sees platform accounts, so until operator product
 	// scope exists (plan.md U-D6) it is a central-ops permission.

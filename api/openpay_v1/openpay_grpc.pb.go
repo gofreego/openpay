@@ -39,6 +39,14 @@ const (
 	OpenPay_GetTrialBalance_FullMethodName         = "/v1.OpenPay/GetTrialBalance"
 	OpenPay_RunLedgerCheck_FullMethodName          = "/v1.OpenPay/RunLedgerCheck"
 	OpenPay_ListLedgerCheckRuns_FullMethodName     = "/v1.OpenPay/ListLedgerCheckRuns"
+	OpenPay_OpenWallet_FullMethodName              = "/v1.OpenPay/OpenWallet"
+	OpenPay_GetWallet_FullMethodName               = "/v1.OpenPay/GetWallet"
+	OpenPay_ListCustomerWallets_FullMethodName     = "/v1.OpenPay/ListCustomerWallets"
+	OpenPay_GetWalletStatement_FullMethodName      = "/v1.OpenPay/GetWalletStatement"
+	OpenPay_GrantWallet_FullMethodName             = "/v1.OpenPay/GrantWallet"
+	OpenPay_TransferWallet_FullMethodName          = "/v1.OpenPay/TransferWallet"
+	OpenPay_AdjustWallet_FullMethodName            = "/v1.OpenPay/AdjustWallet"
+	OpenPay_GetFloatHeld_FullMethodName            = "/v1.OpenPay/GetFloatHeld"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -69,6 +77,14 @@ type OpenPayClient interface {
 	GetTrialBalance(ctx context.Context, in *GetTrialBalanceRequest, opts ...grpc.CallOption) (*GetTrialBalanceResponse, error)
 	RunLedgerCheck(ctx context.Context, in *RunLedgerCheckRequest, opts ...grpc.CallOption) (*RunLedgerCheckResponse, error)
 	ListLedgerCheckRuns(ctx context.Context, in *ListLedgerCheckRunsRequest, opts ...grpc.CallOption) (*ListLedgerCheckRunsResponse, error)
+	OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, error)
+	GetWallet(ctx context.Context, in *GetWalletRequest, opts ...grpc.CallOption) (*GetWalletResponse, error)
+	ListCustomerWallets(ctx context.Context, in *ListCustomerWalletsRequest, opts ...grpc.CallOption) (*ListCustomerWalletsResponse, error)
+	GetWalletStatement(ctx context.Context, in *GetWalletStatementRequest, opts ...grpc.CallOption) (*GetWalletStatementResponse, error)
+	GrantWallet(ctx context.Context, in *GrantWalletRequest, opts ...grpc.CallOption) (*GrantWalletResponse, error)
+	TransferWallet(ctx context.Context, in *TransferWalletRequest, opts ...grpc.CallOption) (*TransferWalletResponse, error)
+	AdjustWallet(ctx context.Context, in *AdjustWalletRequest, opts ...grpc.CallOption) (*AdjustWalletResponse, error)
+	GetFloatHeld(ctx context.Context, in *GetFloatHeldRequest, opts ...grpc.CallOption) (*GetFloatHeldResponse, error)
 }
 
 type openPayClient struct {
@@ -279,6 +295,86 @@ func (c *openPayClient) ListLedgerCheckRuns(ctx context.Context, in *ListLedgerC
 	return out, nil
 }
 
+func (c *openPayClient) OpenWallet(ctx context.Context, in *OpenWalletRequest, opts ...grpc.CallOption) (*OpenWalletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OpenWalletResponse)
+	err := c.cc.Invoke(ctx, OpenPay_OpenWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetWallet(ctx context.Context, in *GetWalletRequest, opts ...grpc.CallOption) (*GetWalletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWalletResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListCustomerWallets(ctx context.Context, in *ListCustomerWalletsRequest, opts ...grpc.CallOption) (*ListCustomerWalletsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCustomerWalletsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListCustomerWallets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetWalletStatement(ctx context.Context, in *GetWalletStatementRequest, opts ...grpc.CallOption) (*GetWalletStatementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWalletStatementResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetWalletStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GrantWallet(ctx context.Context, in *GrantWalletRequest, opts ...grpc.CallOption) (*GrantWalletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantWalletResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GrantWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) TransferWallet(ctx context.Context, in *TransferWalletRequest, opts ...grpc.CallOption) (*TransferWalletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferWalletResponse)
+	err := c.cc.Invoke(ctx, OpenPay_TransferWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) AdjustWallet(ctx context.Context, in *AdjustWalletRequest, opts ...grpc.CallOption) (*AdjustWalletResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdjustWalletResponse)
+	err := c.cc.Invoke(ctx, OpenPay_AdjustWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetFloatHeld(ctx context.Context, in *GetFloatHeldRequest, opts ...grpc.CallOption) (*GetFloatHeldResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFloatHeldResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetFloatHeld_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -307,6 +403,14 @@ type OpenPayServer interface {
 	GetTrialBalance(context.Context, *GetTrialBalanceRequest) (*GetTrialBalanceResponse, error)
 	RunLedgerCheck(context.Context, *RunLedgerCheckRequest) (*RunLedgerCheckResponse, error)
 	ListLedgerCheckRuns(context.Context, *ListLedgerCheckRunsRequest) (*ListLedgerCheckRunsResponse, error)
+	OpenWallet(context.Context, *OpenWalletRequest) (*OpenWalletResponse, error)
+	GetWallet(context.Context, *GetWalletRequest) (*GetWalletResponse, error)
+	ListCustomerWallets(context.Context, *ListCustomerWalletsRequest) (*ListCustomerWalletsResponse, error)
+	GetWalletStatement(context.Context, *GetWalletStatementRequest) (*GetWalletStatementResponse, error)
+	GrantWallet(context.Context, *GrantWalletRequest) (*GrantWalletResponse, error)
+	TransferWallet(context.Context, *TransferWalletRequest) (*TransferWalletResponse, error)
+	AdjustWallet(context.Context, *AdjustWalletRequest) (*AdjustWalletResponse, error)
+	GetFloatHeld(context.Context, *GetFloatHeldRequest) (*GetFloatHeldResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -376,6 +480,30 @@ func (UnimplementedOpenPayServer) RunLedgerCheck(context.Context, *RunLedgerChec
 }
 func (UnimplementedOpenPayServer) ListLedgerCheckRuns(context.Context, *ListLedgerCheckRunsRequest) (*ListLedgerCheckRunsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListLedgerCheckRuns not implemented")
+}
+func (UnimplementedOpenPayServer) OpenWallet(context.Context, *OpenWalletRequest) (*OpenWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OpenWallet not implemented")
+}
+func (UnimplementedOpenPayServer) GetWallet(context.Context, *GetWalletRequest) (*GetWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWallet not implemented")
+}
+func (UnimplementedOpenPayServer) ListCustomerWallets(context.Context, *ListCustomerWalletsRequest) (*ListCustomerWalletsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCustomerWallets not implemented")
+}
+func (UnimplementedOpenPayServer) GetWalletStatement(context.Context, *GetWalletStatementRequest) (*GetWalletStatementResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWalletStatement not implemented")
+}
+func (UnimplementedOpenPayServer) GrantWallet(context.Context, *GrantWalletRequest) (*GrantWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GrantWallet not implemented")
+}
+func (UnimplementedOpenPayServer) TransferWallet(context.Context, *TransferWalletRequest) (*TransferWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TransferWallet not implemented")
+}
+func (UnimplementedOpenPayServer) AdjustWallet(context.Context, *AdjustWalletRequest) (*AdjustWalletResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdjustWallet not implemented")
+}
+func (UnimplementedOpenPayServer) GetFloatHeld(context.Context, *GetFloatHeldRequest) (*GetFloatHeldResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFloatHeld not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -758,6 +886,150 @@ func _OpenPay_ListLedgerCheckRuns_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_OpenWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).OpenWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_OpenWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).OpenWallet(ctx, req.(*OpenWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetWallet(ctx, req.(*GetWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListCustomerWallets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCustomerWalletsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListCustomerWallets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListCustomerWallets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListCustomerWallets(ctx, req.(*ListCustomerWalletsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetWalletStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWalletStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetWalletStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetWalletStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetWalletStatement(ctx, req.(*GetWalletStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GrantWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GrantWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GrantWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GrantWallet(ctx, req.(*GrantWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_TransferWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).TransferWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_TransferWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).TransferWallet(ctx, req.(*TransferWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_AdjustWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdjustWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).AdjustWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_AdjustWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).AdjustWallet(ctx, req.(*AdjustWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetFloatHeld_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFloatHeldRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetFloatHeld(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetFloatHeld_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetFloatHeld(ctx, req.(*GetFloatHeldRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -844,6 +1116,38 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListLedgerCheckRuns",
 			Handler:    _OpenPay_ListLedgerCheckRuns_Handler,
+		},
+		{
+			MethodName: "OpenWallet",
+			Handler:    _OpenPay_OpenWallet_Handler,
+		},
+		{
+			MethodName: "GetWallet",
+			Handler:    _OpenPay_GetWallet_Handler,
+		},
+		{
+			MethodName: "ListCustomerWallets",
+			Handler:    _OpenPay_ListCustomerWallets_Handler,
+		},
+		{
+			MethodName: "GetWalletStatement",
+			Handler:    _OpenPay_GetWalletStatement_Handler,
+		},
+		{
+			MethodName: "GrantWallet",
+			Handler:    _OpenPay_GrantWallet_Handler,
+		},
+		{
+			MethodName: "TransferWallet",
+			Handler:    _OpenPay_TransferWallet_Handler,
+		},
+		{
+			MethodName: "AdjustWallet",
+			Handler:    _OpenPay_AdjustWallet_Handler,
+		},
+		{
+			MethodName: "GetFloatHeld",
+			Handler:    _OpenPay_GetFloatHeld_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

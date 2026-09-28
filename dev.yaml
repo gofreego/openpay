@@ -35,7 +35,12 @@ Repository:
         DBName: openpay
         SSLMode: disable
       replica: []
-Service: {}
+Service:
+  # Per-person caps across every fundable wallet a customer holds, in minor
+  # units. 0 = no cap. Permissive until a PPI decision (plan.md Q1) sets them.
+  Wallet:
+    MaxCustomerBalance: 0
+    MaxCustomerDailyLoad: 0
 Worker:
   Outbox:
     Interval: 5s
@@ -55,11 +60,6 @@ Ledger:
   - mock
   Banks:
   - hdfc
-# Per-person caps across every fundable wallet a customer holds, in minor
-# units. 0 = no cap. Permissive until a PPI decision (plan.md Q1) sets them.
-Wallet:
-  MaxCustomerBalance: 0
-  MaxCustomerDailyLoad: 0
 Telemetry:
   Enabled: true
   ServiceName: openpay

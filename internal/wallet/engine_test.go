@@ -78,7 +78,7 @@ func (f *fixture) customer(ref string) *dao.Customer {
 
 func (f *fixture) open(c *dao.Customer, wt *dao.WalletType) *dao.Wallet {
 	f.t.Helper()
-	w, err := f.engine.Open(f.ctx, c, wt)
+	w, _, err := f.engine.Open(f.ctx, c, wt)
 	if err != nil {
 		f.t.Fatalf("open %s wallet: %v", wt.Code, err)
 	}
@@ -190,7 +190,7 @@ func TestOpenIsIdempotentUnderConcurrency(t *testing.T) {
 	for i := range n {
 		go func() {
 			defer wg.Done()
-			wallets[i], errs[i] = f.engine.Open(f.ctx, c, f.main)
+			wallets[i], _, errs[i] = f.engine.Open(f.ctx, c, f.main)
 		}()
 	}
 	wg.Wait()
@@ -408,10 +408,10 @@ func TestArchivedTypeOpensNoNewWallets(t *testing.T) {
 	testsupport.Exec(t, `UPDATE wallet_types SET status = 'archived' WHERE id = $1`, f.main.ID)
 	f.main.Status = dao.WalletTypeArchived
 
-	if again, err := f.engine.Open(f.ctx, existing, f.main); err != nil || again.ID != w.ID {
+	if again, _, err := f.engine.Open(f.ctx, existing, f.main); err != nil || again.ID != w.ID {
 		t.Errorf("reopening an existing wallet of an archived type: %v", err)
 	}
-	_, err := f.engine.Open(f.ctx, f.customer("newcomer"), f.main)
+	_, _, err := f.engine.Open(f.ctx, f.customer("newcomer"), f.main)
 	wantCode(t, "new wallet of archived type", err, apperrors.WalletOperationDenied)
 }
 

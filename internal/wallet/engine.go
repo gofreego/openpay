@@ -75,14 +75,14 @@ func New(repo Repository, limits Limits) *Engine {
 }
 
 // Open returns the customer's wallet of a type, creating it and its ledger
-// account on first reference. Safe to call repeatedly and concurrently.
-func (e *Engine) Open(ctx context.Context, customer *dao.Customer, walletType *dao.WalletType) (*dao.Wallet, error) {
+// account on first reference. Safe to call repeatedly and concurrently;
+// created reports whether this call made it.
+func (e *Engine) Open(ctx context.Context, customer *dao.Customer, walletType *dao.WalletType) (wallet *dao.Wallet, created bool, err error) {
 	if customer.Status != dao.CustomerActive {
-		return nil, denied("customer %s is %s", customer.PublicID, customer.Status)
+		return nil, false, denied("customer %s is %s", customer.PublicID, customer.Status)
 	}
 
-	var wallet *dao.Wallet
-	err := e.repo.WithTx(ctx, func(ctx context.Context) error {
+	err = e.repo.WithTx(ctx, func(ctx context.Context) error {
 		productSegment := ledger.PlatformScope
 		if walletType.ProductID != nil {
 			product, err := e.repo.GetProductByID(ctx, *walletType.ProductID)
@@ -117,7 +117,7 @@ func (e *Engine) Open(ctx context.Context, customer *dao.Customer, walletType *d
 			LedgerAccountID:  account.ID,
 			Status:           dao.WalletActive,
 		}
-		created, err := e.repo.GetOrCreateWallet(ctx, wallet)
+		created, err = e.repo.GetOrCreateWallet(ctx, wallet)
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (e *Engine) Open(ctx context.Context, customer *dao.Customer, walletType *d
 		}
 		return nil
 	})
-	return wallet, err
+	return wallet, created, err
 }
 
 // GrantRequest credits promotional value.

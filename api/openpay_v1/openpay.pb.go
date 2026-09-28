@@ -26,7 +26,7 @@ var File_proto_openpay_v1_openpay_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1eproto/openpay/v1/product.proto\x1a\"proto/openpay/v1/wallet_type.proto\x1a\x1fproto/openpay/v1/customer.proto\x1a!proto/openpay/v1/credential.proto\x1a\x1dproto/openpay/v1/ledger.proto2\x9b-\n" +
+	"\x1eproto/openpay/v1/openpay.proto\x12\x02v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\x1a\x1eproto/openpay/v1/product.proto\x1a\"proto/openpay/v1/wallet_type.proto\x1a\x1fproto/openpay/v1/customer.proto\x1a!proto/openpay/v1/credential.proto\x1a\x1dproto/openpay/v1/ledger.proto\x1a\x1dproto/openpay/v1/wallet.proto2\x87@\n" +
 	"\aOpenPay\x12\xb1\x02\n" +
 	"\rCreateProduct\x12\x18.v1.CreateProductRequest\x1a\x19.v1.CreateProductResponse\"\xea\x01\x92A\xc7\x01\n" +
 	"\bProducts\x12\x10Create a product\x1a\xa8\x01Registers a product. The code is immutable once set because ledger account codes embed it. Requires the openpay:products:write permission and an Idempotency-Key header.\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/openpay/v1/products\x12\xaa\x01\n" +
@@ -69,7 +69,24 @@ const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\x0eRunLedgerCheck\x12\x19.v1.RunLedgerCheckRequest\x1a\x1a.v1.RunLedgerCheckResponse\"\xbf\x02\x92A\x97\x02\n" +
 	"\x06Ledger\x12#Run the ledger invariant checks now\x1a\xe7\x01Checks every invariant against one consistent snapshot and records the run. Reports drift; never fixes it. Requires the openpay:ledger:check permission. Takes no idempotency key: it moves no money, and running it twice is harmless.\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/openpay/v1/ledger/checks\x12\xfb\x01\n" +
 	"\x13ListLedgerCheckRuns\x12\x1e.v1.ListLedgerCheckRunsRequest\x1a\x1f.v1.ListLedgerCheckRunsResponse\"\xa2\x01\x92A~\n" +
-	"\x06Ledger\x12\x1dList recent ledger check runs\x1aUScheduled and manual runs, newest first. Requires the openpay:ledger:read permission.\x82\xd3\xe4\x93\x02\x1b\x12\x19/openpay/v1/ledger/checksB\xda\x04\x92A\xc8\x04\x12>\n" +
+	"\x06Ledger\x12\x1dList recent ledger check runs\x1aUScheduled and manual runs, newest first. Requires the openpay:ledger:read permission.\x82\xd3\xe4\x93\x02\x1b\x12\x19/openpay/v1/ledger/checks\x12\x8e\x02\n" +
+	"\n" +
+	"OpenWallet\x12\x15.v1.OpenWalletRequest\x1a\x16.v1.OpenWalletResponse\"\xd0\x01\x92A\xae\x01\n" +
+	"\aWallets\x12\x18Open a customer's wallet\x1a\x88\x01Returns the customer's wallet of a type, creating it on first reference. Product backend only. Naturally idempotent; no Idempotency-Key.\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/openpay/v1/wallets\x12\xc4\x01\n" +
+	"\tGetWallet\x12\x14.v1.GetWalletRequest\x1a\x15.v1.GetWalletResponse\"\x89\x01\x92Af\n" +
+	"\aWallets\x12\x1cGet a wallet and its balance\x1a=Product backend, or an operator holding openpay:wallets:read.\x82\xd3\xe4\x93\x02\x1a\x12\x18/openpay/v1/wallets/{id}\x12\xe4\x02\n" +
+	"\x13ListCustomerWallets\x12\x1e.v1.ListCustomerWalletsRequest\x1a\x1f.v1.ListCustomerWalletsResponse\"\x8b\x02\x92A\xd4\x01\n" +
+	"\aWallets\x12\x19List a customer's wallets\x1a\xad\x01A product backend sees its own product's wallets and platform-scoped ones — never another product's. An operator sees their scope; platform wallets need openpay:scope:all.\x82\xd3\xe4\x93\x02-\x12+/openpay/v1/customers/{customer_id}/wallets\x12\xfb\x01\n" +
+	"\x12GetWalletStatement\x12\x1d.v1.GetWalletStatementRequest\x1a\x1e.v1.GetWalletStatementResponse\"\xa5\x01\x92Aq\n" +
+	"\aWallets\x12\x16Get a wallet statement\x1aNNewest first, cursor-paginated, each line with its change and running balance.\x82\xd3\xe4\x93\x02+\x12)/openpay/v1/wallets/{wallet_id}/statement\x12\xd0\x02\n" +
+	"\vGrantWallet\x12\x16.v1.GrantWalletRequest\x1a\x17.v1.GrantWalletResponse\"\x8f\x02\x92A\xda\x01\n" +
+	"\aWallets\x12\x17Grant promotional value\x1a\xb5\x01Grantable wallet types only, funded by the product's promotions expense and reason-coded. Requires an Idempotency-Key. Product backend, or an operator holding openpay:wallets:grant.\x82\xd3\xe4\x93\x02+:\x01*\"&/openpay/v1/wallets/{wallet_id}/grants\x12\x92\x02\n" +
+	"\x0eTransferWallet\x12\x19.v1.TransferWalletRequest\x1a\x1a.v1.TransferWalletResponse\"\xc8\x01\x92A\x8b\x01\n" +
+	"\aWallets\x12\x1cTransfer to another customer\x1abBetween wallets of the same, transferable type. Product backend only. Requires an Idempotency-Key.\x82\xd3\xe4\x93\x023:\x01*\"./openpay/v1/wallets/{from_wallet_id}/transfers\x12\x88\x03\n" +
+	"\fAdjustWallet\x12\x17.v1.AdjustWalletRequest\x1a\x18.v1.AdjustWalletResponse\"\xc4\x02\x92A\x8a\x02\n" +
+	"\aWallets\x12\x0fAdjust a wallet\x1a\xed\x01Operator correction against the product's adjustments expense, reason-coded and explained. Bypasses capability and limit rules but never permits an overdraft. Requires openpay:wallets:adjust and openpay:scope:all, and an Idempotency-Key.\x82\xd3\xe4\x93\x020:\x01*\"+/openpay/v1/wallets/{wallet_id}/adjustments\x12\xb9\x02\n" +
+	"\fGetFloatHeld\x12\x17.v1.GetFloatHeldRequest\x1a\x18.v1.GetFloatHeldResponse\"\xf5\x01\x92A\xd3\x01\n" +
+	"\aWallets\x12 Get the real customer money held\x1a\xa5\x01Balances of fundable wallets only, per product, with platform-scoped wallets as their own line. Requires openpay:wallets:read; platform lines need openpay:scope:all.\x82\xd3\xe4\x93\x02\x18\x12\x16/openpay/v1/float-heldB\x9b\x05\x92A\x89\x05\x12>\n" +
 	"\vOpenPay API\x12'OpenPay is a opensource payment service2\x06v1.0.0Z\x91\x01\n" +
 	"7\n" +
 	"\x06UserId\x12-\b\x02\x12\x1cID of the authenticated user\x1a\tx-user-id \x02\n" +
@@ -83,7 +100,8 @@ const file_proto_openpay_v1_openpay_proto_rawDesc = "" +
 	"\bProducts\x12&Product registration and configurationjI\n" +
 	"\vCredentials\x12:Service credentials a product's backend authenticates withj>\n" +
 	"\vWalletTypes\x12/What a balance of a given type is allowed to dojG\n" +
-	"\tCustomers\x12:People, identified platform-wide by their OpenAuth user idjM\n" +
+	"\tCustomers\x12:People, identified platform-wide by their OpenAuth user idj?\n" +
+	"\aWallets\x124Customer balances, each backed by one ledger accountjM\n" +
 	"\x06Ledger\x12CRead-only view of the double-entry ledger, and its invariant checksZ\f./openpay_v1b\x06proto3"
 
 var file_proto_openpay_v1_openpay_proto_goTypes = []any{
@@ -107,26 +125,42 @@ var file_proto_openpay_v1_openpay_proto_goTypes = []any{
 	(*GetTrialBalanceRequest)(nil),          // 17: v1.GetTrialBalanceRequest
 	(*RunLedgerCheckRequest)(nil),           // 18: v1.RunLedgerCheckRequest
 	(*ListLedgerCheckRunsRequest)(nil),      // 19: v1.ListLedgerCheckRunsRequest
-	(*CreateProductResponse)(nil),           // 20: v1.CreateProductResponse
-	(*GetProductResponse)(nil),              // 21: v1.GetProductResponse
-	(*ListProductsResponse)(nil),            // 22: v1.ListProductsResponse
-	(*UpdateProductResponse)(nil),           // 23: v1.UpdateProductResponse
-	(*CreateServiceCredentialResponse)(nil), // 24: v1.CreateServiceCredentialResponse
-	(*ListServiceCredentialsResponse)(nil),  // 25: v1.ListServiceCredentialsResponse
-	(*RevokeServiceCredentialResponse)(nil), // 26: v1.RevokeServiceCredentialResponse
-	(*CreateWalletTypeResponse)(nil),        // 27: v1.CreateWalletTypeResponse
-	(*GetWalletTypeResponse)(nil),           // 28: v1.GetWalletTypeResponse
-	(*ListWalletTypesResponse)(nil),         // 29: v1.ListWalletTypesResponse
-	(*UpdateWalletTypeResponse)(nil),        // 30: v1.UpdateWalletTypeResponse
-	(*UpsertCustomerResponse)(nil),          // 31: v1.UpsertCustomerResponse
-	(*GetCustomerResponse)(nil),             // 32: v1.GetCustomerResponse
-	(*GetLedgerAccountResponse)(nil),        // 33: v1.GetLedgerAccountResponse
-	(*ListLedgerAccountsResponse)(nil),      // 34: v1.ListLedgerAccountsResponse
-	(*GetAccountStatementResponse)(nil),     // 35: v1.GetAccountStatementResponse
-	(*GetJournalResponse)(nil),              // 36: v1.GetJournalResponse
-	(*GetTrialBalanceResponse)(nil),         // 37: v1.GetTrialBalanceResponse
-	(*RunLedgerCheckResponse)(nil),          // 38: v1.RunLedgerCheckResponse
-	(*ListLedgerCheckRunsResponse)(nil),     // 39: v1.ListLedgerCheckRunsResponse
+	(*OpenWalletRequest)(nil),               // 20: v1.OpenWalletRequest
+	(*GetWalletRequest)(nil),                // 21: v1.GetWalletRequest
+	(*ListCustomerWalletsRequest)(nil),      // 22: v1.ListCustomerWalletsRequest
+	(*GetWalletStatementRequest)(nil),       // 23: v1.GetWalletStatementRequest
+	(*GrantWalletRequest)(nil),              // 24: v1.GrantWalletRequest
+	(*TransferWalletRequest)(nil),           // 25: v1.TransferWalletRequest
+	(*AdjustWalletRequest)(nil),             // 26: v1.AdjustWalletRequest
+	(*GetFloatHeldRequest)(nil),             // 27: v1.GetFloatHeldRequest
+	(*CreateProductResponse)(nil),           // 28: v1.CreateProductResponse
+	(*GetProductResponse)(nil),              // 29: v1.GetProductResponse
+	(*ListProductsResponse)(nil),            // 30: v1.ListProductsResponse
+	(*UpdateProductResponse)(nil),           // 31: v1.UpdateProductResponse
+	(*CreateServiceCredentialResponse)(nil), // 32: v1.CreateServiceCredentialResponse
+	(*ListServiceCredentialsResponse)(nil),  // 33: v1.ListServiceCredentialsResponse
+	(*RevokeServiceCredentialResponse)(nil), // 34: v1.RevokeServiceCredentialResponse
+	(*CreateWalletTypeResponse)(nil),        // 35: v1.CreateWalletTypeResponse
+	(*GetWalletTypeResponse)(nil),           // 36: v1.GetWalletTypeResponse
+	(*ListWalletTypesResponse)(nil),         // 37: v1.ListWalletTypesResponse
+	(*UpdateWalletTypeResponse)(nil),        // 38: v1.UpdateWalletTypeResponse
+	(*UpsertCustomerResponse)(nil),          // 39: v1.UpsertCustomerResponse
+	(*GetCustomerResponse)(nil),             // 40: v1.GetCustomerResponse
+	(*GetLedgerAccountResponse)(nil),        // 41: v1.GetLedgerAccountResponse
+	(*ListLedgerAccountsResponse)(nil),      // 42: v1.ListLedgerAccountsResponse
+	(*GetAccountStatementResponse)(nil),     // 43: v1.GetAccountStatementResponse
+	(*GetJournalResponse)(nil),              // 44: v1.GetJournalResponse
+	(*GetTrialBalanceResponse)(nil),         // 45: v1.GetTrialBalanceResponse
+	(*RunLedgerCheckResponse)(nil),          // 46: v1.RunLedgerCheckResponse
+	(*ListLedgerCheckRunsResponse)(nil),     // 47: v1.ListLedgerCheckRunsResponse
+	(*OpenWalletResponse)(nil),              // 48: v1.OpenWalletResponse
+	(*GetWalletResponse)(nil),               // 49: v1.GetWalletResponse
+	(*ListCustomerWalletsResponse)(nil),     // 50: v1.ListCustomerWalletsResponse
+	(*GetWalletStatementResponse)(nil),      // 51: v1.GetWalletStatementResponse
+	(*GrantWalletResponse)(nil),             // 52: v1.GrantWalletResponse
+	(*TransferWalletResponse)(nil),          // 53: v1.TransferWalletResponse
+	(*AdjustWalletResponse)(nil),            // 54: v1.AdjustWalletResponse
+	(*GetFloatHeldResponse)(nil),            // 55: v1.GetFloatHeldResponse
 }
 var file_proto_openpay_v1_openpay_proto_depIdxs = []int32{
 	0,  // 0: v1.OpenPay.CreateProduct:input_type -> v1.CreateProductRequest
@@ -149,28 +183,44 @@ var file_proto_openpay_v1_openpay_proto_depIdxs = []int32{
 	17, // 17: v1.OpenPay.GetTrialBalance:input_type -> v1.GetTrialBalanceRequest
 	18, // 18: v1.OpenPay.RunLedgerCheck:input_type -> v1.RunLedgerCheckRequest
 	19, // 19: v1.OpenPay.ListLedgerCheckRuns:input_type -> v1.ListLedgerCheckRunsRequest
-	20, // 20: v1.OpenPay.CreateProduct:output_type -> v1.CreateProductResponse
-	21, // 21: v1.OpenPay.GetProduct:output_type -> v1.GetProductResponse
-	22, // 22: v1.OpenPay.ListProducts:output_type -> v1.ListProductsResponse
-	23, // 23: v1.OpenPay.UpdateProduct:output_type -> v1.UpdateProductResponse
-	24, // 24: v1.OpenPay.CreateServiceCredential:output_type -> v1.CreateServiceCredentialResponse
-	25, // 25: v1.OpenPay.ListServiceCredentials:output_type -> v1.ListServiceCredentialsResponse
-	26, // 26: v1.OpenPay.RevokeServiceCredential:output_type -> v1.RevokeServiceCredentialResponse
-	27, // 27: v1.OpenPay.CreateWalletType:output_type -> v1.CreateWalletTypeResponse
-	28, // 28: v1.OpenPay.GetWalletType:output_type -> v1.GetWalletTypeResponse
-	29, // 29: v1.OpenPay.ListWalletTypes:output_type -> v1.ListWalletTypesResponse
-	30, // 30: v1.OpenPay.UpdateWalletType:output_type -> v1.UpdateWalletTypeResponse
-	31, // 31: v1.OpenPay.UpsertCustomer:output_type -> v1.UpsertCustomerResponse
-	32, // 32: v1.OpenPay.GetCustomer:output_type -> v1.GetCustomerResponse
-	33, // 33: v1.OpenPay.GetLedgerAccount:output_type -> v1.GetLedgerAccountResponse
-	34, // 34: v1.OpenPay.ListLedgerAccounts:output_type -> v1.ListLedgerAccountsResponse
-	35, // 35: v1.OpenPay.GetAccountStatement:output_type -> v1.GetAccountStatementResponse
-	36, // 36: v1.OpenPay.GetJournal:output_type -> v1.GetJournalResponse
-	37, // 37: v1.OpenPay.GetTrialBalance:output_type -> v1.GetTrialBalanceResponse
-	38, // 38: v1.OpenPay.RunLedgerCheck:output_type -> v1.RunLedgerCheckResponse
-	39, // 39: v1.OpenPay.ListLedgerCheckRuns:output_type -> v1.ListLedgerCheckRunsResponse
-	20, // [20:40] is the sub-list for method output_type
-	0,  // [0:20] is the sub-list for method input_type
+	20, // 20: v1.OpenPay.OpenWallet:input_type -> v1.OpenWalletRequest
+	21, // 21: v1.OpenPay.GetWallet:input_type -> v1.GetWalletRequest
+	22, // 22: v1.OpenPay.ListCustomerWallets:input_type -> v1.ListCustomerWalletsRequest
+	23, // 23: v1.OpenPay.GetWalletStatement:input_type -> v1.GetWalletStatementRequest
+	24, // 24: v1.OpenPay.GrantWallet:input_type -> v1.GrantWalletRequest
+	25, // 25: v1.OpenPay.TransferWallet:input_type -> v1.TransferWalletRequest
+	26, // 26: v1.OpenPay.AdjustWallet:input_type -> v1.AdjustWalletRequest
+	27, // 27: v1.OpenPay.GetFloatHeld:input_type -> v1.GetFloatHeldRequest
+	28, // 28: v1.OpenPay.CreateProduct:output_type -> v1.CreateProductResponse
+	29, // 29: v1.OpenPay.GetProduct:output_type -> v1.GetProductResponse
+	30, // 30: v1.OpenPay.ListProducts:output_type -> v1.ListProductsResponse
+	31, // 31: v1.OpenPay.UpdateProduct:output_type -> v1.UpdateProductResponse
+	32, // 32: v1.OpenPay.CreateServiceCredential:output_type -> v1.CreateServiceCredentialResponse
+	33, // 33: v1.OpenPay.ListServiceCredentials:output_type -> v1.ListServiceCredentialsResponse
+	34, // 34: v1.OpenPay.RevokeServiceCredential:output_type -> v1.RevokeServiceCredentialResponse
+	35, // 35: v1.OpenPay.CreateWalletType:output_type -> v1.CreateWalletTypeResponse
+	36, // 36: v1.OpenPay.GetWalletType:output_type -> v1.GetWalletTypeResponse
+	37, // 37: v1.OpenPay.ListWalletTypes:output_type -> v1.ListWalletTypesResponse
+	38, // 38: v1.OpenPay.UpdateWalletType:output_type -> v1.UpdateWalletTypeResponse
+	39, // 39: v1.OpenPay.UpsertCustomer:output_type -> v1.UpsertCustomerResponse
+	40, // 40: v1.OpenPay.GetCustomer:output_type -> v1.GetCustomerResponse
+	41, // 41: v1.OpenPay.GetLedgerAccount:output_type -> v1.GetLedgerAccountResponse
+	42, // 42: v1.OpenPay.ListLedgerAccounts:output_type -> v1.ListLedgerAccountsResponse
+	43, // 43: v1.OpenPay.GetAccountStatement:output_type -> v1.GetAccountStatementResponse
+	44, // 44: v1.OpenPay.GetJournal:output_type -> v1.GetJournalResponse
+	45, // 45: v1.OpenPay.GetTrialBalance:output_type -> v1.GetTrialBalanceResponse
+	46, // 46: v1.OpenPay.RunLedgerCheck:output_type -> v1.RunLedgerCheckResponse
+	47, // 47: v1.OpenPay.ListLedgerCheckRuns:output_type -> v1.ListLedgerCheckRunsResponse
+	48, // 48: v1.OpenPay.OpenWallet:output_type -> v1.OpenWalletResponse
+	49, // 49: v1.OpenPay.GetWallet:output_type -> v1.GetWalletResponse
+	50, // 50: v1.OpenPay.ListCustomerWallets:output_type -> v1.ListCustomerWalletsResponse
+	51, // 51: v1.OpenPay.GetWalletStatement:output_type -> v1.GetWalletStatementResponse
+	52, // 52: v1.OpenPay.GrantWallet:output_type -> v1.GrantWalletResponse
+	53, // 53: v1.OpenPay.TransferWallet:output_type -> v1.TransferWalletResponse
+	54, // 54: v1.OpenPay.AdjustWallet:output_type -> v1.AdjustWalletResponse
+	55, // 55: v1.OpenPay.GetFloatHeld:output_type -> v1.GetFloatHeldResponse
+	28, // [28:56] is the sub-list for method output_type
+	0,  // [0:28] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -186,6 +236,7 @@ func file_proto_openpay_v1_openpay_proto_init() {
 	file_proto_openpay_v1_customer_proto_init()
 	file_proto_openpay_v1_credential_proto_init()
 	file_proto_openpay_v1_ledger_proto_init()
+	file_proto_openpay_v1_wallet_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

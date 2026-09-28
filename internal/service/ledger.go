@@ -101,20 +101,6 @@ func (s *Service) GetAccountStatement(ctx context.Context, req *openpay_v1.GetAc
 		return nil, err
 	}
 
-	// The cursor is the id of the last posting shown. It is opaque to callers
-	// but not secret: a posting id reveals nothing a statement does not.
-	var before int64
-	if cursor := req.GetCursor(); cursor != "" {
-		var err error
-		if before, err = strconv.ParseInt(cursor, 10, 64); err != nil || before <= 0 {
-			return nil, apperrors.New(apperrors.InvalidArgument, "cursor %q is not one this API issued", cursor)
-		}
-	}
-	limit := int(req.GetLimit())
-	if limit <= 0 {
-		limit = 50
-	}
-
 	scope, err := s.callerScope(ctx)
 	if err != nil {
 		return nil, err
@@ -128,21 +114,49 @@ func (s *Service) GetAccountStatement(ctx context.Context, req *openpay_v1.GetAc
 		return nil, err
 	}
 
-	// One extra row says whether an older page exists without a count query.
-	entries, err := s.repo.ListStatement(ctx, account.ID, limit+1, before)
+	entries, next, err := s.statementPage(ctx, account.ID, account.Type, req.GetLimit(), req.GetCursor())
 	if err != nil {
 		return nil, err
 	}
+	return &openpay_v1.GetAccountStatementResponse{
+		Account:    toProtoLedgerAccount(view),
+		Entries:    entries,
+		NextCursor: next,
+	}, nil
+}
 
-	response := &openpay_v1.GetAccountStatementResponse{Account: toProtoLedgerAccount(view)}
-	if len(entries) > limit {
-		entries = entries[:limit]
-		response.NextCursor = strconv.FormatInt(entries[limit-1].Posting.ID, 10)
+// statementPage reads one page of an account's statement, newest first.
+//
+// The cursor is the id of the last posting shown. It is opaque to callers but
+// not secret: a posting id reveals nothing a statement does not.
+func (s *Service) statementPage(ctx context.Context, accountID int64, accountType dao.AccountType, limit32 int32, cursor string) ([]*openpay_v1.StatementEntry, string, error) {
+	var before int64
+	if cursor != "" {
+		var err error
+		if before, err = strconv.ParseInt(cursor, 10, 64); err != nil || before <= 0 {
+			return nil, "", apperrors.New(apperrors.InvalidArgument, "cursor %q is not one this API issued", cursor)
+		}
+	}
+	limit := int(limit32)
+	if limit <= 0 {
+		limit = 50
 	}
 
-	sign := account.Type.NormalSign()
-	for _, e := range entries {
-		response.Entries = append(response.Entries, &openpay_v1.StatementEntry{
+	// One extra row says whether an older page exists without a count query.
+	rows, err := s.repo.ListStatement(ctx, accountID, limit+1, before)
+	if err != nil {
+		return nil, "", err
+	}
+	var next string
+	if len(rows) > limit {
+		rows = rows[:limit]
+		next = strconv.FormatInt(rows[limit-1].Posting.ID, 10)
+	}
+
+	sign := accountType.NormalSign()
+	entries := make([]*openpay_v1.StatementEntry, 0, len(rows))
+	for _, e := range rows {
+		entries = append(entries, &openpay_v1.StatementEntry{
 			JournalId:         e.JournalPublicID,
 			JournalExternalId: e.JournalExternalID,
 			JournalKind:       string(e.JournalKind),
@@ -154,7 +168,7 @@ func (s *Service) GetAccountStatement(ctx context.Context, req *openpay_v1.GetAc
 			PostedAt:          timestamppb.New(e.JournalPostedAt),
 		})
 	}
-	return response, nil
+	return entries, next, nil
 }
 
 func (s *Service) GetJournal(ctx context.Context, req *openpay_v1.GetJournalRequest) (*openpay_v1.GetJournalResponse, error) {

@@ -46,7 +46,7 @@ func (w *Worker) Run(ctx context.Context) error {
 
 	drainer := outbox.NewDrainer(w.cfg.Worker.Outbox, repo, outbox.LogPublisher{})
 
-	engine := wallet.New(repo, w.cfg.Wallet)
+	engine := wallet.New(repo, w.cfg.Service.Wallet)
 
 	w.done.Add(6)
 	go func() {

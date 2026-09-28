@@ -10,7 +10,6 @@ import (
 	repo "github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/telemetry"
-	"github.com/gofreego/openpay/internal/wallet"
 
 	"github.com/gofreego/goutils/api/debug"
 	"github.com/gofreego/goutils/configutils"
@@ -27,7 +26,6 @@ type Configuration struct {
 	Service      service.Config     `yaml:"Service"`
 	Worker       Worker             `yaml:"Worker"`
 	Ledger       ledger.ChartConfig `yaml:"Ledger"`
-	Wallet       wallet.Limits      `yaml:"Wallet"`
 	Telemetry    telemetry.Config   `yaml:"Telemetry"`
 	Debug        debug.Config       `yaml:"Debug"`
 }

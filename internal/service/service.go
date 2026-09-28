@@ -7,9 +7,12 @@ import (
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/models/filter"
+	"github.com/gofreego/openpay/internal/wallet"
 )
 
 type Config struct {
+	// Wallet holds the per-customer caps on real money (see wallet.Limits).
+	Wallet wallet.Limits `yaml:"Wallet"`
 }
 
 type Repository interface {
@@ -61,6 +64,7 @@ type WalletRepository interface {
 	ReleaseHold(ctx context.Context, holdExternalID string) (*dao.Hold, error)
 	ExpireHold(ctx context.Context, holdExternalID string) (*dao.Hold, error)
 	ListExpiredHolds(ctx context.Context, now time.Time, limit int) ([]string, error)
+	FloatHeld(ctx context.Context, scope *filter.ProductScope) ([]*dao.FloatLine, error)
 }
 
 type LedgerRepository interface {
@@ -181,12 +185,14 @@ type OutboxRepository interface {
 }
 
 type Service struct {
-	repo Repository
+	repo    Repository
+	wallets *wallet.Engine
 	openpay_v1.UnimplementedOpenPayServer
 }
 
 func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 	return &Service{
-		repo: repo,
+		repo:    repo,
+		wallets: wallet.New(repo, cfg.Wallet),
 	}
 }

@@ -272,3 +272,54 @@ func (r *Repository) CustomerFundedLoadsSince(ctx context.Context, customerID in
 	}
 	return total, nil
 }
+
+// FloatHeld totals the balances of fundable wallets — the money customers
+// paid in and we still owe them — per product, with platform-scoped wallets
+// as their own line. Granted value is excluded: nobody paid for it, and
+// counting it would overstate the one figure finance and compliance always
+// ask for (plan.md D10).
+//
+// Platform lines are included only for the whole-estate scope.
+func (r *Repository) FloatHeld(ctx context.Context, scope *filter.ProductScope) ([]*dao.FloatLine, error) {
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	scoped, err := scopeCondition(scope, "w.product_id", arg)
+	if err != nil {
+		return nil, err
+	}
+	where := ""
+	if scoped != "" {
+		where = " WHERE " + scoped
+	}
+
+	query := `
+		SELECT w.product_id, p.public_id, wt.currency, COALESCE(SUM(-b.raw_balance), 0), COUNT(*)
+		FROM wallets w
+		JOIN wallet_types wt ON wt.id = w.wallet_type_id AND wt.fundable
+		JOIN ledger_balances b ON b.account_id = w.ledger_account_id
+		LEFT JOIN products p ON p.id = w.product_id` + where + `
+		GROUP BY w.product_id, p.public_id, wt.currency
+		ORDER BY w.product_id NULLS LAST, wt.currency`
+
+	rows, err := r.executor(ctx).QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to total float held")
+	}
+	defer rows.Close()
+
+	var lines []*dao.FloatLine
+	for rows.Next() {
+		var l dao.FloatLine
+		if err := rows.Scan(&l.ProductID, &l.ProductPublicID, &l.Currency, &l.Amount, &l.Wallets); err != nil {
+			return nil, apperrors.Wrap(err, apperrors.Internal, "failed to scan float line")
+		}
+		lines = append(lines, &l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to iterate float held")
+	}
+	return lines, nil
+}

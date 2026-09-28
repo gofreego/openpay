@@ -23,6 +23,10 @@
       "description": "People, identified platform-wide by their OpenAuth user id"
     },
     {
+      "name": "Wallets",
+      "description": "Customer balances, each backed by one ledger account"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -176,6 +180,38 @@
         ]
       }
     },
+    "/openpay/v1/customers/{customerId}/wallets": {
+      "get": {
+        "summary": "List a customer's wallets",
+        "description": "A product backend sees its own product's wallets and platform-scoped ones — never another product's. An operator sees their scope; platform wallets need openpay:scope:all.",
+        "operationId": "OpenPay_ListCustomerWallets",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCustomerWalletsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
     "/openpay/v1/customers/{id}": {
       "get": {
         "summary": "Get a customer",
@@ -211,6 +247,30 @@
         ],
         "tags": [
           "Customers"
+        ]
+      }
+    },
+    "/openpay/v1/float-held": {
+      "get": {
+        "summary": "Get the real customer money held",
+        "description": "Balances of fundable wallets only, per product, with platform-scoped wallets as their own line. Requires openpay:wallets:read; platform lines need openpay:scope:all.",
+        "operationId": "OpenPay_GetFloatHeld",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetFloatHeldResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Wallets"
         ]
       }
     },
@@ -812,11 +872,302 @@
           "WalletTypes"
         ]
       }
+    },
+    "/openpay/v1/wallets": {
+      "post": {
+        "summary": "Open a customer's wallet",
+        "description": "Returns the customer's wallet of a type, creating it on first reference. Product backend only. Naturally idempotent; no Idempotency-Key.",
+        "operationId": "OpenPay_OpenWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1OpenWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "OpenWallet returns a customer's wallet of a type, creating it on first\nreference. Called by a product backend. Naturally idempotent on (customer,\ntype), so it takes no Idempotency-Key.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1OpenWalletRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
+    "/openpay/v1/wallets/{fromWalletId}/transfers": {
+      "post": {
+        "summary": "Transfer to another customer",
+        "description": "Between wallets of the same, transferable type. Product backend only. Requires an Idempotency-Key.",
+        "operationId": "OpenPay_TransferWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "fromWalletId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayTransferWalletBody"
+            }
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
+    "/openpay/v1/wallets/{id}": {
+      "get": {
+        "summary": "Get a wallet and its balance",
+        "description": "Product backend, or an operator holding openpay:wallets:read.",
+        "operationId": "OpenPay_GetWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
+    "/openpay/v1/wallets/{walletId}/adjustments": {
+      "post": {
+        "summary": "Adjust a wallet",
+        "description": "Operator correction against the product's adjustments expense, reason-coded and explained. Bypasses capability and limit rules but never permits an overdraft. Requires openpay:wallets:adjust and openpay:scope:all, and an Idempotency-Key.",
+        "operationId": "OpenPay_AdjustWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AdjustWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayAdjustWalletBody"
+            }
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
+    "/openpay/v1/wallets/{walletId}/grants": {
+      "post": {
+        "summary": "Grant promotional value",
+        "description": "Grantable wallet types only, funded by the product's promotions expense and reason-coded. Requires an Idempotency-Key. Product backend, or an operator holding openpay:wallets:grant.",
+        "operationId": "OpenPay_GrantWallet",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GrantWalletResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayGrantWalletBody"
+            }
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
+    },
+    "/openpay/v1/wallets/{walletId}/statement": {
+      "get": {
+        "summary": "Get a wallet statement",
+        "description": "Newest first, cursor-paginated, each line with its change and running balance.",
+        "operationId": "OpenPay_GetWalletStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWalletStatementResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "description": "next_cursor from the previous page. Empty for the newest entries.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Wallets"
+        ]
+      }
     }
   },
   "definitions": {
+    "OpenPayAdjustWalletBody": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "direction": {
+          "$ref": "#/definitions/v1PostingDirection",
+          "description": "CREDIT adds value to the wallet; DEBIT removes it."
+        },
+        "reasonCode": {
+          "type": "string",
+          "description": "goodwill, error_correction, fraud_recovery or migration."
+        },
+        "memo": {
+          "type": "string",
+          "description": "Required: an adjustment nobody explained cannot be audited."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Whose adjustments account funds it, for a platform-scoped wallet."
+        }
+      }
+    },
+    "OpenPayGrantWalletBody": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reasonCode": {
+          "type": "string",
+          "description": "promotion, referral, cashback, loyalty or compensation."
+        },
+        "memo": {
+          "type": "string"
+        },
+        "fundingProductId": {
+          "type": "string",
+          "description": "Whose promotions budget pays, for a platform-scoped wallet. Ignored for a\nproduct wallet (its own product pays) and for a product backend (the\ncaller's product pays)."
+        }
+      }
+    },
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
+    },
+    "OpenPayTransferWalletBody": {
+      "type": "object",
+      "properties": {
+        "toCustomerId": {
+          "type": "string",
+          "description": "The recipient's wallet of the same type is opened if they have none."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
     },
     "OpenPayUpdateProductBody": {
       "type": "object",
@@ -869,6 +1220,17 @@
             "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
+        }
+      }
+    },
+    "v1AdjustWalletResponse": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "journalId": {
+          "type": "string"
         }
       }
     },
@@ -1018,6 +1380,27 @@
       "default": "EXPIRY_POLICY_UNSPECIFIED",
       "description": " - EXPIRY_POLICY_FIXED: Expires a fixed period after the balance was credited.\n - EXPIRY_POLICY_ROLLING: Pushes expiry out on every use."
     },
+    "v1FloatHeldLine": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Empty for platform-scoped wallets, which belong to no one product."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "wallets": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "FloatHeld is the real customer money held — the balance of fundable\nwallets only; granted value is excluded because nobody paid for it."
+    },
     "v1GetAccountStatementResponse": {
       "type": "object",
       "properties": {
@@ -1043,6 +1426,22 @@
       "properties": {
         "customer": {
           "$ref": "#/definitions/v1Customer"
+        }
+      }
+    },
+    "v1GetFloatHeldResponse": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FloatHeldLine"
+          }
+        },
+        "asOf": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -1093,11 +1492,49 @@
         }
       }
     },
+    "v1GetWalletResponse": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/v1Wallet"
+        }
+      }
+    },
+    "v1GetWalletStatementResponse": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1StatementEntry"
+          },
+          "description": "Newest first; change is positive when the wallet grew."
+        },
+        "nextCursor": {
+          "type": "string"
+        }
+      }
+    },
     "v1GetWalletTypeResponse": {
       "type": "object",
       "properties": {
         "walletType": {
           "$ref": "#/definitions/v1WalletType"
+        }
+      }
+    },
+    "v1GrantWalletResponse": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "journalId": {
+          "type": "string"
         }
       }
     },
@@ -1314,6 +1751,18 @@
       "default": "LEDGER_CHECK_STATUS_UNSPECIFIED",
       "description": " - LEDGER_CHECK_STATUS_OK: Every invariant held.\n - LEDGER_CHECK_STATUS_DRIFT: At least one invariant was broken. Never fixed automatically.\n - LEDGER_CHECK_STATUS_ERROR: The check itself could not complete, so nothing is known."
     },
+    "v1ListCustomerWalletsResponse": {
+      "type": "object",
+      "properties": {
+        "wallets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Wallet"
+          }
+        }
+      }
+    },
     "v1ListLedgerAccountsResponse": {
       "type": "object",
       "properties": {
@@ -1382,6 +1831,31 @@
             "type": "object",
             "$ref": "#/definitions/v1WalletType"
           }
+        }
+      }
+    },
+    "v1OpenWalletRequest": {
+      "type": "object",
+      "properties": {
+        "customerId": {
+          "type": "string"
+        },
+        "walletTypeCode": {
+          "type": "string",
+          "description": "The caller's own product's type, or a platform-scoped type."
+        }
+      },
+      "description": "OpenWallet returns a customer's wallet of a type, creating it on first\nreference. Called by a product backend. Naturally idempotent on (customer,\ntype), so it takes no Idempotency-Key."
+    },
+    "v1OpenWalletResponse": {
+      "type": "object",
+      "properties": {
+        "wallet": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False when the wallet already existed."
         }
       }
     },
@@ -1526,6 +2000,20 @@
       },
       "description": "One line of an account statement: a posting, with enough of its journal to\nsay why the money moved."
     },
+    "v1TransferWalletResponse": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "to": {
+          "$ref": "#/definitions/v1Wallet"
+        },
+        "journalId": {
+          "type": "string"
+        }
+      }
+    },
     "v1TrialBalanceLine": {
       "type": "object",
       "properties": {
@@ -1622,6 +2110,41 @@
         }
       }
     },
+    "v1Wallet": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "walletTypeId": {
+          "type": "string"
+        },
+        "walletTypeCode": {
+          "type": "string",
+          "description": "e.g. MAIN, BONUS."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Empty for a platform-scoped wallet, spendable in every product."
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1WalletStatus"
+        },
+        "balance": {
+          "$ref": "#/definitions/v1LedgerBalance"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1WalletCapabilities": {
       "type": "object",
       "properties": {
@@ -1679,6 +2202,16 @@
       ],
       "default": "WALLET_SCOPE_UNSPECIFIED",
       "description": " - WALLET_SCOPE_PRODUCT: Confined to one product.\n - WALLET_SCOPE_PLATFORM: Spendable across every product — possible only because this is a\nsingle-tenant estate."
+    },
+    "v1WalletStatus": {
+      "type": "string",
+      "enum": [
+        "WALLET_STATUS_UNSPECIFIED",
+        "WALLET_STATUS_ACTIVE",
+        "WALLET_STATUS_FROZEN"
+      ],
+      "default": "WALLET_STATUS_UNSPECIFIED",
+      "description": " - WALLET_STATUS_FROZEN: Customer-initiated movement is refused while support investigates."
     },
     "v1WalletType": {
       "type": "object",

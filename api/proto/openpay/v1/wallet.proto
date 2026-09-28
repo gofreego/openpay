@@ -1,0 +1,150 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "proto/openpay/v1/ledger.proto";
+
+// Wallets hold no balance of their own: each is backed by one ledger account,
+// and every figure here is read from the ledger. Amounts are minor units.
+//
+// Money-moving calls (grant, transfer, adjust) require an Idempotency-Key
+// header, which also serves as the reference of the resulting journal: a
+// retry with the same key cannot move money twice.
+//
+// Top-up and spend are deliberately absent. Top-ups arrive through payments
+// (a captured payment credits the wallet), and spending is part of an order,
+// which carries the tax breakdown a bare spend would lose.
+
+enum WalletStatus {
+  WALLET_STATUS_UNSPECIFIED = 0;
+  WALLET_STATUS_ACTIVE = 1;
+  // Customer-initiated movement is refused while support investigates.
+  WALLET_STATUS_FROZEN = 2;
+}
+
+message Wallet {
+  string id = 1;
+  string customer_id = 2;
+  string wallet_type_id = 3;
+  // e.g. MAIN, BONUS.
+  string wallet_type_code = 4;
+  // Empty for a platform-scoped wallet, spendable in every product.
+  string product_id = 5;
+  string currency = 6;
+  WalletStatus status = 7;
+  LedgerBalance balance = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+// OpenWallet returns a customer's wallet of a type, creating it on first
+// reference. Called by a product backend. Naturally idempotent on (customer,
+// type), so it takes no Idempotency-Key.
+message OpenWalletRequest {
+  string customer_id = 1 [(validate.rules).string = {min_len: 1}];
+  // The caller's own product's type, or a platform-scoped type.
+  string wallet_type_code = 2 [(validate.rules).string = {min_len: 1, max_len: 50}];
+}
+
+message OpenWalletResponse {
+  Wallet wallet = 1;
+  // False when the wallet already existed.
+  bool created = 2;
+}
+
+message GetWalletRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetWalletResponse {
+  Wallet wallet = 1;
+}
+
+message ListCustomerWalletsRequest {
+  string customer_id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message ListCustomerWalletsResponse {
+  repeated Wallet wallets = 1;
+}
+
+message GetWalletStatementRequest {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  // next_cursor from the previous page. Empty for the newest entries.
+  string cursor = 3 [(validate.rules).string = {max_len: 50}];
+}
+
+message GetWalletStatementResponse {
+  Wallet wallet = 1;
+  // Newest first; change is positive when the wallet grew.
+  repeated StatementEntry entries = 2;
+  string next_cursor = 3;
+}
+
+message GrantWalletRequest {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 2 [(validate.rules).int64 = {gt: 0}];
+  // promotion, referral, cashback, loyalty or compensation.
+  string reason_code = 3 [(validate.rules).string = {min_len: 1, max_len: 50}];
+  string memo = 4 [(validate.rules).string = {max_len: 500}];
+  // Whose promotions budget pays, for a platform-scoped wallet. Ignored for a
+  // product wallet (its own product pays) and for a product backend (the
+  // caller's product pays).
+  string funding_product_id = 5;
+}
+
+message GrantWalletResponse {
+  Wallet wallet = 1;
+  string journal_id = 2;
+}
+
+message TransferWalletRequest {
+  string from_wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  // The recipient's wallet of the same type is opened if they have none.
+  string to_customer_id = 2 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 3 [(validate.rules).int64 = {gt: 0}];
+}
+
+message TransferWalletResponse {
+  Wallet from = 1;
+  Wallet to = 2;
+  string journal_id = 3;
+}
+
+message AdjustWalletRequest {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 2 [(validate.rules).int64 = {gt: 0}];
+  // CREDIT adds value to the wallet; DEBIT removes it.
+  PostingDirection direction = 3 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  // goodwill, error_correction, fraud_recovery or migration.
+  string reason_code = 4 [(validate.rules).string = {min_len: 1, max_len: 50}];
+  // Required: an adjustment nobody explained cannot be audited.
+  string memo = 5 [(validate.rules).string = {min_len: 1, max_len: 500}];
+  // Whose adjustments account funds it, for a platform-scoped wallet.
+  string product_id = 6;
+}
+
+message AdjustWalletResponse {
+  Wallet wallet = 1;
+  string journal_id = 2;
+}
+
+// FloatHeld is the real customer money held — the balance of fundable
+// wallets only; granted value is excluded because nobody paid for it.
+message FloatHeldLine {
+  // Empty for platform-scoped wallets, which belong to no one product.
+  string product_id = 1;
+  string currency = 2;
+  int64 amount = 3;
+  int64 wallets = 4;
+}
+
+message GetFloatHeldRequest {}
+
+message GetFloatHeldResponse {
+  repeated FloatHeldLine lines = 1;
+  google.protobuf.Timestamp as_of = 2;
+}
