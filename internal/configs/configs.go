@@ -59,6 +59,14 @@ type Worker struct {
 	// WalletExpiryInterval controls how often dormant rolling-expiry wallets
 	// are lapsed. Expiry is measured in days, so hourly is plenty.
 	WalletExpiryInterval time.Duration `yaml:"WalletExpiryInterval"`
+
+	// PaymentEventInterval is how often stored webhooks are processed when
+	// the queue is idle. A backlog is drained without waiting for it.
+	PaymentEventInterval time.Duration `yaml:"PaymentEventInterval"`
+
+	// PaymentPollInterval is how often open payments are checked with their
+	// provider — the safety net for webhooks that never arrive.
+	PaymentPollInterval time.Duration `yaml:"PaymentPollInterval"`
 }
 
 func (w *Worker) WithDefaults() {
@@ -76,6 +84,12 @@ func (w *Worker) WithDefaults() {
 	}
 	if w.WalletExpiryInterval <= 0 {
 		w.WalletExpiryInterval = time.Hour
+	}
+	if w.PaymentEventInterval <= 0 {
+		w.PaymentEventInterval = time.Second
+	}
+	if w.PaymentPollInterval <= 0 {
+		w.PaymentPollInterval = time.Minute
 	}
 }
 

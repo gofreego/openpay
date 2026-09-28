@@ -1,0 +1,141 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// A payment is an intent to collect money through a PSP. Its status only ever
+// reflects what the provider says (plan.md D7); the client's word is never
+// taken for whether, or how much, it paid.
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_CREATED = 1;
+  // Waiting for the customer at the provider's checkout.
+  PAYMENT_STATUS_PENDING = 2;
+  PAYMENT_STATUS_AUTHORIZED = 3;
+  PAYMENT_STATUS_CAPTURED = 4;
+  PAYMENT_STATUS_SETTLED = 5;
+  PAYMENT_STATUS_FAILED = 6;
+  PAYMENT_STATUS_EXPIRED = 7;
+  PAYMENT_STATUS_CANCELLED = 8;
+}
+
+enum PaymentPurpose {
+  PAYMENT_PURPOSE_UNSPECIFIED = 0;
+  PAYMENT_PURPOSE_WALLET_TOPUP = 1;
+  // Paying for an order. Available with orders (plan.md phase 7).
+  PAYMENT_PURPOSE_ORDER = 2;
+}
+
+// Where captured money went in the ledger.
+enum PaymentApplication {
+  PAYMENT_APPLICATION_UNSPECIFIED = 0;
+  // Not captured yet.
+  PAYMENT_APPLICATION_PENDING = 1;
+  // Credited to its purpose.
+  PAYMENT_APPLICATION_APPLIED = 2;
+  // The purpose refused it (e.g. a wallet limit); owed back to the customer.
+  PAYMENT_APPLICATION_UNAPPLIED = 3;
+  // The provider's amount disagreed with ours; held for review.
+  PAYMENT_APPLICATION_SUSPENSE = 4;
+}
+
+message PaymentAttempt {
+  string id = 1;
+  string provider = 2;
+  string routing_reason = 3;
+  string provider_payment_id = 4;
+  string status = 5;
+  string failure_code = 6;
+  string failure_reason = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message PaymentTransition {
+  PaymentStatus from = 1;
+  PaymentStatus to = 2;
+  // api, webhook, poller, sweeper or operator.
+  string source = 3;
+  string reference = 4;
+  string detail = 5;
+  google.protobuf.Timestamp at = 6;
+}
+
+message Payment {
+  string id = 1;
+  string product_id = 2;
+  string customer_id = 3;
+  PaymentPurpose purpose = 4;
+  string wallet_id = 5;
+  int64 amount = 6;
+  string currency = 7;
+  PaymentStatus status = 8;
+  PaymentApplication application = 9;
+  string provider = 10;
+  // From the provider, once captured.
+  int64 captured_amount = 11;
+  // Where to send the customer to pay, while the payment is pending.
+  string checkout_url = 12;
+  // Canonical: declined, insufficient_funds, risk or technical.
+  string failure_code = 13;
+  string failure_reason = 14;
+  string description = 15;
+  google.protobuf.Timestamp expires_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  // Operator views only: every try and every state change, with its cause.
+  repeated PaymentAttempt attempts = 19;
+  repeated PaymentTransition transitions = 20;
+}
+
+// CreatePaymentRequest starts collecting money. Called by a product backend
+// with an Idempotency-Key: a retry returns the same payment and checkout.
+message CreatePaymentRequest {
+  PaymentPurpose purpose = 1 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  // For WALLET_TOPUP: the wallet to credit, which fixes the customer too.
+  string wallet_id = 2 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 3 [(validate.rules).int64 = {gt: 0}];
+  string currency = 4 [(validate.rules).string = {in: ["INR"]}];
+  // On the customer's statement; the product name is prefixed.
+  string description = 5 [(validate.rules).string = {max_len: 200}];
+  // Where the provider sends the customer afterwards.
+  string return_url = 6 [(validate.rules).string = {max_len: 2000}];
+}
+
+message CreatePaymentResponse {
+  Payment payment = 1;
+}
+
+message GetPaymentRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetPaymentResponse {
+  Payment payment = 1;
+}
+
+message ListPaymentsRequest {
+  int32 limit = 1 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  int32 offset = 2 [(validate.rules).int32 = {gte: 0}];
+  string product_id = 3;
+  string customer_id = 4;
+  PaymentStatus status = 5 [(validate.rules).enum = {defined_only: true}];
+}
+
+message ListPaymentsResponse {
+  repeated Payment payments = 1;
+  int64 total = 2;
+}
+
+// SyncPaymentRequest asks the provider for a payment's state now, rather than
+// waiting for a webhook or the poller.
+message SyncPaymentRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message SyncPaymentResponse {
+  Payment payment = 1;
+}

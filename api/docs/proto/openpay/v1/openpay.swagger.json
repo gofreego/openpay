@@ -27,6 +27,10 @@
       "description": "Customer balances, each backed by one ledger account"
     },
     {
+      "name": "Payments",
+      "description": "Collecting money through payment providers"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -573,6 +577,182 @@
         ],
         "tags": [
           "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/payments": {
+      "get": {
+        "summary": "List payments",
+        "description": "Operator only, within scope. Requires openpay:payments:read.",
+        "operationId": "OpenPay_ListPayments",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListPaymentsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": " - PAYMENT_STATUS_PENDING: Waiting for the customer at the provider's checkout.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PAYMENT_STATUS_UNSPECIFIED",
+              "PAYMENT_STATUS_CREATED",
+              "PAYMENT_STATUS_PENDING",
+              "PAYMENT_STATUS_AUTHORIZED",
+              "PAYMENT_STATUS_CAPTURED",
+              "PAYMENT_STATUS_SETTLED",
+              "PAYMENT_STATUS_FAILED",
+              "PAYMENT_STATUS_EXPIRED",
+              "PAYMENT_STATUS_CANCELLED"
+            ],
+            "default": "PAYMENT_STATUS_UNSPECIFIED"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      },
+      "post": {
+        "summary": "Start collecting a payment",
+        "description": "Product backend only. Returns the checkout to send the customer to. Requires an Idempotency-Key. Wallet top-ups only until orders exist.",
+        "operationId": "OpenPay_CreatePayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreatePaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CreatePaymentRequest starts collecting money. Called by a product backend\nwith an Idempotency-Key: a retry returns the same payment and checkout.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreatePaymentRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/payments/{id}": {
+      "get": {
+        "summary": "Get a payment",
+        "description": "Product backend for its own payments, or an operator holding openpay:payments:read; operators also see attempts and the transition history.",
+        "operationId": "OpenPay_GetPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/payments/{id}/sync": {
+      "post": {
+        "summary": "Sync a payment with its provider now",
+        "description": "Fetches the provider's state and applies it, as the poller would. Requires openpay:payments:sync.",
+        "operationId": "OpenPay_SyncPayment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SyncPaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPaySyncPaymentBody"
+            }
+          }
+        ],
+        "tags": [
+          "Payments"
         ]
       }
     },
@@ -1156,6 +1336,10 @@
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
     },
+    "OpenPaySyncPaymentBody": {
+      "type": "object",
+      "description": "SyncPaymentRequest asks the provider for a payment's state now, rather than\nwaiting for a webhook or the poller."
+    },
     "OpenPayTransferWalletBody": {
       "type": "object",
       "properties": {
@@ -1231,6 +1415,42 @@
         },
         "journalId": {
           "type": "string"
+        }
+      }
+    },
+    "v1CreatePaymentRequest": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "$ref": "#/definitions/v1PaymentPurpose"
+        },
+        "walletId": {
+          "type": "string",
+          "description": "For WALLET_TOPUP: the wallet to credit, which fixes the customer too."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "On the customer's statement; the product name is prefixed."
+        },
+        "returnUrl": {
+          "type": "string",
+          "description": "Where the provider sends the customer afterwards."
+        }
+      },
+      "description": "CreatePaymentRequest starts collecting money. Called by a product backend\nwith an Idempotency-Key: a retry returns the same payment and checkout."
+    },
+    "v1CreatePaymentResponse": {
+      "type": "object",
+      "properties": {
+        "payment": {
+          "$ref": "#/definitions/v1Payment"
         }
       }
     },
@@ -1458,6 +1678,14 @@
       "properties": {
         "account": {
           "$ref": "#/definitions/v1LedgerAccount"
+        }
+      }
+    },
+    "v1GetPaymentResponse": {
+      "type": "object",
+      "properties": {
+        "payment": {
+          "$ref": "#/definitions/v1Payment"
         }
       }
     },
@@ -1793,6 +2021,22 @@
         }
       }
     },
+    "v1ListPaymentsResponse": {
+      "type": "object",
+      "properties": {
+        "payments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Payment"
+          }
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1ListProductsResponse": {
       "type": "object",
       "properties": {
@@ -1856,6 +2100,181 @@
         "created": {
           "type": "boolean",
           "description": "False when the wallet already existed."
+        }
+      }
+    },
+    "v1Payment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "purpose": {
+          "$ref": "#/definitions/v1PaymentPurpose"
+        },
+        "walletId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1PaymentStatus"
+        },
+        "application": {
+          "$ref": "#/definitions/v1PaymentApplication"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "capturedAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "From the provider, once captured."
+        },
+        "checkoutUrl": {
+          "type": "string",
+          "description": "Where to send the customer to pay, while the payment is pending."
+        },
+        "failureCode": {
+          "type": "string",
+          "description": "Canonical: declined, insufficient_funds, risk or technical."
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentAttempt"
+          },
+          "description": "Operator views only: every try and every state change, with its cause."
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PaymentTransition"
+          }
+        }
+      }
+    },
+    "v1PaymentApplication": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_APPLICATION_UNSPECIFIED",
+        "PAYMENT_APPLICATION_PENDING",
+        "PAYMENT_APPLICATION_APPLIED",
+        "PAYMENT_APPLICATION_UNAPPLIED",
+        "PAYMENT_APPLICATION_SUSPENSE"
+      ],
+      "default": "PAYMENT_APPLICATION_UNSPECIFIED",
+      "description": "Where captured money went in the ledger.\n\n - PAYMENT_APPLICATION_PENDING: Not captured yet.\n - PAYMENT_APPLICATION_APPLIED: Credited to its purpose.\n - PAYMENT_APPLICATION_UNAPPLIED: The purpose refused it (e.g. a wallet limit); owed back to the customer.\n - PAYMENT_APPLICATION_SUSPENSE: The provider's amount disagreed with ours; held for review."
+    },
+    "v1PaymentAttempt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "routingReason": {
+          "type": "string"
+        },
+        "providerPaymentId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "failureCode": {
+          "type": "string"
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1PaymentPurpose": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_PURPOSE_UNSPECIFIED",
+        "PAYMENT_PURPOSE_WALLET_TOPUP",
+        "PAYMENT_PURPOSE_ORDER"
+      ],
+      "default": "PAYMENT_PURPOSE_UNSPECIFIED",
+      "description": " - PAYMENT_PURPOSE_ORDER: Paying for an order. Available with orders (plan.md phase 7)."
+    },
+    "v1PaymentStatus": {
+      "type": "string",
+      "enum": [
+        "PAYMENT_STATUS_UNSPECIFIED",
+        "PAYMENT_STATUS_CREATED",
+        "PAYMENT_STATUS_PENDING",
+        "PAYMENT_STATUS_AUTHORIZED",
+        "PAYMENT_STATUS_CAPTURED",
+        "PAYMENT_STATUS_SETTLED",
+        "PAYMENT_STATUS_FAILED",
+        "PAYMENT_STATUS_EXPIRED",
+        "PAYMENT_STATUS_CANCELLED"
+      ],
+      "default": "PAYMENT_STATUS_UNSPECIFIED",
+      "description": " - PAYMENT_STATUS_PENDING: Waiting for the customer at the provider's checkout."
+    },
+    "v1PaymentTransition": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/definitions/v1PaymentStatus"
+        },
+        "to": {
+          "$ref": "#/definitions/v1PaymentStatus"
+        },
+        "source": {
+          "type": "string",
+          "description": "api, webhook, poller, sweeper or operator."
+        },
+        "reference": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -1999,6 +2418,14 @@
         }
       },
       "description": "One line of an account statement: a posting, with enough of its journal to\nsay why the money moved."
+    },
+    "v1SyncPaymentResponse": {
+      "type": "object",
+      "properties": {
+        "payment": {
+          "$ref": "#/definitions/v1Payment"
+        }
+      }
     },
     "v1TransferWalletResponse": {
       "type": "object",

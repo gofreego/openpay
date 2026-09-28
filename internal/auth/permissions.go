@@ -41,6 +41,12 @@ const (
 
 	PermCustomersRead = "openpay:customers:read"
 
+	PermPaymentsRead = "openpay:payments:read"
+	// PermPaymentsSync asks a provider for a payment's state and applies it.
+	// It moves money only as the provider says it moved, so it is safe to
+	// give product operators.
+	PermPaymentsSync = "openpay:payments:sync"
+
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"
 	// PermWalletsAdjust moves money that no payment or grant explains, so it

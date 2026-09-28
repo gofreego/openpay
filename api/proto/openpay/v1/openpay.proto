@@ -11,6 +11,7 @@ import "proto/openpay/v1/customer.proto";
 import "proto/openpay/v1/credential.proto";
 import "proto/openpay/v1/ledger.proto";
 import "proto/openpay/v1/wallet.proto";
+import "proto/openpay/v1/payment.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -38,6 +39,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Wallets"
       description: "Customer balances, each backed by one ledger account"
+    },
+    {
+      name: "Payments"
+      description: "Collecting money through payment providers"
     },
     {
       name: "Ledger"
@@ -418,6 +423,54 @@ service OpenPay {
             tags: "Wallets"
             summary: "Get the real customer money held"
             description: "Balances of fundable wallets only, per product, with platform-scoped wallets as their own line. Requires openpay:wallets:read; platform lines need openpay:scope:all."
+        };
+    }
+
+    // ---- Payments ----
+
+    rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/payments"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Start collecting a payment"
+            description: "Product backend only. Returns the checkout to send the customer to. Requires an Idempotency-Key. Wallet top-ups only until orders exist."
+        };
+    }
+
+    rpc GetPayment (GetPaymentRequest) returns (GetPaymentResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/payments/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Get a payment"
+            description: "Product backend for its own payments, or an operator holding openpay:payments:read; operators also see attempts and the transition history."
+        };
+    }
+
+    rpc ListPayments (ListPaymentsRequest) returns (ListPaymentsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/payments"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "List payments"
+            description: "Operator only, within scope. Requires openpay:payments:read."
+        };
+    }
+
+    rpc SyncPayment (SyncPaymentRequest) returns (SyncPaymentResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/payments/{id}/sync"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Sync a payment with its provider now"
+            description: "Fetches the provider's state and applies it, as the poller would. Requires openpay:payments:sync."
         };
     }
 }

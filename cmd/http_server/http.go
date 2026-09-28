@@ -10,6 +10,8 @@ import (
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/health"
 	"github.com/gofreego/openpay/internal/middleware"
+	"github.com/gofreego/openpay/internal/payment"
+	"github.com/gofreego/openpay/internal/provider/mock"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 
@@ -20,6 +22,11 @@ import (
 
 	"github.com/gofreego/goutils/logger"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+)
+
+const (
+	webhookPrefix      = "/openpay/v1/webhooks/"
+	mockCheckoutPrefix = "/openpay/v1/mock-provider/checkout/"
 )
 
 type HTTPServer struct {
@@ -76,6 +83,17 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 	root := http.NewServeMux()
 	root.Handle("/healthz", health.Live())
 	root.Handle("/readyz", health.Ready(repo))
+
+	// Webhooks sit outside the gateway too: the signature check needs the raw
+	// body, and a provider is not an authenticated OpenPay caller.
+	registry, mockProvider := payment.Providers(a.cfg.Service.Payments)
+	webhooks := payment.WebhookHandler(webhookPrefix, registry, repo)
+	root.Handle(webhookPrefix, webhooks)
+	if mockProvider != nil {
+		logger.Warn(ctx, "mock payment provider enabled: checkout at %s — never enable this in production", mockCheckoutPrefix)
+		root.Handle(mockCheckoutPrefix, payment.MockCheckoutHandler(mockCheckoutPrefix, webhookPrefix+mock.Name, mockProvider, webhooks))
+	}
+
 	root.Handle("/", mux)
 
 	// otelhttp is where HTTP spans come from. The gRPC server gets the

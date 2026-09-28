@@ -24,7 +24,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 1 | Products & Catalog | ✅ Complete (fee policies deferred to P4; wallet-listing scope and nullable `customer_id` land with their tables in P3/P4/P7) |
 | 2 | Ledger Core | ✅ Complete |
 | 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
-| 4 | Payment Orchestration + Mock Provider | ☐ Not started |
+| 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ☐ Not started |
 | 7 | Orders & Checkout (Split Tender) | ☐ Not started |
@@ -915,29 +915,54 @@ a withdrawal from `BONUS` is rejected by the capability guard.
 **Goal:** the full collect-money pipeline, proven against a controllable fake provider
 before any real vendor is involved.
 
-- [ ] `Provider` interface:
-      `CreatePayment`, `FetchPayment`, `Capture`, `Cancel`, `Refund`,
-      `VerifyWebhook(headers, body) → NormalizedEvent`, `Capabilities()`
-- [ ] Provider registry + per-product `provider_configs`
-- [ ] **Mock provider** with programmable behaviour: success, decline, timeout,
-      delayed webhook, duplicate webhook, out-of-order webhook, amount mismatch
-- [ ] Tables: `payments`, `payment_attempts`, `provider_events` (raw, immutable),
-      `provider_request_log`
-- [ ] `POST /v1/payments` — purpose (`WALLET_TOPUP` | `ORDER` ), amount, currency,
-      customer, target wallet, return URL; idempotent; returns checkout instructions
-- [ ] State machine enforcement + transition audit trail on every payment
-- [ ] Webhook endpoint: verify signature → persist raw event → return 200 fast →
+- [x] `Provider` interface:
+      `CreatePayment`, `FetchPayment`, `Capture`, `Cancel`,
+      `VerifyWebhook(headers, body) → NormalizedEvent`, `Capabilities()`.
+      `Refund` joins it in Phase 6 with its first caller — an interface method with
+      no caller cannot be verified
+- [x] Provider registry. **Platform-wide, not per-product** `provider_configs`: D8 puts
+      one credential set per provider at platform level, which the rest of the plan
+      builds on; the per-product wording here predated it
+- [x] **Mock provider** with programmable behaviour: success, decline, timeout,
+      delayed webhook, duplicate webhook, out-of-order webhook, amount mismatch.
+      Plus a dev-only hosted checkout page (`/openpay/v1/mock-provider/checkout/…`)
+      that pays or declines and sends the signed webhook through the real handler,
+      optionally not at all, to watch recovery
+- [x] Tables: `payments`, `payment_attempts`, `provider_events` (raw, immutable),
+      `provider_request_log`, plus `payment_transitions` (append-only).
+      `payments.application` records where captured money went
+- [x] `POST /v1/payments` — purpose (`WALLET_TOPUP` | `ORDER` ), amount, currency,
+      customer, target wallet, return URL; idempotent; returns checkout instructions.
+      `ORDER` is refused until orders exist. The wallet's capability is checked
+      before the customer is sent to pay
+- [x] State machine enforcement + transition audit trail on every payment.
+      Failure states may still move to captured: a late success is money that
+      arrived, and refusing to record it would lose it
+- [x] Webhook endpoint: verify signature → persist raw event → return 200 fast →
       process asynchronously. Never do ledger work in the HTTP handler
-- [ ] Webhook processor worker: dedupe on `(provider, event_id)`, fetch authoritative
+- [x] Webhook processor worker: dedupe on `(provider, event_id)`, fetch authoritative
       status from provider (D7), advance state machine, post ledger journal with
-      `external_id = payment:<id>:capture`
-- [ ] **Reconciliation poller**: payments stuck in `PENDING` past a threshold get their
-      status fetched directly — webhooks *will* be missed and this is the safety net
-- [ ] Expiry sweeper for abandoned payments
-- [ ] Top-up flow complete: payment captured → wallet credited → `payment.succeeded`
-      event emitted via outbox
-- [ ] Tests: duplicate webhook credits once; out-of-order webhooks converge to the
-      correct terminal state; webhook lost entirely → poller recovers
+      `external_id = payment:<id>:capture`. Failures back off (5s … 10m) and stay
+      visible on the event
+- [x] **Reconciliation poller**: payments stuck in `PENDING` past a threshold get their
+      status fetched directly — webhooks *will* be missed and this is the safety net.
+      Also exposed as an operator's manual sync
+- [x] Expiry sweeper for abandoned payments — asks the provider first, so a customer
+      who paid at the last second is credited rather than expired
+- [x] Top-up flow complete: payment captured → wallet credited → `payment.succeeded`
+      event emitted via outbox. Captured money always lands in the ledger: wallet
+      (applied), `refunds_payable` if the wallet refuses it (unapplied), or the
+      provider's suspense account if the amounts disagree (suspense). The refusal
+      path needs a savepoint — without one the capped wallet was credited anyway
+      (measured)
+- [x] Tests: duplicate webhook credits once; out-of-order webhooks converge to the
+      correct terminal state; webhook lost entirely → poller recovers. Also: decline
+      then late success, amount mismatch, refused credit, provider timeout, expiry,
+      forged signature, webhook-before-commit retried, webhook racing the poller
+- [ ] `fee_policies` (deferred from Phase 1): only `ABSORBED` works without a rate
+      card, and D12 says skip the rate card until a product needs `DEDUCTED` or
+      `PASSED_ON`. A table that can hold one value is config nobody can use; it
+      arrives with the rate card in Phase 5. Every top-up is `ABSORBED` meanwhile
 
 **Exit criteria:** with the mock provider, a top-up survives duplicated, delayed,
 reordered, and dropped webhooks, and the wallet is credited exactly once in all cases.

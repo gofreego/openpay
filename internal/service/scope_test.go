@@ -8,6 +8,8 @@ import (
 	"github.com/gofreego/openpay/internal/appcontext"
 	"github.com/gofreego/openpay/internal/auth"
 	"github.com/gofreego/openpay/internal/ledger"
+	"github.com/gofreego/openpay/internal/payment"
+	"github.com/gofreego/openpay/internal/provider/mock"
 	"github.com/gofreego/openpay/internal/repository/postgresql"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/testsupport"
@@ -21,7 +23,10 @@ var repo *postgresql.Repository
 func testService(t *testing.T) *service.Service {
 	t.Helper()
 	repo = testsupport.Repository(t)
-	return service.NewService(context.Background(), &service.Config{}, repo)
+	return service.NewService(context.Background(), &service.Config{Payments: payment.Config{
+		Providers: []string{mock.Name},
+		Mock:      payment.MockConfig{Enabled: true, WebhookSecret: "test", CheckoutURL: "https://mock.test/checkout/"},
+	}}, repo)
 }
 
 func as(perms ...string) context.Context {
@@ -34,7 +39,7 @@ func as(perms ...string) context.Context {
 var readPerms = []string{
 	auth.PermProductsRead, auth.PermWalletTypesRead, auth.PermLedgerRead,
 	auth.PermProductsWrite, auth.PermWalletTypesWrite, auth.PermLedgerCheck, auth.PermCredentialsWrite,
-	auth.PermWalletsRead, auth.PermWalletsGrant,
+	auth.PermWalletsRead, auth.PermWalletsGrant, auth.PermPaymentsRead,
 }
 
 func central() context.Context { return as(append(readPerms, auth.PermScopeAll)...) }
@@ -72,7 +77,7 @@ func setupEstate(t *testing.T) estate {
 		return resp.GetProduct()
 	}
 	e := estate{svc: svc, zshala: create("zshala"), bappa: create("bappaapp")}
-	if _, err := ledger.EnsureChart(context.Background(), repo, ledger.ChartConfig{Providers: []string{"razorpay"}}); err != nil {
+	if _, err := ledger.EnsureChart(context.Background(), repo, ledger.ChartConfig{Providers: []string{"razorpay", mock.Name}}); err != nil {
 		t.Fatalf("chart: %v", err)
 	}
 	return e

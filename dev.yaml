@@ -41,6 +41,17 @@ Service:
   Wallet:
     MaxCustomerBalance: 0
     MaxCustomerDailyLoad: 0
+  Payments:
+    Providers: [mock]
+    TTL: 30m
+    # An open payment untouched this long is checked with its provider.
+    PollAfter: 2m
+    # Local development only. The mock moves no money and its checkout page
+    # lets anyone mark a payment paid.
+    Mock:
+      Enabled: true
+      WebhookSecret: dev-mock-webhook-secret
+      CheckoutURL: http://localhost:8085/openpay/v1/mock-provider/checkout/
 Worker:
   Outbox:
     Interval: 5s
@@ -50,6 +61,8 @@ Worker:
   LedgerCheckInterval: 24h
   HoldSweepInterval: 1m
   WalletExpiryInterval: 1h
+  PaymentEventInterval: 1s
+  PaymentPollInterval: 1m
 # Platform chart of accounts: each provider gets a receivable and a suspense
 # account, each bank a current account. Adding one here creates its accounts
 # the next time the worker starts; removing one never deletes anything.

@@ -7,12 +7,15 @@ import (
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/models/filter"
+	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/wallet"
 )
 
 type Config struct {
 	// Wallet holds the per-customer caps on real money (see wallet.Limits).
 	Wallet wallet.Limits `yaml:"Wallet"`
+	// Payments configures providers and payment timing.
+	Payments payment.Config `yaml:"Payments"`
 }
 
 type Repository interface {
@@ -38,6 +41,35 @@ type Repository interface {
 	WalletTypeRepository
 	LedgerRepository
 	WalletRepository
+	PaymentRepository
+}
+
+type PaymentRepository interface {
+	WithSavepoint(ctx context.Context, fn func(ctx context.Context) error) error
+
+	CreatePayment(ctx context.Context, p *dao.Payment) error
+	GetPaymentByID(ctx context.Context, id int64) (*dao.Payment, error)
+	GetPaymentByPublicID(ctx context.Context, publicID string) (*dao.Payment, error)
+	LockPayment(ctx context.Context, id int64) (*dao.Payment, error)
+	UpdatePayment(ctx context.Context, p *dao.Payment) error
+	ListPayments(ctx context.Context, f *filter.Payment) ([]*dao.Payment, int64, error)
+	ListStalePayments(ctx context.Context, before time.Time, limit int) ([]*dao.Payment, error)
+	ListExpiredPayments(ctx context.Context, now time.Time, limit int) ([]*dao.Payment, error)
+
+	CreatePaymentAttempt(ctx context.Context, a *dao.PaymentAttempt) error
+	UpdatePaymentAttempt(ctx context.Context, a *dao.PaymentAttempt) error
+	GetAttemptByProviderRef(ctx context.Context, providerName, providerPaymentID string) (*dao.PaymentAttempt, error)
+	ListPaymentAttempts(ctx context.Context, paymentID int64) ([]*dao.PaymentAttempt, error)
+	RecordPaymentTransition(ctx context.Context, t *dao.PaymentTransition) error
+	ListPaymentTransitions(ctx context.Context, paymentID int64) ([]*dao.PaymentTransition, error)
+
+	SaveProviderEvent(ctx context.Context, e *dao.ProviderEvent) (inserted bool, err error)
+	ClaimProviderEvent(ctx context.Context, now time.Time) (*dao.ProviderEvent, error)
+	MarkProviderEventProcessed(ctx context.Context, id int64) error
+	MarkProviderEventFailed(ctx context.Context, id int64, cause string, retryAt time.Time) error
+	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
+
+	PostJournal(ctx context.Context, journal *dao.Journal) error
 }
 
 type WalletRepository interface {
@@ -185,14 +217,18 @@ type OutboxRepository interface {
 }
 
 type Service struct {
-	repo    Repository
-	wallets *wallet.Engine
+	repo     Repository
+	wallets  *wallet.Engine
+	payments *payment.Engine
 	openpay_v1.UnimplementedOpenPayServer
 }
 
 func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
+	wallets := wallet.New(repo, cfg.Wallet)
+	registry, _ := payment.Providers(cfg.Payments)
 	return &Service{
-		repo:    repo,
-		wallets: wallet.New(repo, cfg.Wallet),
+		repo:     repo,
+		wallets:  wallets,
+		payments: payment.New(repo, registry, wallets, cfg.Payments),
 	}
 }

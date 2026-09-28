@@ -16,6 +16,7 @@ import (
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/outbox"
+	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/wallet"
@@ -47,8 +48,23 @@ func (w *Worker) Run(ctx context.Context) error {
 	drainer := outbox.NewDrainer(w.cfg.Worker.Outbox, repo, outbox.LogPublisher{})
 
 	engine := wallet.New(repo, w.cfg.Service.Wallet)
+	w.cfg.Service.Payments.WithDefaults()
+	registry, _ := payment.Providers(w.cfg.Service.Payments)
+	payments := payment.New(repo, registry, engine, w.cfg.Service.Payments)
 
-	w.done.Add(6)
+	w.done.Add(9)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "payment event processor", w.cfg.Worker.PaymentEventInterval, func() { w.processPaymentEvents(ctx, repo, payments) })
+	}()
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "payment poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollPayments(ctx, repo, payments) })
+	}()
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "payment expiry sweeper", w.cfg.Worker.PaymentPollInterval, func() { w.expirePayments(ctx, repo, payments) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "hold expiry sweeper", w.cfg.Worker.HoldSweepInterval, func() { w.expireHolds(ctx, repo) })
@@ -135,6 +151,50 @@ func (w *Worker) every(ctx context.Context, name string, interval time.Duration,
 // sweepBatch bounds one pass of a sweeper, so a backlog is worked through
 // over a few ticks rather than in one enormous burst.
 const sweepBatch = 500
+
+// processPaymentEvents drains stored webhooks until none are due.
+func (w *Worker) processPaymentEvents(ctx context.Context, repo service.Repository, payments *payment.Engine) {
+	for range sweepBatch {
+		found, err := payments.ProcessNextEvent(ctx, repo)
+		if err != nil {
+			logger.Error(ctx, "failed to process payment event: %v", err)
+			return
+		}
+		if !found {
+			return
+		}
+	}
+}
+
+// pollPayments asks providers about open payments that have gone quiet.
+// Webhooks will be missed; this is what makes that harmless.
+func (w *Worker) pollPayments(ctx context.Context, repo service.Repository, payments *payment.Engine) {
+	stale, err := repo.ListStalePayments(ctx, time.Now().Add(-w.cfg.Service.Payments.PollAfter), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list stale payments: %v", err)
+		return
+	}
+	for _, p := range stale {
+		if _, err := payments.Poll(ctx, p, "poller"); err != nil {
+			logger.Warn(ctx, "failed to poll payment %s: %v", p.PublicID, err)
+		}
+	}
+}
+
+// expirePayments closes payments nobody completed in time, after checking
+// with the provider that they really are unpaid.
+func (w *Worker) expirePayments(ctx context.Context, repo service.Repository, payments *payment.Engine) {
+	due, err := repo.ListExpiredPayments(ctx, time.Now(), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list expired payments: %v", err)
+		return
+	}
+	for _, p := range due {
+		if _, err := payments.Expire(ctx, p); err != nil {
+			logger.Warn(ctx, "failed to expire payment %s: %v", p.PublicID, err)
+		}
+	}
+}
 
 // expireHolds releases holds past their expiry, one transaction each, so one
 // bad hold cannot block the rest. A stranded hold is customer money nobody

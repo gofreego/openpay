@@ -47,6 +47,10 @@ const (
 	OpenPay_TransferWallet_FullMethodName          = "/v1.OpenPay/TransferWallet"
 	OpenPay_AdjustWallet_FullMethodName            = "/v1.OpenPay/AdjustWallet"
 	OpenPay_GetFloatHeld_FullMethodName            = "/v1.OpenPay/GetFloatHeld"
+	OpenPay_CreatePayment_FullMethodName           = "/v1.OpenPay/CreatePayment"
+	OpenPay_GetPayment_FullMethodName              = "/v1.OpenPay/GetPayment"
+	OpenPay_ListPayments_FullMethodName            = "/v1.OpenPay/ListPayments"
+	OpenPay_SyncPayment_FullMethodName             = "/v1.OpenPay/SyncPayment"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -85,6 +89,10 @@ type OpenPayClient interface {
 	TransferWallet(ctx context.Context, in *TransferWalletRequest, opts ...grpc.CallOption) (*TransferWalletResponse, error)
 	AdjustWallet(ctx context.Context, in *AdjustWalletRequest, opts ...grpc.CallOption) (*AdjustWalletResponse, error)
 	GetFloatHeld(ctx context.Context, in *GetFloatHeldRequest, opts ...grpc.CallOption) (*GetFloatHeldResponse, error)
+	CreatePayment(ctx context.Context, in *CreatePaymentRequest, opts ...grpc.CallOption) (*CreatePaymentResponse, error)
+	GetPayment(ctx context.Context, in *GetPaymentRequest, opts ...grpc.CallOption) (*GetPaymentResponse, error)
+	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
+	SyncPayment(ctx context.Context, in *SyncPaymentRequest, opts ...grpc.CallOption) (*SyncPaymentResponse, error)
 }
 
 type openPayClient struct {
@@ -375,6 +383,46 @@ func (c *openPayClient) GetFloatHeld(ctx context.Context, in *GetFloatHeldReques
 	return out, nil
 }
 
+func (c *openPayClient) CreatePayment(ctx context.Context, in *CreatePaymentRequest, opts ...grpc.CallOption) (*CreatePaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreatePaymentResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CreatePayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetPayment(ctx context.Context, in *GetPaymentRequest, opts ...grpc.CallOption) (*GetPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPaymentResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPaymentsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListPayments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) SyncPayment(ctx context.Context, in *SyncPaymentRequest, opts ...grpc.CallOption) (*SyncPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncPaymentResponse)
+	err := c.cc.Invoke(ctx, OpenPay_SyncPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -411,6 +459,10 @@ type OpenPayServer interface {
 	TransferWallet(context.Context, *TransferWalletRequest) (*TransferWalletResponse, error)
 	AdjustWallet(context.Context, *AdjustWalletRequest) (*AdjustWalletResponse, error)
 	GetFloatHeld(context.Context, *GetFloatHeldRequest) (*GetFloatHeldResponse, error)
+	CreatePayment(context.Context, *CreatePaymentRequest) (*CreatePaymentResponse, error)
+	GetPayment(context.Context, *GetPaymentRequest) (*GetPaymentResponse, error)
+	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
+	SyncPayment(context.Context, *SyncPaymentRequest) (*SyncPaymentResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -504,6 +556,18 @@ func (UnimplementedOpenPayServer) AdjustWallet(context.Context, *AdjustWalletReq
 }
 func (UnimplementedOpenPayServer) GetFloatHeld(context.Context, *GetFloatHeldRequest) (*GetFloatHeldResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFloatHeld not implemented")
+}
+func (UnimplementedOpenPayServer) CreatePayment(context.Context, *CreatePaymentRequest) (*CreatePaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePayment not implemented")
+}
+func (UnimplementedOpenPayServer) GetPayment(context.Context, *GetPaymentRequest) (*GetPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPayment not implemented")
+}
+func (UnimplementedOpenPayServer) ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPayments not implemented")
+}
+func (UnimplementedOpenPayServer) SyncPayment(context.Context, *SyncPaymentRequest) (*SyncPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncPayment not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1030,6 +1094,78 @@ func _OpenPay_GetFloatHeld_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CreatePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CreatePayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CreatePayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CreatePayment(ctx, req.(*CreatePaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetPayment(ctx, req.(*GetPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPaymentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListPayments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListPayments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListPayments(ctx, req.(*ListPaymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_SyncPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).SyncPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_SyncPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).SyncPayment(ctx, req.(*SyncPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1148,6 +1284,22 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFloatHeld",
 			Handler:    _OpenPay_GetFloatHeld_Handler,
+		},
+		{
+			MethodName: "CreatePayment",
+			Handler:    _OpenPay_CreatePayment_Handler,
+		},
+		{
+			MethodName: "GetPayment",
+			Handler:    _OpenPay_GetPayment_Handler,
+		},
+		{
+			MethodName: "ListPayments",
+			Handler:    _OpenPay_ListPayments_Handler,
+		},
+		{
+			MethodName: "SyncPayment",
+			Handler:    _OpenPay_SyncPayment_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
