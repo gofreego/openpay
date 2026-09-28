@@ -35,6 +35,7 @@ type payment struct {
 	provider.Payment
 	attemptID string
 	refunded  int64
+	settled   bool
 }
 
 // Provider is the mock PSP.
@@ -49,6 +50,10 @@ type Provider struct {
 	byAttempt map[string]string
 
 	disputes map[string]*provider.Dispute
+
+	settlements []*provider.Settlement
+	// settledRefs are refunds and disputes already in a settlement.
+	settledRefs map[string]bool
 
 	refunds map[string]*provider.Refund
 	// byRefundID makes Refund idempotent on our refund id.
@@ -70,6 +75,7 @@ func New(secret, checkoutURL string) *Provider {
 		byAttempt:   map[string]string{},
 		refunds:     map[string]*provider.Refund{},
 		disputes:    map[string]*provider.Dispute{},
+		settledRefs: map[string]bool{},
 		byRefundID:  map[string]string{},
 	}
 }
@@ -382,4 +388,66 @@ func (m *Provider) ResolveDispute(providerDisputeID string, won bool) {
 // DisputeWebhook builds a signed webhook about a dispute.
 func (m *Provider) DisputeWebhook(providerDisputeID, eventType string) (http.Header, []byte) {
 	return m.webhookFor(provider.ObjectDispute, providerDisputeID, eventType)
+}
+
+func (m *Provider) FetchSettlements(_ context.Context, since time.Time) ([]*provider.Settlement, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []*provider.Settlement
+	for _, st := range m.settlements {
+		if st.SettledAt.After(since) {
+			copied := *st
+			copied.Items = append([]provider.SettlementItem(nil), st.Items...)
+			out = append(out, &copied)
+		}
+	}
+	return out, nil
+}
+
+// Settle pays out everything not yet settled — captured payments, processed
+// refunds, lost chargebacks — as one settlement, charging feeBps on payments
+// plus 18% GST on that fee. tamper, if given, edits the settlement before it
+// is published: the way a test injects a mismatch the reconciliation must
+// catch. It returns the settlement id.
+func (m *Provider) Settle(feeBps int64, tamper func(*provider.Settlement)) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	st := &provider.Settlement{
+		ProviderSettlementID: "mockstl_" + ids.New(ids.Settlement)[4:],
+		SettledAt:            time.Now().UTC(), BankReference: "UTR" + ids.New(ids.Settlement)[4:16],
+		Currency: "INR",
+	}
+	for _, p := range m.payments {
+		if p.Status != provider.StatusCaptured || p.settled {
+			continue
+		}
+		p.settled = true
+		fee := p.Amount * feeBps / 10000
+		tax := fee * 18 / 100
+		st.Items = append(st.Items, provider.SettlementItem{Kind: provider.SettlePayment, ProviderRef: p.ProviderPaymentID,
+			Gross: p.Amount, Fee: fee, FeeTax: tax, Net: p.Amount - fee - tax})
+	}
+	for id, r := range m.refunds {
+		if r.Status != provider.RefundProcessed || m.settledRefs[id] {
+			continue
+		}
+		m.settledRefs[id] = true
+		st.Items = append(st.Items, provider.SettlementItem{Kind: provider.SettleRefund, ProviderRef: id,
+			Gross: -r.Amount, Net: -r.Amount})
+	}
+	for id, d := range m.disputes {
+		if d.Status != provider.DisputeLost || m.settledRefs[id] {
+			continue
+		}
+		m.settledRefs[id] = true
+		st.Items = append(st.Items, provider.SettlementItem{Kind: provider.SettleChargeback, ProviderRef: id,
+			Gross: -d.Amount, Net: -d.Amount})
+	}
+	if tamper != nil {
+		tamper(st)
+	}
+	st.Raw, _ = json.Marshal(st.Items)
+	m.settlements = append(m.settlements, st)
+	return st.ProviderSettlementID
 }

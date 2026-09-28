@@ -59,6 +59,8 @@ type Payment struct {
 	Provider       *string
 	CapturedAmount *int64
 	CapturedAt     *time.Time
+	// SettledAt is when the provider paid this payment out to our bank.
+	SettledAt *time.Time
 	// RefundedAmount is what refunds have promised back so far — initiated,
 	// pending or processed. The database refuses it beyond CapturedAmount.
 	RefundedAmount int64

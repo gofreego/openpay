@@ -139,6 +139,42 @@ type Dispute struct {
 	EvidenceDueBy     *time.Time
 }
 
+// SettlementItemKind is what a settlement line settles.
+type SettlementItemKind string
+
+const (
+	SettlePayment    SettlementItemKind = "payment"
+	SettleRefund     SettlementItemKind = "refund"
+	SettleChargeback SettlementItemKind = "chargeback"
+)
+
+// SettlementItem is one line of a settlement report. Amounts are signed as
+// the provider reports them: money in positive, refunds and chargebacks
+// negative. Net is what the line contributed to the bank credit.
+type SettlementItem struct {
+	Kind SettlementItemKind
+	// ProviderRef is the provider's id for the payment, refund or dispute.
+	ProviderRef string
+	Gross       int64
+	Fee         int64
+	// FeeTax is GST the provider charged on its fee: reclaimable input tax,
+	// not a payment cost (plan.md D13).
+	FeeTax int64
+	Net    int64
+}
+
+// Settlement is one payout from the provider to our bank: many payments,
+// from every product, netted into one credit.
+type Settlement struct {
+	ProviderSettlementID string
+	SettledAt            time.Time
+	BankReference        string
+	Currency             string
+	Items                []SettlementItem
+	// Raw is the report as the provider sent it, kept as evidence.
+	Raw []byte
+}
+
 // Provider is one PSP. Implementations must be safe for concurrent use, and
 // every mutating call must be idempotent at the provider (their own
 // idempotency keys) so a retry after a timeout cannot move money twice.
@@ -161,6 +197,11 @@ type Provider interface {
 	// them by webhook, fetch them, and answer with evidence.
 	FetchDispute(ctx context.Context, providerDisputeID string) (*Dispute, error)
 	SubmitDisputeEvidence(ctx context.Context, providerDisputeID, evidence string) error
+
+	// FetchSettlements returns the settlements made after since. Real
+	// providers serve these by API or as SFTP/CSV reports; either way they
+	// arrive here normalized.
+	FetchSettlements(ctx context.Context, since time.Time) ([]*Settlement, error)
 
 	// VerifyWebhook authenticates a webhook and normalizes it. An invalid
 	// signature is an Unauthenticated error; nothing from such a request may

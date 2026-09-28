@@ -111,6 +111,13 @@ func (l *logged) SubmitDisputeEvidence(ctx context.Context, id, evidence string)
 	return err
 }
 
+func (l *logged) FetchSettlements(ctx context.Context, since time.Time) ([]*provider.Settlement, error) {
+	started := time.Now()
+	res, err := l.Provider.FetchSettlements(ctx, since)
+	l.record(ctx, "fetch_settlements", since.Format(time.RFC3339), nil, map[string]int{"settlements": len(res)}, err, started)
+	return res, err
+}
+
 // VerifyWebhook is inbound, not a call we made; the raw event is kept in
 // provider_events instead.
 func (l *logged) VerifyWebhook(headers http.Header, body []byte) (*provider.Event, error) {

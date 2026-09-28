@@ -34,6 +34,10 @@ const (
 	InputTaxCredit = "asset:input_tax_credit"
 
 	OpeningBalance = "equity:opening_balance"
+
+	// ReconWriteoffs absorbs reconciliation breaks an operator writes off:
+	// money that will never be matched, taken out of suspense on the record.
+	ReconWriteoffs = "expense:reconciliation_writeoffs"
 )
 
 // PSPReceivable is what a provider owes us for captured payments not yet settled.
@@ -128,6 +132,7 @@ func PlatformChart(cfg ChartConfig) []*dao.LedgerAccount {
 		chartAccount(GSTPayable, dao.AccountLiability, dao.OwnerPlatform, nil, nil),
 		chartAccount(InputTaxCredit, dao.AccountAsset, dao.OwnerPlatform, nil, nil),
 		chartAccount(OpeningBalance, dao.AccountEquity, dao.OwnerPlatform, nil, nil),
+		chartAccount(ReconWriteoffs, dao.AccountExpense, dao.OwnerPlatform, nil, nil),
 	}
 	for _, provider := range cfg.Providers {
 		accounts = append(accounts,

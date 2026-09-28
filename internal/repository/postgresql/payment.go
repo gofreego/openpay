@@ -15,7 +15,7 @@ import (
 
 const paymentColumns = `p.id, p.public_id, p.product_id, p.customer_id, p.purpose, p.wallet_id, p.order_id,
 	p.amount, p.currency, p.status, p.application, p.provider, p.captured_amount, p.captured_at,
-	p.refunded_amount, p.failure_code, p.failure_reason, p.description, p.return_url, p.expires_at,
+	p.settled_at, p.refunded_amount, p.failure_code, p.failure_reason, p.description, p.return_url, p.expires_at,
 	pr.public_id, c.public_id, w.public_id, p.created_at, p.updated_at`
 
 const paymentFrom = ` FROM payments p
@@ -72,12 +72,12 @@ func (r *Repository) UpdatePayment(ctx context.Context, p *dao.Payment) error {
 	const update = `
 		UPDATE payments
 		SET status = $2, application = $3, provider = $4, captured_amount = $5, captured_at = $6,
-		    failure_code = $7, failure_reason = $8, refunded_amount = $9
+		    failure_code = $7, failure_reason = $8, refunded_amount = $9, settled_at = $10
 		WHERE id = $1
 		RETURNING updated_at`
 	if err := r.executor(ctx).QueryRowContext(ctx, update,
 		p.ID, p.Status, p.Application, p.Provider, p.CapturedAmount, p.CapturedAt,
-		p.FailureCode, p.FailureReason, p.RefundedAmount,
+		p.FailureCode, p.FailureReason, p.RefundedAmount, p.SettledAt,
 	).Scan(&p.UpdatedAt); err != nil {
 		if isCheckViolation(err, "ck_payments_refunded") {
 			return apperrors.Wrap(err, apperrors.FailedPrecondition,
@@ -171,7 +171,7 @@ func scanPayment(row rowScanner) (*dao.Payment, error) {
 	var p dao.Payment
 	err := row.Scan(&p.ID, &p.PublicID, &p.ProductID, &p.CustomerID, &p.Purpose, &p.WalletID, &p.OrderID,
 		&p.Amount, &p.Currency, &p.Status, &p.Application, &p.Provider, &p.CapturedAmount, &p.CapturedAt,
-		&p.RefundedAmount, &p.FailureCode, &p.FailureReason, &p.Description, &p.ReturnURL, &p.ExpiresAt,
+		&p.SettledAt, &p.RefundedAmount, &p.FailureCode, &p.FailureReason, &p.Description, &p.ReturnURL, &p.ExpiresAt,
 		&p.ProductPublicID, &p.CustomerPublicID, &p.WalletPublicID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err

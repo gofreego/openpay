@@ -28,7 +28,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 5 | Real Vendor Integrations | ☐ Not started |
 | 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
-| 8 | Settlement & Reconciliation | ☐ Not started |
+| 8 | Settlement & Reconciliation | ◐ Ingestion, matching, settlement journal and break detection done; ops APIs, reports and daily recon job next |
 | 9 | Payouts & Withdrawals | ☐ Not started |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
 
@@ -1173,16 +1173,26 @@ into one bank credit. The matching must therefore work at the **payment level**,
 at batch totals, or per-product attribution is lost the moment two products transact on
 the same day.
 
-- [ ] `settlements` + `settlement_items`; ingest provider settlement reports
-      (API or SFTP/CSV) on a schedule
-- [ ] Matching engine keyed on provider transaction ref → `payment_attempts`;
-      each matched item carries the product through from its payment
-- [ ] Break classification: matched · missing-in-ledger · missing-at-provider ·
-      amount mismatch · fee mismatch · duplicate
-- [ ] Settlement journal (D12): `Dr bank`, `Cr psp:receivable` platform-scoped, with
+- [x] `settlements` + `settlement_items`; ingest provider settlement reports
+      (API or SFTP/CSV) on a schedule.
+      `Provider.FetchSettlements` returns them normalized; the raw report is kept as
+      evidence. Idempotent on the provider's settlement id. Real report parsing arrives
+      with each provider in Phase 5; the mock settles what it captured, refunded and
+      lost, with a hook to tamper with the report
+- [x] Matching engine keyed on provider transaction ref → `payment_attempts`;
+      each matched item carries the product through from its payment.
+      Refund lines match `refunds`, chargeback lines lost `disputes`
+- [x] Break classification: matched · missing-in-ledger · missing-at-provider ·
+      amount mismatch · fee mismatch · duplicate.
+      Fee mismatch means the provider's own line does not add up (gross ≠ net + fee +
+      tax); a variance against the rate card needs the rate card (Phase 5)
+- [x] Settlement journal (D12): `Dr bank`, `Cr psp:receivable` platform-scoped, with
       **actual** fees debited to `expense:<product>:psp_fees` per matched payment —
-      this is the point where estimated fees become facts
-- [ ] **Split GST on the PSP's fee** into `asset:input_tax_credit` rather than burying it
+      this is the point where estimated fees become facts.
+      Each line credits the receivable with what the ledger expected and suspense with
+      the rest (net + fee + tax − expected), so every line balances by construction and
+      every difference is visible. Matched payments become `settled`
+- [x] **Split GST on the PSP's fee** into `asset:input_tax_credit` rather than burying it
       in `expense:psp_fees` (D13) — it is reclaimable, and merging it overstates payment
       costs. This is the one tax OpenPay handles, because it arrives in the settlement
       report rather than from a calling product
@@ -1190,8 +1200,10 @@ the same day.
       `expense:<product>:psp_fees`, i.e. what we charged customers against what it
       actually cost. Persistent one-sided variance means the rate card is wrong
 - [ ] Per-product settlement report: of this ₹X bank credit, which product earned what
-- [ ] Unmatched items park in `suspense:<provider>` with an ops work queue — the
-      suspense account balance is a KPI and should trend to zero
+- [x] Unmatched items park in `suspense:<provider>` with an ops work queue — the
+      suspense account balance is a KPI and should trend to zero.
+      `recon_breaks`; a payment unsettled past `SettleWithin` (72h) is flagged
+      missing-at-provider once, and the break closes itself if it settles late
 - [ ] Daily recon report + alerting on drift threshold and on aged breaks
 - [ ] Ops APIs: resolve break, force-match with reason code, write off (permissioned,
       fully audited, always a journal)

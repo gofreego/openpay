@@ -32,6 +32,7 @@ const (
 	Refund            Prefix = "ref"
 	Dispute           Prefix = "dsp"
 	Settlement        Prefix = "stl"
+	ReconBreak        Prefix = "brk"
 	Payout            Prefix = "pot"
 	Idempotency       Prefix = "idk"
 	OutboxEvent       Prefix = "evt"
