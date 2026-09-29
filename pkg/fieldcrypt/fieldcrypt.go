@@ -5,7 +5,9 @@
 // Values are AES-256-GCM sealed and tagged with the id of the key that sealed
 // them ("v1:<key id>:<base64>"), so keys can be rotated: new values use the
 // current key, old ones still open with theirs, and nothing has to be
-// re-encrypted at once.
+// re-encrypted at once. Fingerprints are keyed from the current key too, so
+// after a rotation every value must be re-sealed (withdrawal.ResealAccounts,
+// run by the worker at startup) for duplicate detection to keep working.
 package fieldcrypt
 
 import (
@@ -68,6 +70,13 @@ func New(cfg Config) (*Cipher, error) {
 	}
 	return c, nil
 }
+
+// CurrentKeyID is the key new values are sealed under.
+func (c *Cipher) CurrentKeyID() string { return c.current }
+
+// IsSealed reports whether value is a sealed value (under any key), as
+// opposed to plaintext.
+func IsSealed(value string) bool { return strings.HasPrefix(value, "v1:") }
 
 // Seal encrypts plaintext under the current key.
 func (c *Cipher) Seal(plaintext string) (string, error) {

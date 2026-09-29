@@ -248,13 +248,14 @@ func (r *Repository) WithdrawnSince(ctx context.Context, customerID int64, walle
 	return amount, count, nil
 }
 
-// ListPlaintextBeneficiaries finds bank accounts stored before encryption,
-// for the one-time backfill.
-func (r *Repository) ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error) {
+// ListBeneficiariesToReseal finds bank accounts not sealed under keyID:
+// plaintext stored before encryption existed, or sealed under a key since
+// rotated out.
+func (r *Repository) ListBeneficiariesToReseal(ctx context.Context, keyID string) ([]*dao.Beneficiary, error) {
 	rows, err := r.executor(ctx).QueryContext(ctx, `SELECT `+beneficiaryColumns+` FROM beneficiaries
-		WHERE account_number IS NOT NULL AND account_number NOT LIKE 'v1:%'`)
+		WHERE account_number IS NOT NULL AND account_number NOT LIKE 'v1:' || $1 || ':%'`, keyID)
 	if err != nil {
-		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to list plaintext beneficiaries")
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to list beneficiaries to reseal")
 	}
 	defer rows.Close()
 	var out []*dao.Beneficiary
@@ -268,14 +269,21 @@ func (r *Repository) ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Ben
 	return out, rows.Err()
 }
 
-// SealBeneficiaryAccount replaces a plaintext account number with its sealed
-// form, last four and fingerprint — refusing if it is no longer plaintext.
-func (r *Repository) SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error {
-	_, err := r.executor(ctx).ExecContext(ctx, `
-		UPDATE beneficiaries SET account_number = $2, account_last4 = $3, account_fingerprint = $4
-		WHERE id = $1 AND account_number NOT LIKE 'v1:%'`, id, sealed, last4, fingerprint)
+// ResealBeneficiaryAccount replaces a stored account number with its form
+// under the current key, with a fresh last four and fingerprint. It changes
+// the row only if it still holds previous, so two workers resealing at once
+// cannot overwrite each other. It reports whether the row changed.
+func (r *Repository) ResealBeneficiaryAccount(ctx context.Context, id int64, previous, sealed, last4, fingerprint string) (bool, error) {
+	res, err := r.executor(ctx).ExecContext(ctx, `
+		UPDATE beneficiaries SET account_number = $3, account_last4 = $4, account_fingerprint = $5
+		WHERE id = $1 AND account_number = $2`, id, previous, sealed, last4, fingerprint)
 	if err != nil {
-		return apperrors.Wrap(err, apperrors.Internal, "failed to seal beneficiary account")
+		if isUniqueViolation(err) {
+			return false, apperrors.Wrap(err, apperrors.AlreadyExists,
+				"beneficiary %d is the same account as another of its customer's", id)
+		}
+		return false, apperrors.Wrap(err, apperrors.Internal, "failed to reseal beneficiary account")
 	}
-	return nil
+	n, _ := res.RowsAffected()
+	return n == 1, nil
 }

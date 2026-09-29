@@ -531,27 +531,51 @@ func deref(s *string) string {
 	return *s
 }
 
-// SealLegacyAccounts encrypts bank account numbers stored before encryption
-// existed. Idempotent: a sealed value is never touched again. The worker
-// runs it at startup, so no plaintext account number outlives a deploy.
-func (e *Engine) SealLegacyAccounts(ctx context.Context, repo interface {
-	ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error)
-	SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error
-}) (int, error) {
-	legacy, err := repo.ListPlaintextBeneficiaries(ctx)
+// ResealAccounts brings every stored bank account number under the current
+// key: plaintext from before encryption existed, and values sealed under a
+// key since rotated out. It also recomputes each fingerprint, which is keyed
+// from the current key — until this has run after a rotation, the same
+// account could be registered twice.
+//
+// Idempotent, and safe to run from several workers at once. The worker runs
+// it at startup, so a rotation completes with the deploy that makes it. A
+// row that turns out to duplicate another (registered in that window) is
+// left under its old key and reported, for a person to merge.
+func (e *Engine) ResealAccounts(ctx context.Context, repo interface {
+	ListBeneficiariesToReseal(ctx context.Context, keyID string) ([]*dao.Beneficiary, error)
+	ResealBeneficiaryAccount(ctx context.Context, id int64, previous, sealed, last4, fingerprint string) (bool, error)
+}) (resealed int, duplicates []string, err error) {
+	stale, err := repo.ListBeneficiariesToReseal(ctx, e.cipher.CurrentKeyID())
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	for _, b := range legacy {
-		plain := *b.AccountNumber
+	for _, b := range stale {
+		stored := *b.AccountNumber
+		plain := stored
+		if fieldcrypt.IsSealed(stored) {
+			if plain, err = e.cipher.Open(stored); err != nil {
+				// A key missing from config: resealing cannot proceed, and
+				// payouts to this account would fail too. Loud, not skipped.
+				return resealed, duplicates, apperrors.Wrap(err, apperrors.Internal,
+					"beneficiary %s cannot be opened to reseal", b.PublicID)
+			}
+		}
 		sealed, err := e.cipher.Seal(plain)
 		if err != nil {
-			return 0, err
+			return resealed, duplicates, err
 		}
-		if err := repo.SealBeneficiaryAccount(ctx, b.ID, sealed, plain[max(len(plain)-4, 0):],
-			e.cipher.Fingerprint(plain+"|"+deref(b.IFSC))); err != nil {
-			return 0, err
+		changed, err := repo.ResealBeneficiaryAccount(ctx, b.ID, stored, sealed, plain[max(len(plain)-4, 0):],
+			e.cipher.Fingerprint(plain+"|"+deref(b.IFSC)))
+		if apperrors.Is(err, apperrors.AlreadyExists) {
+			duplicates = append(duplicates, b.PublicID)
+			continue
+		}
+		if err != nil {
+			return resealed, duplicates, err
+		}
+		if changed {
+			resealed++
 		}
 	}
-	return len(legacy), nil
+	return resealed, duplicates, nil
 }

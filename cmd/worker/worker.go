@@ -65,10 +65,16 @@ func (w *Worker) Run(ctx context.Context) error {
 		logger.Panic(ctx, "field encryption is not configured (Service.Encryption): %v", err)
 	}
 	withdrawals := withdrawal.New(repo, registry, engine, payments, cipher, w.cfg.Service.Withdrawals)
-	if n, err := withdrawals.SealLegacyAccounts(ctx, repo); err != nil {
-		logger.Error(ctx, "failed to encrypt legacy beneficiary accounts: %v", err)
+	// Brings every account number under the current key: plaintext from
+	// before encryption, and anything sealed under a key since rotated out.
+	n, duplicates, err := withdrawals.ResealAccounts(ctx, repo)
+	if err != nil {
+		logger.Error(ctx, "failed to reseal beneficiary accounts under key %s: %v", cipher.CurrentKeyID(), err)
 	} else if n > 0 {
-		logger.Info(ctx, "encrypted %d bank account numbers stored before encryption", n)
+		logger.Info(ctx, "resealed %d bank account numbers under key %s", n, cipher.CurrentKeyID())
+	}
+	if len(duplicates) > 0 {
+		logger.Error(ctx, "beneficiaries %v duplicate another account of the same customer and were left under their old key; merge them", duplicates)
 	}
 
 	w.done.Add(14)

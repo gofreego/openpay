@@ -167,8 +167,8 @@ type PaymentRepository interface {
 	CreateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	UpdateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	LockWithdrawal(ctx context.Context, id int64) (*dao.Withdrawal, error)
-	ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error)
-	SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error
+	ListBeneficiariesToReseal(ctx context.Context, keyID string) ([]*dao.Beneficiary, error)
+	ResealBeneficiaryAccount(ctx context.Context, id int64, previous, sealed, last4, fingerprint string) (bool, error)
 	GetWithdrawalByPublicID(ctx context.Context, publicID string) (*dao.Withdrawal, error)
 	GetWithdrawalByProviderRef(ctx context.Context, providerName, providerPayoutID string) (*dao.Withdrawal, error)
 	ListWithdrawals(ctx context.Context, scope *filter.ProductScope, status dao.WithdrawalStatus, customerID *int64, limit int) ([]*dao.Withdrawal, error)

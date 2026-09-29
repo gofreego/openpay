@@ -21,6 +21,7 @@ import (
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/internal/withdrawal"
 	"github.com/gofreego/openpay/pkg/apperrors"
+	"github.com/gofreego/openpay/pkg/fieldcrypt"
 	"github.com/gofreego/openpay/pkg/ids"
 )
 
@@ -35,6 +36,7 @@ type fixture struct {
 	payments    *payment.Engine
 	withdrawals *withdrawal.Engine
 	webhooks    http.Handler
+	registry    *provider.Registry
 
 	product     *dao.Product
 	customer    *dao.Customer
@@ -48,7 +50,8 @@ func setup(t *testing.T, cfg withdrawal.Config) *fixture {
 	t.Helper()
 	f := &fixture{t: t, ctx: context.Background(), repo: testsupport.Repository(t)}
 	f.mock = mock.New("test-secret", "https://mock.test/checkout/")
-	registry := provider.NewRegistry([]string{mock.Name}, f.mock)
+	f.registry = provider.NewRegistry([]string{mock.Name}, f.mock)
+	registry := f.registry
 	f.wallets = wallet.New(f.repo, wallet.Limits{})
 	f.payments = payment.New(f.repo, registry, f.wallets, payment.Config{})
 	f.withdrawals = withdrawal.New(f.repo, registry, f.wallets, f.payments, testsupport.Cipher(t), cfg)
@@ -431,11 +434,11 @@ func TestLegacyAccountsAreSealed(t *testing.T) {
 	testsupport.Exec(t, `INSERT INTO beneficiaries (public_id, customer_id, kind, name, account_number, ifsc, status, verified_at)
 		VALUES ('bnf_legacy', $1, 'bank_account', 'Old Row', '999988887777', 'HDFC0000002', 'verified', NOW())`, f.customer.ID)
 
-	n, err := f.withdrawals.SealLegacyAccounts(f.ctx, f.repo)
-	if err != nil || n != 1 {
-		t.Fatalf("sealed %d (%v), want 1", n, err)
+	n, dups, err := f.withdrawals.ResealAccounts(f.ctx, f.repo)
+	if err != nil || n != 1 || len(dups) != 0 {
+		t.Fatalf("sealed %d, duplicates %v (%v); want 1 and none", n, dups, err)
 	}
-	if n, _ := f.withdrawals.SealLegacyAccounts(f.ctx, f.repo); n != 0 {
+	if n, _, _ := f.withdrawals.ResealAccounts(f.ctx, f.repo); n != 0 {
 		t.Errorf("second backfill sealed %d, want 0", n)
 	}
 	var stored, last4 string
@@ -451,4 +454,49 @@ func TestLegacyAccountsAreSealed(t *testing.T) {
 	if _, err := f.withdrawals.Request(f.ctx, withdrawal.Request{Wallet: f.cash, Beneficiary: legacy, Amount: 20000, RequestedBy: "scr"}); err != nil {
 		t.Errorf("payout to a backfilled account: %v", err)
 	}
+}
+
+// After a key rotation, resealing moves every account to the new key and
+// recomputes its fingerprint — so the old key can be retired, and the same
+// account still cannot be registered twice.
+func TestKeyRotationReseals(t *testing.T) {
+	f := setup(t, withdrawal.Config{})
+	var oldFingerprint string
+	testsupport.Query(t, `SELECT account_fingerprint FROM beneficiaries WHERE public_id = '`+f.beneficiary.PublicID+`'`, &oldFingerprint)
+
+	rotated := testsupport.EncryptionConfig()
+	rotated.Keys["k2"] = "cm90YXRlZC10ZXN0LWtleS0zMi1ieXRlcy1sb25nISE="
+	rotated.CurrentKeyID = "k2"
+	cipher, err := fieldcrypt.New(rotated)
+	if err != nil {
+		t.Fatalf("rotated cipher: %v", err)
+	}
+	engine := withdrawal.New(f.repo, f.registry, f.wallets, f.payments, cipher, withdrawal.Config{})
+
+	n, dups, err := engine.ResealAccounts(f.ctx, f.repo)
+	if err != nil || n != 1 || len(dups) != 0 {
+		t.Fatalf("resealed %d, duplicates %v (%v); want 1 and none", n, dups, err)
+	}
+	var stored, fingerprint string
+	testsupport.Query(t, `SELECT account_number, account_fingerprint FROM beneficiaries WHERE public_id = '`+f.beneficiary.PublicID+`'`, &stored, &fingerprint)
+	if !strings.HasPrefix(stored, "v1:k2:") {
+		t.Errorf("stored = %q, want sealed under k2", stored)
+	}
+	if fingerprint == oldFingerprint {
+		t.Error("fingerprint was not recomputed under the new key")
+	}
+
+	// The old key can go: the account opens under k2 alone.
+	cipher, err = fieldcrypt.New(fieldcrypt.Config{CurrentKeyID: "k2", Keys: map[string]string{"k2": rotated.Keys["k2"]}})
+	if err != nil {
+		t.Fatalf("k2-only cipher: %v", err)
+	}
+	engine = withdrawal.New(f.repo, f.registry, f.wallets, f.payments, cipher, withdrawal.Config{})
+	if _, err := engine.Request(f.ctx, withdrawal.Request{Wallet: f.cash, Beneficiary: f.beneficiary, Amount: 20000, RequestedBy: "scr"}); err != nil {
+		t.Errorf("payout after retiring the old key: %v", err)
+	}
+	account, ifsc := "12345678901", "HDFC0000001"
+	_, err = engine.AddBeneficiary(f.ctx, &dao.Beneficiary{CustomerID: f.customer.ID, Kind: "bank_account",
+		Name: "Asha Rao", AccountNumber: &account, IFSC: &ifsc})
+	wantCode(t, "the same account after rotation", err, apperrors.AlreadyExists)
 }
