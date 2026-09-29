@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -51,6 +52,11 @@ type Provider struct {
 
 	disputes map[string]*provider.Dispute
 
+	payouts map[string]*provider.Payout
+	// byPayoutID makes CreatePayout idempotent on our payout id.
+	byPayoutID     map[string]string
+	failNextPayout error
+
 	settlements []*provider.Settlement
 	// settledRefs are refunds and disputes already in a settlement.
 	settledRefs map[string]bool
@@ -76,6 +82,8 @@ func New(secret, checkoutURL string) *Provider {
 		refunds:     map[string]*provider.Refund{},
 		disputes:    map[string]*provider.Dispute{},
 		settledRefs: map[string]bool{},
+		payouts:     map[string]*provider.Payout{},
+		byPayoutID:  map[string]string{},
 		byRefundID:  map[string]string{},
 	}
 }
@@ -450,4 +458,86 @@ func (m *Provider) Settle(feeBps int64, tamper func(*provider.Settlement)) strin
 	st.Raw, _ = json.Marshal(st.Items)
 	m.settlements = append(m.settlements, st)
 	return st.ProviderSettlementID
+}
+
+// VerifyDestination verifies everything except bank accounts starting 0000
+// and VPAs starting "invalid", which fail — the way tests reach the unhappy path.
+func (m *Provider) VerifyDestination(_ context.Context, d provider.Destination) (*provider.Verification, error) {
+	if strings.HasPrefix(d.AccountNumber, "0000") || strings.HasPrefix(d.VPA, "invalid") {
+		return &provider.Verification{FailureReason: "mock: account does not exist"}, nil
+	}
+	return &provider.Verification{Verified: true, NameAtBank: strings.ToUpper(d.Name)}, nil
+}
+
+// CreatePayout accepts a payout as processing; CompletePayout, FailPayout and
+// ReversePayout decide how it ends.
+func (m *Provider) CreatePayout(_ context.Context, req provider.PayoutRequest) (*provider.Payout, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.failNextPayout; err != nil {
+		m.failNextPayout = nil
+		return nil, err
+	}
+	if id, ok := m.byPayoutID[req.PayoutID]; ok {
+		out := *m.payouts[id]
+		return &out, nil
+	}
+	id := "mockpout_" + ids.New(ids.Payout)[4:]
+	m.payouts[id] = &provider.Payout{ProviderPayoutID: id, Status: provider.PayoutProcessing, Amount: req.Amount}
+	m.byPayoutID[req.PayoutID] = id
+	out := *m.payouts[id]
+	return &out, nil
+}
+
+func (m *Provider) FetchPayout(_ context.Context, providerPayoutID string) (*provider.Payout, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	p, ok := m.payouts[providerPayoutID]
+	if !ok {
+		return nil, apperrors.New(apperrors.NotFound, "mock payout %q not found", providerPayoutID)
+	}
+	out := *p
+	return &out, nil
+}
+
+func (m *Provider) setPayout(id string, from, to provider.PayoutStatus, reason string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if p, ok := m.payouts[id]; ok && p.Status == from {
+		p.Status, p.FailureReason = to, reason
+	}
+}
+
+// CompletePayout: the money reached the bank.
+func (m *Provider) CompletePayout(id string) {
+	m.setPayout(id, provider.PayoutProcessing, provider.PayoutPaid, "")
+}
+
+// FailPayout: the payout never left.
+func (m *Provider) FailPayout(id, reason string) {
+	m.setPayout(id, provider.PayoutProcessing, provider.PayoutFailed, reason)
+}
+
+// ReversePayout: it was paid, then the receiving bank sent it back.
+func (m *Provider) ReversePayout(id, reason string) {
+	m.setPayout(id, provider.PayoutPaid, provider.PayoutReversed, reason)
+}
+
+// FailNextPayout makes the next CreatePayout return err, e.g. a timeout.
+func (m *Provider) FailNextPayout(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.failNextPayout = err
+}
+
+// PayoutWebhook builds a signed webhook about a payout.
+func (m *Provider) PayoutWebhook(providerPayoutID, eventType string) (http.Header, []byte) {
+	return m.webhookFor(provider.ObjectPayout, providerPayoutID, eventType)
+}
+
+// PayoutCount is how many payouts the mock has been asked to make.
+func (m *Provider) PayoutCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.payouts)
 }

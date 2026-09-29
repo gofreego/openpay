@@ -11,6 +11,7 @@ import (
 	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/recon"
 	"github.com/gofreego/openpay/internal/wallet"
+	"github.com/gofreego/openpay/internal/withdrawal"
 )
 
 type Config struct {
@@ -23,6 +24,9 @@ type Config struct {
 	// Recon configures settlement matching and when it alerts.
 	Recon       recon.Config      `yaml:"Recon"`
 	ReconAlerts recon.AlertConfig `yaml:"ReconAlerts"`
+	// Withdrawals configures payouts: the bank they leave from, and how long
+	// a new destination cools before it can receive money.
+	Withdrawals withdrawal.Config `yaml:"Withdrawals"`
 }
 
 type Repository interface {
@@ -127,6 +131,18 @@ type PaymentRepository interface {
 	ListBreaks(ctx context.Context, scope *filter.ProductScope, status dao.BreakStatus, limit int) ([]*dao.ReconBreak, error)
 	BreakSummary(ctx context.Context, agedBefore time.Time) (open, aged int64, err error)
 	ListUnsettledPayments(ctx context.Context, providerName string, capturedBefore time.Time, limit int) ([]*dao.Payment, error)
+
+	CreateBeneficiary(ctx context.Context, b *dao.Beneficiary) error
+	GetBeneficiaryByID(ctx context.Context, id int64) (*dao.Beneficiary, error)
+	GetBeneficiaryByPublicID(ctx context.Context, publicID string) (*dao.Beneficiary, error)
+	ListBeneficiaries(ctx context.Context, customerID int64) ([]*dao.Beneficiary, error)
+	CreateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
+	UpdateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
+	LockWithdrawal(ctx context.Context, id int64) (*dao.Withdrawal, error)
+	GetWithdrawalByPublicID(ctx context.Context, publicID string) (*dao.Withdrawal, error)
+	GetWithdrawalByProviderRef(ctx context.Context, providerName, providerPayoutID string) (*dao.Withdrawal, error)
+	ListWithdrawals(ctx context.Context, scope *filter.ProductScope, status dao.WithdrawalStatus, customerID *int64, limit int) ([]*dao.Withdrawal, error)
+	ListOpenWithdrawals(ctx context.Context, before time.Time, limit int) ([]*dao.Withdrawal, error)
 
 	CreateDispute(ctx context.Context, d *dao.Dispute) error
 	UpdateDispute(ctx context.Context, d *dao.Dispute) error
@@ -282,12 +298,13 @@ type OutboxRepository interface {
 }
 
 type Service struct {
-	repo     Repository
-	wallets  *wallet.Engine
-	payments *payment.Engine
-	orders   *order.Engine
-	recon    *recon.Engine
-	alerts   recon.AlertConfig
+	repo        Repository
+	wallets     *wallet.Engine
+	payments    *payment.Engine
+	orders      *order.Engine
+	recon       *recon.Engine
+	alerts      recon.AlertConfig
+	withdrawals *withdrawal.Engine
 	openpay_v1.UnimplementedOpenPayServer
 }
 
@@ -304,5 +321,7 @@ func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 		orders: order.New(repo, wallets, payments, cfg.Orders),
 		recon:  recon.New(repo, registry, payments, cfg.Recon),
 		alerts: cfg.ReconAlerts,
+		// Connects itself to payments, which hands it payout webhooks.
+		withdrawals: withdrawal.New(repo, registry, wallets, payments, cfg.Withdrawals),
 	}
 }

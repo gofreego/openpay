@@ -39,6 +39,10 @@
       "description": "Settlements matched against the ledger, and the break queue"
     },
     {
+      "name": "Withdrawals",
+      "description": "Cashing withdrawable wallets out to a bank account or UPI id"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -53,6 +57,41 @@
     "application/json"
   ],
   "paths": {
+    "/openpay/v1/beneficiaries": {
+      "post": {
+        "summary": "Add a withdrawal destination",
+        "description": "Product backend only. Verified with the provider before it can receive money.",
+        "operationId": "OpenPay_AddBeneficiary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddBeneficiaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "AddBeneficiaryRequest registers a destination, verified with the provider\n(penny drop / VPA lookup) before it can receive money.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddBeneficiaryRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      }
+    },
     "/openpay/v1/credentials": {
       "get": {
         "summary": "List a product's service credentials",
@@ -189,6 +228,38 @@
         ],
         "tags": [
           "Customers"
+        ]
+      }
+    },
+    "/openpay/v1/customers/{customerId}/beneficiaries": {
+      "get": {
+        "summary": "List a customer's withdrawal destinations",
+        "description": "Product backend, or an operator holding openpay:withdrawals:read.",
+        "operationId": "OpenPay_ListBeneficiaries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListBeneficiariesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Withdrawals"
         ]
       }
     },
@@ -1932,6 +2003,208 @@
           "Wallets"
         ]
       }
+    },
+    "/openpay/v1/withdrawals": {
+      "get": {
+        "summary": "List withdrawals",
+        "description": "Filter by status for the approval queue. Operator holding openpay:withdrawals:read within scope.",
+        "operationId": "OpenPay_ListWithdrawals",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWithdrawalsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": "WITHDRAWAL_STATUS_PENDING_APPROVAL gives the approval queue.\n\n - WITHDRAWAL_STATUS_PENDING_APPROVAL: Above the wallet type's threshold: waiting for an approver.\n - WITHDRAWAL_STATUS_APPROVED: Cleared to send; the provider has not yet confirmed it.\n - WITHDRAWAL_STATUS_FAILED: Never left; the money is back in the wallet.\n - WITHDRAWAL_STATUS_REVERSED: Left, then bounced; the money is back in the wallet.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "WITHDRAWAL_STATUS_UNSPECIFIED",
+              "WITHDRAWAL_STATUS_PENDING_APPROVAL",
+              "WITHDRAWAL_STATUS_APPROVED",
+              "WITHDRAWAL_STATUS_PROCESSING",
+              "WITHDRAWAL_STATUS_PAID",
+              "WITHDRAWAL_STATUS_FAILED",
+              "WITHDRAWAL_STATUS_REJECTED",
+              "WITHDRAWAL_STATUS_REVERSED"
+            ],
+            "default": "WITHDRAWAL_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      },
+      "post": {
+        "summary": "Request a withdrawal",
+        "description": "Product backend only. Refused below the wallet type's minimum; above its approval threshold it waits for an approver. Requires an Idempotency-Key.",
+        "operationId": "OpenPay_RequestWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RequestWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RequestWithdrawalRequest takes the amount out of the wallet at once. Up to\nthe wallet type's approval threshold it is sent immediately; above it, it\nwaits for approval. Requires an Idempotency-Key.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RequestWithdrawalRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      }
+    },
+    "/openpay/v1/withdrawals/{id}": {
+      "get": {
+        "summary": "Get a withdrawal",
+        "description": "Product backend for its own, or an operator holding openpay:withdrawals:read within scope.",
+        "operationId": "OpenPay_GetWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      }
+    },
+    "/openpay/v1/withdrawals/{id}/approve": {
+      "post": {
+        "summary": "Approve a withdrawal",
+        "description": "Central ops: requires openpay:withdrawals:approve and openpay:scope:all. The approver cannot be whoever requested it.",
+        "operationId": "OpenPay_ApproveWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DecideWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayApproveWithdrawalBody"
+            }
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      }
+    },
+    "/openpay/v1/withdrawals/{id}/reject": {
+      "post": {
+        "summary": "Reject a withdrawal",
+        "description": "Returns the money to the wallet. Central ops: requires openpay:withdrawals:approve and openpay:scope:all.",
+        "operationId": "OpenPay_RejectWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DecideWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayRejectWithdrawalBody"
+            }
+          }
+        ],
+        "tags": [
+          "Withdrawals"
+        ]
+      }
     }
   },
   "definitions": {
@@ -1957,6 +2230,15 @@
         "productId": {
           "type": "string",
           "description": "Whose adjustments account funds it, for a platform-scoped wallet."
+        }
+      }
+    },
+    "OpenPayApproveWithdrawalBody": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "description": "Why. Required: a decision nobody explained cannot be audited."
         }
       }
     },
@@ -2029,6 +2311,15 @@
         },
         "memo": {
           "type": "string"
+        }
+      }
+    },
+    "OpenPayRejectWithdrawalBody": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "description": "Why. Required: a decision nobody explained cannot be audited."
         }
       }
     },
@@ -2138,6 +2429,38 @@
         }
       }
     },
+    "v1AddBeneficiaryRequest": {
+      "type": "object",
+      "properties": {
+        "customerId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        },
+        "ifsc": {
+          "type": "string"
+        },
+        "vpa": {
+          "type": "string"
+        }
+      },
+      "description": "AddBeneficiaryRequest registers a destination, verified with the provider\n(penny drop / VPA lookup) before it can receive money."
+    },
+    "v1AddBeneficiaryResponse": {
+      "type": "object",
+      "properties": {
+        "beneficiary": {
+          "$ref": "#/definitions/v1Beneficiary"
+        }
+      }
+    },
     "v1AdjustWalletResponse": {
       "type": "object",
       "properties": {
@@ -2146,6 +2469,53 @@
         },
         "journalId": {
           "type": "string"
+        }
+      }
+    },
+    "v1Beneficiary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "description": "bank_account or vpa."
+        },
+        "name": {
+          "type": "string"
+        },
+        "accountNumberMasked": {
+          "type": "string",
+          "description": "Only the last four digits are ever returned."
+        },
+        "ifsc": {
+          "type": "string"
+        },
+        "vpa": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "description": "pending, verified or failed."
+        },
+        "nameAtBank": {
+          "type": "string",
+          "description": "The name the bank or UPI directory reports, to check against name."
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "verifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -2443,6 +2813,14 @@
       ],
       "default": "CUSTOMER_STATUS_UNSPECIFIED",
       "description": " - CUSTOMER_STATUS_MERGED: A duplicate that now resolves to another record. Lookups follow it, so an\nid stored before a merge keeps working."
+    },
+    "v1DecideWithdrawalResponse": {
+      "type": "object",
+      "properties": {
+        "withdrawal": {
+          "$ref": "#/definitions/v1Withdrawal"
+        }
+      }
     },
     "v1Dispute": {
       "type": "object",
@@ -2758,6 +3136,14 @@
         }
       }
     },
+    "v1GetWithdrawalResponse": {
+      "type": "object",
+      "properties": {
+        "withdrawal": {
+          "$ref": "#/definitions/v1Withdrawal"
+        }
+      }
+    },
     "v1GrantWalletResponse": {
       "type": "object",
       "properties": {
@@ -3012,6 +3398,18 @@
       "default": "LEDGER_CHECK_STATUS_UNSPECIFIED",
       "description": " - LEDGER_CHECK_STATUS_OK: Every invariant held.\n - LEDGER_CHECK_STATUS_DRIFT: At least one invariant was broken. Never fixed automatically.\n - LEDGER_CHECK_STATUS_ERROR: The check itself could not complete, so nothing is known."
     },
+    "v1ListBeneficiariesResponse": {
+      "type": "object",
+      "properties": {
+        "beneficiaries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Beneficiary"
+          }
+        }
+      }
+    },
     "v1ListCustomerWalletsResponse": {
       "type": "object",
       "properties": {
@@ -3167,6 +3565,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1WalletType"
+          }
+        }
+      }
+    },
+    "v1ListWithdrawalsResponse": {
+      "type": "object",
+      "properties": {
+        "withdrawals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Withdrawal"
           }
         }
       }
@@ -3806,6 +4216,30 @@
       "default": "REFUND_STATUS_UNSPECIFIED",
       "description": " - REFUND_STATUS_INITIATED: Money reserved; the provider has not yet confirmed it has the request."
     },
+    "v1RequestWithdrawalRequest": {
+      "type": "object",
+      "properties": {
+        "walletId": {
+          "type": "string"
+        },
+        "beneficiaryId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "RequestWithdrawalRequest takes the amount out of the wallet at once. Up to\nthe wallet type's approval threshold it is sent immediately; above it, it\nwaits for approval. Requires an Idempotency-Key."
+    },
+    "v1RequestWithdrawalResponse": {
+      "type": "object",
+      "properties": {
+        "withdrawal": {
+          "$ref": "#/definitions/v1Withdrawal"
+        }
+      }
+    },
     "v1ResolveReconBreakResponse": {
       "type": "object",
       "properties": {
@@ -4369,6 +4803,57 @@
       "default": "WALLET_TYPE_STATUS_UNSPECIFIED",
       "description": " - WALLET_TYPE_STATUS_ARCHIVED: Stops new wallets being created. Existing ones keep working: they hold\nreal balances."
     },
+    "v1Withdrawal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "walletId": {
+          "type": "string"
+        },
+        "beneficiaryId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/v1WithdrawalStatus"
+        },
+        "requiresApproval": {
+          "type": "boolean"
+        },
+        "requestedBy": {
+          "type": "string"
+        },
+        "decidedBy": {
+          "type": "string"
+        },
+        "decidedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decisionNote": {
+          "type": "string"
+        },
+        "failureReason": {
+          "type": "string"
+        },
+        "paidAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "v1WithdrawalApproval": {
       "type": "object",
       "properties": {
@@ -4384,6 +4869,21 @@
         }
       },
       "description": "WithdrawalApproval records who signed off on enabling withdrawal."
+    },
+    "v1WithdrawalStatus": {
+      "type": "string",
+      "enum": [
+        "WITHDRAWAL_STATUS_UNSPECIFIED",
+        "WITHDRAWAL_STATUS_PENDING_APPROVAL",
+        "WITHDRAWAL_STATUS_APPROVED",
+        "WITHDRAWAL_STATUS_PROCESSING",
+        "WITHDRAWAL_STATUS_PAID",
+        "WITHDRAWAL_STATUS_FAILED",
+        "WITHDRAWAL_STATUS_REJECTED",
+        "WITHDRAWAL_STATUS_REVERSED"
+      ],
+      "default": "WITHDRAWAL_STATUS_UNSPECIFIED",
+      "description": " - WITHDRAWAL_STATUS_PENDING_APPROVAL: Above the wallet type's threshold: waiting for an approver.\n - WITHDRAWAL_STATUS_APPROVED: Cleared to send; the provider has not yet confirmed it.\n - WITHDRAWAL_STATUS_FAILED: Never left; the money is back in the wallet.\n - WITHDRAWAL_STATUS_REVERSED: Left, then bounced; the money is back in the wallet."
     }
   },
   "securityDefinitions": {

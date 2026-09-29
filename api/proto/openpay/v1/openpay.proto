@@ -14,6 +14,7 @@ import "proto/openpay/v1/wallet.proto";
 import "proto/openpay/v1/payment.proto";
 import "proto/openpay/v1/order.proto";
 import "proto/openpay/v1/recon.proto";
+import "proto/openpay/v1/withdrawal.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -53,6 +54,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Reconciliation"
       description: "Settlements matched against the ledger, and the break queue"
+    },
+    {
+      name: "Withdrawals"
+      description: "Cashing withdrawable wallets out to a bank account or UPI id"
     },
     {
       name: "Ledger"
@@ -690,6 +695,89 @@ service OpenPay {
             tags: "Reconciliation"
             summary: "Get fee variance per product"
             description: "Fees charged to customers against fees paid to providers over a period. Central ops: requires openpay:recon:read and openpay:scope:all."
+        };
+    }
+
+    // ---- Withdrawals ----
+
+    rpc AddBeneficiary (AddBeneficiaryRequest) returns (AddBeneficiaryResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/beneficiaries"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "Add a withdrawal destination"
+            description: "Product backend only. Verified with the provider before it can receive money."
+        };
+    }
+
+    rpc ListBeneficiaries (ListBeneficiariesRequest) returns (ListBeneficiariesResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/customers/{customer_id}/beneficiaries"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "List a customer's withdrawal destinations"
+            description: "Product backend, or an operator holding openpay:withdrawals:read."
+        };
+    }
+
+    rpc RequestWithdrawal (RequestWithdrawalRequest) returns (RequestWithdrawalResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/withdrawals"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "Request a withdrawal"
+            description: "Product backend only. Refused below the wallet type's minimum; above its approval threshold it waits for an approver. Requires an Idempotency-Key."
+        };
+    }
+
+    rpc ApproveWithdrawal (DecideWithdrawalRequest) returns (DecideWithdrawalResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/withdrawals/{id}/approve"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "Approve a withdrawal"
+            description: "Central ops: requires openpay:withdrawals:approve and openpay:scope:all. The approver cannot be whoever requested it."
+        };
+    }
+
+    rpc RejectWithdrawal (DecideWithdrawalRequest) returns (DecideWithdrawalResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/withdrawals/{id}/reject"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "Reject a withdrawal"
+            description: "Returns the money to the wallet. Central ops: requires openpay:withdrawals:approve and openpay:scope:all."
+        };
+    }
+
+    rpc GetWithdrawal (GetWithdrawalRequest) returns (GetWithdrawalResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/withdrawals/{id}"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "Get a withdrawal"
+            description: "Product backend for its own, or an operator holding openpay:withdrawals:read within scope."
+        };
+    }
+
+    rpc ListWithdrawals (ListWithdrawalsRequest) returns (ListWithdrawalsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/withdrawals"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Withdrawals"
+            summary: "List withdrawals"
+            description: "Filter by status for the approval queue. Operator holding openpay:withdrawals:read within scope."
         };
     }
 }

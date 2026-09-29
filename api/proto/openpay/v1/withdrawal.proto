@@ -1,0 +1,129 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Withdrawals cash a withdrawable wallet out to the customer's bank account or
+// UPI id. Only wallet types configured withdrawable take part (a compliance
+// decision, plan.md D10/Q1), and each type's policy decides the rest: its
+// min_withdrawal_amount, and its withdrawal_approval_threshold above which a
+// person other than the requester must approve before any money is sent.
+
+message Beneficiary {
+  string id = 1;
+  string customer_id = 2;
+  // bank_account or vpa.
+  string kind = 3;
+  string name = 4;
+  // Only the last four digits are ever returned.
+  string account_number_masked = 5;
+  string ifsc = 6;
+  string vpa = 7;
+  // pending, verified or failed.
+  string status = 8;
+  // The name the bank or UPI directory reports, to check against name.
+  string name_at_bank = 9;
+  string failure_reason = 10;
+  google.protobuf.Timestamp verified_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+// AddBeneficiaryRequest registers a destination, verified with the provider
+// (penny drop / VPA lookup) before it can receive money.
+message AddBeneficiaryRequest {
+  string customer_id = 1 [(validate.rules).string = {min_len: 1}];
+  string kind = 2 [(validate.rules).string = {in: ["bank_account", "vpa"]}];
+  string name = 3 [(validate.rules).string = {min_len: 1, max_len: 200}];
+  string account_number = 4 [(validate.rules).string = {pattern: "^([0-9]{9,18})?$"}];
+  string ifsc = 5 [(validate.rules).string = {pattern: "^([A-Z]{4}0[A-Z0-9]{6})?$"}];
+  string vpa = 6 [(validate.rules).string = {max_len: 100}];
+}
+
+message AddBeneficiaryResponse {
+  Beneficiary beneficiary = 1;
+}
+
+message ListBeneficiariesRequest {
+  string customer_id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message ListBeneficiariesResponse {
+  repeated Beneficiary beneficiaries = 1;
+}
+
+enum WithdrawalStatus {
+  WITHDRAWAL_STATUS_UNSPECIFIED = 0;
+  // Above the wallet type's threshold: waiting for an approver.
+  WITHDRAWAL_STATUS_PENDING_APPROVAL = 1;
+  // Cleared to send; the provider has not yet confirmed it.
+  WITHDRAWAL_STATUS_APPROVED = 2;
+  WITHDRAWAL_STATUS_PROCESSING = 3;
+  WITHDRAWAL_STATUS_PAID = 4;
+  // Never left; the money is back in the wallet.
+  WITHDRAWAL_STATUS_FAILED = 5;
+  WITHDRAWAL_STATUS_REJECTED = 6;
+  // Left, then bounced; the money is back in the wallet.
+  WITHDRAWAL_STATUS_REVERSED = 7;
+}
+
+message Withdrawal {
+  string id = 1;
+  string wallet_id = 2;
+  string beneficiary_id = 3;
+  int64 amount = 4;
+  string currency = 5;
+  WithdrawalStatus status = 6;
+  bool requires_approval = 7;
+  string requested_by = 8;
+  string decided_by = 9;
+  google.protobuf.Timestamp decided_at = 10;
+  string decision_note = 11;
+  string failure_reason = 12;
+  google.protobuf.Timestamp paid_at = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+// RequestWithdrawalRequest takes the amount out of the wallet at once. Up to
+// the wallet type's approval threshold it is sent immediately; above it, it
+// waits for approval. Requires an Idempotency-Key.
+message RequestWithdrawalRequest {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  string beneficiary_id = 2 [(validate.rules).string = {min_len: 1}];
+  int64 amount = 3 [(validate.rules).int64 = {gt: 0}];
+}
+
+message RequestWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
+message DecideWithdrawalRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  // Why. Required: a decision nobody explained cannot be audited.
+  string note = 2 [(validate.rules).string = {min_len: 1, max_len: 1000}];
+}
+
+message DecideWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
+message GetWithdrawalRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+message GetWithdrawalResponse {
+  Withdrawal withdrawal = 1;
+}
+
+message ListWithdrawalsRequest {
+  // WITHDRAWAL_STATUS_PENDING_APPROVAL gives the approval queue.
+  WithdrawalStatus status = 1 [(validate.rules).enum = {defined_only: true}];
+  string customer_id = 2;
+  int32 limit = 3 [(validate.rules).int32 = {gte: 0, lte: 100}];
+}
+
+message ListWithdrawalsResponse {
+  repeated Withdrawal withdrawals = 1;
+}

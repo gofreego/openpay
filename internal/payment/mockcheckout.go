@@ -31,11 +31,17 @@ import (
 //     POST disputes/{providerDisputeID}?outcome=won|lost decides it.
 //   - POST settle?fee_bps=N pays out everything unsettled as one settlement;
 //     &inflate=M adds M to the first line, to watch a break be caught.
+//   - POST payouts/{providerPayoutID}?outcome=paid|fail|reverse finishes a
+//     withdrawal's payout — reverse bounces one already paid.
 func MockCheckoutHandler(prefix, webhookPath string, m *mock.Provider, webhooks http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, prefix)
 		if refundID, ok := strings.CutPrefix(id, "refunds/"); ok {
 			mockRefund(w, r, refundID, webhookPath, m, webhooks)
+			return
+		}
+		if payoutID, ok := strings.CutPrefix(id, "payouts/"); ok {
+			mockPayout(w, r, payoutID, webhookPath, m, webhooks)
 			return
 		}
 		if id == "settle" {
@@ -182,4 +188,33 @@ func mockSettle(w http.ResponseWriter, r *http.Request, m *mock.Provider) {
 	})
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"settlement":%q,"lines":%d}`, id, lines)
+}
+
+func mockPayout(w http.ResponseWriter, r *http.Request, id, webhookPath string, m *mock.Provider, webhooks http.Handler) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if _, err := m.FetchPayout(r.Context(), id); err != nil {
+		http.Error(w, "unknown mock payout", http.StatusNotFound)
+		return
+	}
+	switch r.URL.Query().Get("outcome") {
+	case "paid":
+		m.CompletePayout(id)
+	case "fail":
+		m.FailPayout(id, "mock: payout failed")
+	case "reverse":
+		m.ReversePayout(id, "mock: beneficiary account closed")
+	default:
+		http.Error(w, "outcome must be paid, fail or reverse", http.StatusBadRequest)
+		return
+	}
+	headers, body := m.PayoutWebhook(id, "payout.updated")
+	req := httptest.NewRequest(http.MethodPost, webhookPath, bytes.NewReader(body)).WithContext(r.Context())
+	req.Header = headers
+	rec := httptest.NewRecorder()
+	webhooks.ServeHTTP(rec, req)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"payout":%q,"webhook":"delivered, answered %d"}`, id, rec.Code)
 }

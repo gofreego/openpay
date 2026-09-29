@@ -72,6 +72,7 @@ func (c *Config) WithDefaults() {
 
 type Engine struct {
 	orders    OrderHook
+	payouts   PayoutHook
 	repo      Repository
 	providers *provider.Registry
 	wallets   *wallet.Engine
@@ -245,6 +246,15 @@ type OrderHook interface {
 	// cancelled, so it can release what it holds.
 	PaymentEnded(ctx context.Context, payment *dao.Payment) error
 }
+
+// PayoutHook is how payout webhooks reach the withdrawal engine, which the
+// payment package cannot import.
+type PayoutHook interface {
+	ProcessPayoutEvent(ctx context.Context, providerName, providerPayoutID string) error
+}
+
+// SetPayoutHook connects the withdrawal engine.
+func (e *Engine) SetPayoutHook(h PayoutHook) { e.payouts = h }
 
 // SetOrderHook connects the order engine. Order payments are refused until
 // one is set, rather than captured with nowhere to go.

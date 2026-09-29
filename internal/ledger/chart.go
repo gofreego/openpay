@@ -38,6 +38,11 @@ const (
 	// ReconWriteoffs absorbs reconciliation breaks an operator writes off:
 	// money that will never be matched, taken out of suspense on the record.
 	ReconWriteoffs = "expense:reconciliation_writeoffs"
+
+	// PayoutsInTransit holds withdrawals that have left the wallet but not yet
+	// reached the customer's bank. Still owed to the customer — so a
+	// liability — because payouts fail after you thought they left.
+	PayoutsInTransit = "liability:payouts_in_transit"
 )
 
 // PSPReceivable is what a provider owes us for captured payments not yet settled.
@@ -133,6 +138,7 @@ func PlatformChart(cfg ChartConfig) []*dao.LedgerAccount {
 		chartAccount(InputTaxCredit, dao.AccountAsset, dao.OwnerPlatform, nil, nil),
 		chartAccount(OpeningBalance, dao.AccountEquity, dao.OwnerPlatform, nil, nil),
 		chartAccount(ReconWriteoffs, dao.AccountExpense, dao.OwnerPlatform, nil, nil),
+		chartAccount(PayoutsInTransit, dao.AccountLiability, dao.OwnerPlatform, nil, nil),
 	}
 	for _, provider := range cfg.Providers {
 		accounts = append(accounts,

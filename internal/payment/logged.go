@@ -118,6 +118,28 @@ func (l *logged) FetchSettlements(ctx context.Context, since time.Time) ([]*prov
 	return res, err
 }
 
+func (l *logged) VerifyDestination(ctx context.Context, d provider.Destination) (*provider.Verification, error) {
+	started := time.Now()
+	res, err := l.Provider.VerifyDestination(ctx, d)
+	// The account number is not logged: only whether one was checked.
+	l.record(ctx, "verify_destination", "", map[string]bool{"bank_account": d.AccountNumber != "", "vpa": d.VPA != ""}, res, err, started)
+	return res, err
+}
+
+func (l *logged) CreatePayout(ctx context.Context, req provider.PayoutRequest) (*provider.Payout, error) {
+	started := time.Now()
+	res, err := l.Provider.CreatePayout(ctx, req)
+	l.record(ctx, "create_payout", req.PayoutID, map[string]any{"amount": req.Amount, "currency": req.Currency}, res, err, started)
+	return res, err
+}
+
+func (l *logged) FetchPayout(ctx context.Context, id string) (*provider.Payout, error) {
+	started := time.Now()
+	res, err := l.Provider.FetchPayout(ctx, id)
+	l.record(ctx, "fetch_payout", id, nil, res, err, started)
+	return res, err
+}
+
 // VerifyWebhook is inbound, not a call we made; the raw event is kept in
 // provider_events instead.
 func (l *logged) VerifyWebhook(headers http.Header, body []byte) (*provider.Event, error) {

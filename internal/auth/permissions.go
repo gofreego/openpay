@@ -58,6 +58,11 @@ const (
 	PermReconRead   = "openpay:recon:read"
 	PermReconManage = "openpay:recon:manage"
 
+	PermWithdrawalsRead = "openpay:withdrawals:read"
+	// PermWithdrawalsApprove sends a withdrawal above its wallet type's
+	// threshold. Platform-level, and never usable on your own request.
+	PermWithdrawalsApprove = "openpay:withdrawals:approve"
+
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"
 	// PermWalletsAdjust moves money that no payment or grant explains, so it

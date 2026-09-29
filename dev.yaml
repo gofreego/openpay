@@ -57,6 +57,11 @@ Service:
     Bank: hdfc
     # A captured payment unsettled this long is flagged missing at the provider.
     SettleWithin: 72h
+  Withdrawals:
+    Bank: hdfc
+    # How long a newly verified destination waits before it can receive
+    # money. 0 for local testing; 24h or more in production.
+    BeneficiaryCooling: 0s
   ReconAlerts:
     AgedAfter: 48h
     # Alert when a provider's suspense holds more than this, either way (paise).

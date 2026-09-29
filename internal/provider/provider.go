@@ -71,7 +71,51 @@ const (
 	ObjectPayment ObjectKind = "payment"
 	ObjectRefund  ObjectKind = "refund"
 	ObjectDispute ObjectKind = "dispute"
+	ObjectPayout  ObjectKind = "payout"
 )
+
+// Destination is where a payout goes: a bank account or a UPI id.
+type Destination struct {
+	Name          string
+	AccountNumber string
+	IFSC          string
+	VPA           string
+}
+
+// Verification is the provider's check that a destination exists — a penny
+// drop for a bank account, a directory lookup for a VPA.
+type Verification struct {
+	Verified bool
+	// NameAtBank is the name the bank reports, to compare with the name given.
+	NameAtBank    string
+	FailureReason string
+}
+
+type PayoutStatus string
+
+const (
+	PayoutProcessing PayoutStatus = "processing"
+	PayoutPaid       PayoutStatus = "paid"
+	PayoutFailed     PayoutStatus = "failed"
+	// PayoutReversed: paid, then bounced back by the receiving bank.
+	PayoutReversed PayoutStatus = "reversed"
+)
+
+type PayoutRequest struct {
+	// PayoutID is our id, the provider's idempotency key: asking again after
+	// a timeout returns the same payout rather than paying twice.
+	PayoutID    string
+	Destination Destination
+	Amount      int64
+	Currency    string
+}
+
+type Payout struct {
+	ProviderPayoutID string
+	Status           PayoutStatus
+	Amount           int64
+	FailureReason    string
+}
 
 // Event is a webhook after its signature has been verified. It is only a hint
 // that something changed: the engine fetches the object before acting.
@@ -202,6 +246,11 @@ type Provider interface {
 	// providers serve these by API or as SFTP/CSV reports; either way they
 	// arrive here normalized.
 	FetchSettlements(ctx context.Context, since time.Time) ([]*Settlement, error)
+
+	// Payouts (RazorpayX, Cashfree Payouts) send money out to a customer.
+	VerifyDestination(ctx context.Context, d Destination) (*Verification, error)
+	CreatePayout(ctx context.Context, req PayoutRequest) (*Payout, error)
+	FetchPayout(ctx context.Context, providerPayoutID string) (*Payout, error)
 
 	// VerifyWebhook authenticates a webhook and normalizes it. An invalid
 	// signature is an Unauthenticated error; nothing from such a request may

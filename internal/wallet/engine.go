@@ -757,7 +757,13 @@ func (e *Engine) move(ctx context.Context, req SpendRequest, op Operation, walle
 		if err != nil {
 			return err
 		}
-		journal = newJournal(req.ExternalID, req.Kind, &req.ProductID, req.Wallet)
+		// A platform-scoped wallet belongs to no product; its movements are
+		// booked to none rather than to a product id of 0.
+		var productID *int64
+		if req.ProductID != 0 {
+			productID = &req.ProductID
+		}
+		journal = newJournal(req.ExternalID, req.Kind, productID, req.Wallet)
 		journal.ReversesJournalID = reverses
 		journal.Postings = []*dao.Posting{
 			leg(req.Wallet.LedgerAccountID, walletDirection, req.Amount, walletType.Currency),
@@ -799,4 +805,17 @@ func (e *Engine) CheckRefundIn(ctx context.Context, w *dao.Wallet, amount int64)
 		return err
 	}
 	return assertAllowed(walletType, w, OpRefundIn, amount)
+}
+
+// WithdrawOut takes a withdrawal out of a wallet into the counter account
+// (payouts in transit): Dr wallet. It goes through the capability guard, so
+// a closed-loop type, a frozen wallet, an amount below the type's minimum
+// withdrawal or above its per-transaction limit are all refused here.
+func (e *Engine) WithdrawOut(ctx context.Context, req SpendRequest) (*dao.Journal, error) {
+	return e.move(ctx, req, OpWithdraw, dao.Debit, nil)
+}
+
+// WalletType returns a wallet's type, for callers deciding by its rules.
+func (e *Engine) WalletType(ctx context.Context, w *dao.Wallet) (*dao.WalletType, error) {
+	return e.repo.GetWalletTypeByID(ctx, w.WalletTypeID)
 }

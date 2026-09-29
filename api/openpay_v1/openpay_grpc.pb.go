@@ -69,6 +69,13 @@ const (
 	OpenPay_GetReconSummary_FullMethodName         = "/v1.OpenPay/GetReconSummary"
 	OpenPay_RunReconCycle_FullMethodName           = "/v1.OpenPay/RunReconCycle"
 	OpenPay_GetFeeVariance_FullMethodName          = "/v1.OpenPay/GetFeeVariance"
+	OpenPay_AddBeneficiary_FullMethodName          = "/v1.OpenPay/AddBeneficiary"
+	OpenPay_ListBeneficiaries_FullMethodName       = "/v1.OpenPay/ListBeneficiaries"
+	OpenPay_RequestWithdrawal_FullMethodName       = "/v1.OpenPay/RequestWithdrawal"
+	OpenPay_ApproveWithdrawal_FullMethodName       = "/v1.OpenPay/ApproveWithdrawal"
+	OpenPay_RejectWithdrawal_FullMethodName        = "/v1.OpenPay/RejectWithdrawal"
+	OpenPay_GetWithdrawal_FullMethodName           = "/v1.OpenPay/GetWithdrawal"
+	OpenPay_ListWithdrawals_FullMethodName         = "/v1.OpenPay/ListWithdrawals"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -129,6 +136,13 @@ type OpenPayClient interface {
 	GetReconSummary(ctx context.Context, in *GetReconSummaryRequest, opts ...grpc.CallOption) (*GetReconSummaryResponse, error)
 	RunReconCycle(ctx context.Context, in *RunReconCycleRequest, opts ...grpc.CallOption) (*RunReconCycleResponse, error)
 	GetFeeVariance(ctx context.Context, in *GetFeeVarianceRequest, opts ...grpc.CallOption) (*GetFeeVarianceResponse, error)
+	AddBeneficiary(ctx context.Context, in *AddBeneficiaryRequest, opts ...grpc.CallOption) (*AddBeneficiaryResponse, error)
+	ListBeneficiaries(ctx context.Context, in *ListBeneficiariesRequest, opts ...grpc.CallOption) (*ListBeneficiariesResponse, error)
+	RequestWithdrawal(ctx context.Context, in *RequestWithdrawalRequest, opts ...grpc.CallOption) (*RequestWithdrawalResponse, error)
+	ApproveWithdrawal(ctx context.Context, in *DecideWithdrawalRequest, opts ...grpc.CallOption) (*DecideWithdrawalResponse, error)
+	RejectWithdrawal(ctx context.Context, in *DecideWithdrawalRequest, opts ...grpc.CallOption) (*DecideWithdrawalResponse, error)
+	GetWithdrawal(ctx context.Context, in *GetWithdrawalRequest, opts ...grpc.CallOption) (*GetWithdrawalResponse, error)
+	ListWithdrawals(ctx context.Context, in *ListWithdrawalsRequest, opts ...grpc.CallOption) (*ListWithdrawalsResponse, error)
 }
 
 type openPayClient struct {
@@ -639,6 +653,76 @@ func (c *openPayClient) GetFeeVariance(ctx context.Context, in *GetFeeVarianceRe
 	return out, nil
 }
 
+func (c *openPayClient) AddBeneficiary(ctx context.Context, in *AddBeneficiaryRequest, opts ...grpc.CallOption) (*AddBeneficiaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddBeneficiaryResponse)
+	err := c.cc.Invoke(ctx, OpenPay_AddBeneficiary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListBeneficiaries(ctx context.Context, in *ListBeneficiariesRequest, opts ...grpc.CallOption) (*ListBeneficiariesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBeneficiariesResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListBeneficiaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) RequestWithdrawal(ctx context.Context, in *RequestWithdrawalRequest, opts ...grpc.CallOption) (*RequestWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestWithdrawalResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RequestWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ApproveWithdrawal(ctx context.Context, in *DecideWithdrawalRequest, opts ...grpc.CallOption) (*DecideWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DecideWithdrawalResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ApproveWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) RejectWithdrawal(ctx context.Context, in *DecideWithdrawalRequest, opts ...grpc.CallOption) (*DecideWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DecideWithdrawalResponse)
+	err := c.cc.Invoke(ctx, OpenPay_RejectWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetWithdrawal(ctx context.Context, in *GetWithdrawalRequest, opts ...grpc.CallOption) (*GetWithdrawalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWithdrawalResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetWithdrawal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListWithdrawals(ctx context.Context, in *ListWithdrawalsRequest, opts ...grpc.CallOption) (*ListWithdrawalsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWithdrawalsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListWithdrawals_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -697,6 +781,13 @@ type OpenPayServer interface {
 	GetReconSummary(context.Context, *GetReconSummaryRequest) (*GetReconSummaryResponse, error)
 	RunReconCycle(context.Context, *RunReconCycleRequest) (*RunReconCycleResponse, error)
 	GetFeeVariance(context.Context, *GetFeeVarianceRequest) (*GetFeeVarianceResponse, error)
+	AddBeneficiary(context.Context, *AddBeneficiaryRequest) (*AddBeneficiaryResponse, error)
+	ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error)
+	RequestWithdrawal(context.Context, *RequestWithdrawalRequest) (*RequestWithdrawalResponse, error)
+	ApproveWithdrawal(context.Context, *DecideWithdrawalRequest) (*DecideWithdrawalResponse, error)
+	RejectWithdrawal(context.Context, *DecideWithdrawalRequest) (*DecideWithdrawalResponse, error)
+	GetWithdrawal(context.Context, *GetWithdrawalRequest) (*GetWithdrawalResponse, error)
+	ListWithdrawals(context.Context, *ListWithdrawalsRequest) (*ListWithdrawalsResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -856,6 +947,27 @@ func (UnimplementedOpenPayServer) RunReconCycle(context.Context, *RunReconCycleR
 }
 func (UnimplementedOpenPayServer) GetFeeVariance(context.Context, *GetFeeVarianceRequest) (*GetFeeVarianceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFeeVariance not implemented")
+}
+func (UnimplementedOpenPayServer) AddBeneficiary(context.Context, *AddBeneficiaryRequest) (*AddBeneficiaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddBeneficiary not implemented")
+}
+func (UnimplementedOpenPayServer) ListBeneficiaries(context.Context, *ListBeneficiariesRequest) (*ListBeneficiariesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListBeneficiaries not implemented")
+}
+func (UnimplementedOpenPayServer) RequestWithdrawal(context.Context, *RequestWithdrawalRequest) (*RequestWithdrawalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestWithdrawal not implemented")
+}
+func (UnimplementedOpenPayServer) ApproveWithdrawal(context.Context, *DecideWithdrawalRequest) (*DecideWithdrawalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApproveWithdrawal not implemented")
+}
+func (UnimplementedOpenPayServer) RejectWithdrawal(context.Context, *DecideWithdrawalRequest) (*DecideWithdrawalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RejectWithdrawal not implemented")
+}
+func (UnimplementedOpenPayServer) GetWithdrawal(context.Context, *GetWithdrawalRequest) (*GetWithdrawalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWithdrawal not implemented")
+}
+func (UnimplementedOpenPayServer) ListWithdrawals(context.Context, *ListWithdrawalsRequest) (*ListWithdrawalsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWithdrawals not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -1778,6 +1890,132 @@ func _OpenPay_GetFeeVariance_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_AddBeneficiary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddBeneficiaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).AddBeneficiary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_AddBeneficiary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).AddBeneficiary(ctx, req.(*AddBeneficiaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListBeneficiaries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBeneficiariesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListBeneficiaries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListBeneficiaries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListBeneficiaries(ctx, req.(*ListBeneficiariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_RequestWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RequestWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RequestWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RequestWithdrawal(ctx, req.(*RequestWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ApproveWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ApproveWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ApproveWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ApproveWithdrawal(ctx, req.(*DecideWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_RejectWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).RejectWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_RejectWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).RejectWithdrawal(ctx, req.(*DecideWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetWithdrawal(ctx, req.(*GetWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListWithdrawals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWithdrawalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListWithdrawals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListWithdrawals_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListWithdrawals(ctx, req.(*ListWithdrawalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1984,6 +2222,34 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFeeVariance",
 			Handler:    _OpenPay_GetFeeVariance_Handler,
+		},
+		{
+			MethodName: "AddBeneficiary",
+			Handler:    _OpenPay_AddBeneficiary_Handler,
+		},
+		{
+			MethodName: "ListBeneficiaries",
+			Handler:    _OpenPay_ListBeneficiaries_Handler,
+		},
+		{
+			MethodName: "RequestWithdrawal",
+			Handler:    _OpenPay_RequestWithdrawal_Handler,
+		},
+		{
+			MethodName: "ApproveWithdrawal",
+			Handler:    _OpenPay_ApproveWithdrawal_Handler,
+		},
+		{
+			MethodName: "RejectWithdrawal",
+			Handler:    _OpenPay_RejectWithdrawal_Handler,
+		},
+		{
+			MethodName: "GetWithdrawal",
+			Handler:    _OpenPay_GetWithdrawal_Handler,
+		},
+		{
+			MethodName: "ListWithdrawals",
+			Handler:    _OpenPay_ListWithdrawals_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -34,6 +34,7 @@ const (
 	Settlement        Prefix = "stl"
 	ReconBreak        Prefix = "brk"
 	Payout            Prefix = "pot"
+	Beneficiary       Prefix = "bnf"
 	Idempotency       Prefix = "idk"
 	OutboxEvent       Prefix = "evt"
 	Request           Prefix = "req"

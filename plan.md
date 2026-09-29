@@ -29,7 +29,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
 | 8 | Settlement & Reconciliation | ✅ Complete against the mock (real report formats arrive with each provider in P5) |
-| 9 | Payouts & Withdrawals | ◐ Withdrawal policy on wallet types done; beneficiaries, withdrawals, approval and payouts next |
+| 9 | Payouts & Withdrawals | ✅ Complete against the mock (daily/velocity withdrawal limits and risk holds deferred; real payout APIs with P5) |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
 
 **Admin UI track** (React — see Part III; runs in parallel, each phase trails its backend dependency)
@@ -1231,18 +1231,34 @@ mismatch is detected, classified, and alerted within one cycle.
 > only merchant/vendor payouts remain. Do not build it speculatively — and do not let a
 > `withdrawable` type be enabled in production before the Q1 answer is in writing.
 
-- [ ] `payouts` + `beneficiaries` (bank account / VPA), with verification (penny-drop)
+- [x] `payouts` + `beneficiaries` (bank account / VPA), with verification (penny-drop).
+      `withdrawals` + `beneficiaries`; verified through the provider before any money
+      goes, failures kept on file; account numbers only ever returned masked
 - [x] Withdrawal policy per wallet type, on withdrawable types only:
       `min_withdrawal_amount` (smaller requests are refused) and
       `withdrawal_approval_threshold` (larger ones wait for an approver). Both live in
       `WalletLimits` and can be tightened later; a CHECK refuses them on a closed-loop
       type, where they would read like permission that does not exist
-- [ ] Payout state machine, maker-checker approval above configurable thresholds
-- [ ] Ledger: `Dr wallet (liability)`, `Cr bank` — with an in-transit account between
-      initiation and confirmation, because payouts fail *after* you thought they left
-- [ ] Reversal handling for failed/bounced payouts (funds must return to the wallet)
-- [ ] Provider payout APIs + webhooks + status poller
-- [ ] Limits: per-txn, daily, velocity; risk holds; cooling period for new beneficiaries
+- [x] Payout state machine, maker-checker approval above configurable thresholds.
+      pending_approval → approved → processing → paid | failed | rejected | reversed.
+      The threshold is the wallet type's; the approver cannot be the requester — a
+      CHECK as well as code, and the decision is written before the payout call so the
+      CHECK refuses a self-approval before any money is sent. Approval queue, note
+      required, audited
+- [x] Ledger: `Dr wallet (liability)`, `Cr bank` — with an in-transit account between
+      initiation and confirmation, because payouts fail *after* you thought they left.
+      The money leaves the wallet at request (into `liability:payouts_in_transit`), so
+      it cannot be spent while it waits for approval
+- [x] Reversal handling for failed/bounced payouts (funds must return to the wallet).
+      Failed or rejected: in transit → wallet. Bounced after paid: bank → wallet. Both by
+      a journal reversing the debit
+- [x] Provider payout APIs + webhooks + status poller (mock; RazorpayX / Cashfree
+      Payouts with P5). A timeout leaves the withdrawal approved and the poller
+      resubmits under the same id
+- [ ] Limits: per-txn, daily, velocity; risk holds; cooling period for new beneficiaries.
+      **Done:** per-txn (the type's `max_txn_amount`), minimum withdrawal, approval
+      threshold, beneficiary cooling (`Withdrawals.BeneficiaryCooling`).
+      **Deferred:** daily and velocity withdrawal limits, risk holds
 - [ ] Inter-product accounting: no money actually moves between products (it is all one
       company, one bank account), so this is a reporting concern — per-product P&L and
       float attribution, not an internal payout

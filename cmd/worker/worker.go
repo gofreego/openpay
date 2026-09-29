@@ -22,6 +22,7 @@ import (
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/wallet"
+	"github.com/gofreego/openpay/internal/withdrawal"
 	"github.com/gofreego/openpay/pkg/apperrors"
 
 	"github.com/gofreego/goutils/logger"
@@ -57,8 +58,14 @@ func (w *Worker) Run(ctx context.Context) error {
 	// orders: an order's card capture settles the order in the same transaction.
 	orders := order.New(repo, engine, payments, w.cfg.Service.Orders)
 	reconciler := recon.New(repo, registry, payments, w.cfg.Service.Recon)
+	// Handles payout webhooks the worker processes, and polls quiet payouts.
+	withdrawals := withdrawal.New(repo, registry, engine, payments, w.cfg.Service.Withdrawals)
 
-	w.done.Add(13)
+	w.done.Add(14)
+	go func() {
+		defer w.done.Done()
+		w.every(ctx, "withdrawal poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollWithdrawals(ctx, repo, withdrawals) })
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "reconciliation", w.cfg.Worker.ReconInterval, func() {
@@ -249,6 +256,22 @@ func (w *Worker) expireOrders(ctx context.Context, repo service.Repository, orde
 	for _, o := range due {
 		if err := orders.Expire(ctx, o); err != nil {
 			logger.Warn(ctx, "failed to expire order %s: %v", o.PublicID, err)
+		}
+	}
+}
+
+// pollWithdrawals recovers payouts that went quiet: resubmits ones a timeout
+// left approved, and fetches processing ones whose webhook never came. A
+// missed bounce would leave a customer's money nowhere.
+func (w *Worker) pollWithdrawals(ctx context.Context, repo service.Repository, withdrawals *withdrawal.Engine) {
+	open, err := repo.ListOpenWithdrawals(ctx, time.Now().Add(-w.cfg.Service.Payments.PollAfter), sweepBatch)
+	if err != nil {
+		logger.Error(ctx, "failed to list open withdrawals: %v", err)
+		return
+	}
+	for _, x := range open {
+		if _, err := withdrawals.Poll(ctx, x); err != nil {
+			logger.Warn(ctx, "failed to poll withdrawal %s: %v", x.PublicID, err)
 		}
 	}
 }

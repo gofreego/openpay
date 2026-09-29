@@ -142,6 +142,11 @@ func (e *Engine) processEvent(ctx context.Context, event *dao.ProviderEvent) err
 		return e.processRefundEvent(ctx, event.Provider, *event.ObjectID, reference)
 	case provider.ObjectDispute:
 		return e.processDisputeEvent(ctx, event.Provider, *event.ObjectID)
+	case provider.ObjectPayout:
+		if e.payouts == nil {
+			return apperrors.New(apperrors.Internal, "payout webhook received but no withdrawal engine is connected")
+		}
+		return e.payouts.ProcessPayoutEvent(ctx, event.Provider, *event.ObjectID)
 	case provider.ObjectPayment:
 		attempt, err := e.attemptFor(ctx, event.Provider, *event.ObjectID)
 		if err != nil {
