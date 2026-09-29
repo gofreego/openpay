@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -82,7 +83,13 @@ func (s *Service) GetCustomer(ctx context.Context, req *openpay_v1.GetCustomerRe
 	)
 	switch identifier := req.GetIdentifier().(type) {
 	case *openpay_v1.GetCustomerRequest_Id:
-		customer, err = s.repo.GetCustomerByPublicID(ctx, identifier.Id)
+		// Over HTTP only the {id} path binding exists, so an external ref
+		// arrives here too: anything that is not a customer id is one.
+		if strings.HasPrefix(identifier.Id, string(ids.Customer)+"_") {
+			customer, err = s.repo.GetCustomerByPublicID(ctx, identifier.Id)
+		} else {
+			customer, err = s.repo.GetCustomerByExternalRef(ctx, identifier.Id)
+		}
 	case *openpay_v1.GetCustomerRequest_ExternalRef:
 		customer, err = s.repo.GetCustomerByExternalRef(ctx, identifier.ExternalRef)
 	default:

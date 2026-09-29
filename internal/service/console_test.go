@@ -39,6 +39,13 @@ func TestConsoleReads(t *testing.T) {
 		t.Errorf("refunds: %v", err)
 	}
 
+	// The console looks customers up by OpenAuth ref through the id path.
+	byRef, err := w.svc.GetCustomer(as(auth.PermCustomersRead, auth.PermScopeAll),
+		&openpay_v1.GetCustomerRequest{Identifier: &openpay_v1.GetCustomerRequest_Id{Id: "openauth|42"}})
+	if err != nil || byRef.GetCustomer().GetId() != w.customer {
+		t.Errorf("customer by ref = %v (%v), want %s", byRef, err, w.customer)
+	}
+
 	// Product creation is a platform entry: central ops see it, a product
 	// operator does not.
 	all, err := w.svc.ListAuditLog(as(auth.PermAuditRead, auth.PermScopeAll), &openpay_v1.ListAuditLogRequest{})
