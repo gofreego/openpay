@@ -13,7 +13,20 @@ import (
 	"github.com/gofreego/openpay/internal/recon"
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/internal/withdrawal"
+	"github.com/gofreego/openpay/pkg/fieldcrypt"
+
+	"github.com/gofreego/goutils/logger"
 )
+
+// mustCipher builds the field cipher or stops startup: without a key the only
+// alternative would be storing bank accounts in plaintext.
+func mustCipher(ctx context.Context, cfg fieldcrypt.Config) *fieldcrypt.Cipher {
+	c, err := fieldcrypt.New(cfg)
+	if err != nil {
+		logger.Panic(ctx, "field encryption is not configured (Service.Encryption): %v", err)
+	}
+	return c
+}
 
 type Config struct {
 	// Wallet holds the per-customer caps on real money (see wallet.Limits).
@@ -28,6 +41,9 @@ type Config struct {
 	// Withdrawals configures payouts: the bank they leave from, and how long
 	// a new destination cools before it can receive money.
 	Withdrawals withdrawal.Config `yaml:"Withdrawals"`
+	// Encryption keys for sensitive fields (bank account numbers). Real keys
+	// belong in a secret store; the service refuses to start without one.
+	Encryption fieldcrypt.Config `yaml:"Encryption"`
 }
 
 type Repository interface {
@@ -142,6 +158,8 @@ type PaymentRepository interface {
 	CreateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	UpdateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	LockWithdrawal(ctx context.Context, id int64) (*dao.Withdrawal, error)
+	ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error)
+	SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error
 	GetWithdrawalByPublicID(ctx context.Context, publicID string) (*dao.Withdrawal, error)
 	GetWithdrawalByProviderRef(ctx context.Context, providerName, providerPayoutID string) (*dao.Withdrawal, error)
 	ListWithdrawals(ctx context.Context, scope *filter.ProductScope, status dao.WithdrawalStatus, customerID *int64, limit int) ([]*dao.Withdrawal, error)
@@ -327,7 +345,7 @@ func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 		recon:  recon.New(repo, registry, payments, cfg.Recon),
 		alerts: cfg.ReconAlerts,
 		// Connects itself to payments, which hands it payout webhooks.
-		withdrawals: withdrawal.New(repo, registry, wallets, payments, cfg.Withdrawals),
+		withdrawals: withdrawal.New(repo, registry, wallets, payments, mustCipher(ctx, cfg.Encryption), cfg.Withdrawals),
 		registry:    registry,
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/gofreego/openpay/internal/provider"
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/pkg/apperrors"
+	"github.com/gofreego/openpay/pkg/fieldcrypt"
 	"github.com/gofreego/openpay/pkg/ids"
 
 	"github.com/gofreego/goutils/logger"
@@ -65,6 +66,7 @@ func (c *Config) WithDefaults() {
 }
 
 type Engine struct {
+	cipher    *fieldcrypt.Cipher
 	repo      Repository
 	providers *provider.Registry
 	wallets   *wallet.Engine
@@ -74,9 +76,10 @@ type Engine struct {
 
 // New builds the engine and connects it to the payment engine, which hands
 // it payout webhooks.
-func New(repo Repository, providers *provider.Registry, wallets *wallet.Engine, payments *payment.Engine, cfg Config) *Engine {
+func New(repo Repository, providers *provider.Registry, wallets *wallet.Engine, payments *payment.Engine,
+	cipher *fieldcrypt.Cipher, cfg Config) *Engine {
 	cfg.WithDefaults()
-	e := &Engine{repo: repo, providers: providers, wallets: wallets, cfg: cfg, now: time.Now}
+	e := &Engine{repo: repo, providers: providers, wallets: wallets, cipher: cipher, cfg: cfg, now: time.Now}
 	payments.SetPayoutHook(e)
 	return e
 }
@@ -111,6 +114,16 @@ func (e *Engine) AddBeneficiary(ctx context.Context, b *dao.Beneficiary) (*dao.B
 		return nil, err
 	}
 	b.PublicID = ids.New(ids.Beneficiary)
+	if b.AccountNumber != nil {
+		// Stored sealed: a database dump must not hand over bank accounts.
+		plain := *b.AccountNumber
+		sealed, err := e.cipher.Seal(plain)
+		if err != nil {
+			return nil, err
+		}
+		last4, fingerprint := plain[max(len(plain)-4, 0):], e.cipher.Fingerprint(plain+"|"+deref(b.IFSC))
+		b.AccountNumber, b.AccountLast4, b.AccountFingerprint = &sealed, &last4, &fingerprint
+	}
 	if v.Verified {
 		now := e.now()
 		b.Status, b.VerifiedAt, b.NameAtBank = dao.BeneficiaryVerified, &now, &v.NameAtBank
@@ -258,7 +271,12 @@ func (e *Engine) submit(ctx context.Context, x *dao.Withdrawal) error {
 	}
 	d := provider.Destination{Name: b.Name}
 	if b.AccountNumber != nil {
-		d.AccountNumber, d.IFSC = *b.AccountNumber, *b.IFSC
+		// Opened only here, only to send the payout.
+		account, err := e.cipher.Open(*b.AccountNumber)
+		if err != nil {
+			return err
+		}
+		d.AccountNumber, d.IFSC = account, *b.IFSC
 	}
 	if b.VPA != nil {
 		d.VPA = *b.VPA
@@ -504,4 +522,36 @@ func (e *Engine) emit(ctx context.Context, x *dao.Withdrawal, topic string) erro
 	}
 	return e.repo.SaveOutboxEvent(ctx, &dao.OutboxEvent{EventID: ids.New(ids.OutboxEvent), Topic: topic,
 		AggregateType: "withdrawal", AggregateID: x.PublicID, Payload: payload})
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// SealLegacyAccounts encrypts bank account numbers stored before encryption
+// existed. Idempotent: a sealed value is never touched again. The worker
+// runs it at startup, so no plaintext account number outlives a deploy.
+func (e *Engine) SealLegacyAccounts(ctx context.Context, repo interface {
+	ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error)
+	SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error
+}) (int, error) {
+	legacy, err := repo.ListPlaintextBeneficiaries(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for _, b := range legacy {
+		plain := *b.AccountNumber
+		sealed, err := e.cipher.Seal(plain)
+		if err != nil {
+			return 0, err
+		}
+		if err := repo.SealBeneficiaryAccount(ctx, b.ID, sealed, plain[max(len(plain)-4, 0):],
+			e.cipher.Fingerprint(plain+"|"+deref(b.IFSC))); err != nil {
+			return 0, err
+		}
+	}
+	return len(legacy), nil
 }

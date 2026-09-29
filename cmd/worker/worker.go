@@ -24,6 +24,7 @@ import (
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/internal/withdrawal"
 	"github.com/gofreego/openpay/pkg/apperrors"
+	"github.com/gofreego/openpay/pkg/fieldcrypt"
 
 	"github.com/gofreego/goutils/logger"
 )
@@ -59,7 +60,16 @@ func (w *Worker) Run(ctx context.Context) error {
 	orders := order.New(repo, engine, payments, w.cfg.Service.Orders)
 	reconciler := recon.New(repo, registry, payments, w.cfg.Service.Recon)
 	// Handles payout webhooks the worker processes, and polls quiet payouts.
-	withdrawals := withdrawal.New(repo, registry, engine, payments, w.cfg.Service.Withdrawals)
+	cipher, err := fieldcrypt.New(w.cfg.Service.Encryption)
+	if err != nil {
+		logger.Panic(ctx, "field encryption is not configured (Service.Encryption): %v", err)
+	}
+	withdrawals := withdrawal.New(repo, registry, engine, payments, cipher, w.cfg.Service.Withdrawals)
+	if n, err := withdrawals.SealLegacyAccounts(ctx, repo); err != nil {
+		logger.Error(ctx, "failed to encrypt legacy beneficiary accounts: %v", err)
+	} else if n > 0 {
+		logger.Info(ctx, "encrypted %d bank account numbers stored before encryption", n)
+	}
 
 	w.done.Add(14)
 	go func() {

@@ -13,18 +13,18 @@ import (
 	"github.com/gofreego/openpay/pkg/apperrors"
 )
 
-const beneficiaryColumns = `id, public_id, customer_id, kind, name, account_number, ifsc, vpa, status,
+const beneficiaryColumns = `id, public_id, customer_id, kind, name, account_number, account_last4, account_fingerprint, ifsc, vpa, status,
 	name_at_bank, verified_at, failure_reason, created_at, updated_at`
 
 // CreateBeneficiary registers a destination. The same destination for the
 // same customer is registered once (AlreadyExists the second time).
 func (r *Repository) CreateBeneficiary(ctx context.Context, b *dao.Beneficiary) error {
 	err := r.executor(ctx).QueryRowContext(ctx, `
-		INSERT INTO beneficiaries (public_id, customer_id, kind, name, account_number, ifsc, vpa, status,
-		                           name_at_bank, verified_at, failure_reason)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO beneficiaries (public_id, customer_id, kind, name, account_number, account_last4, account_fingerprint,
+		                           ifsc, vpa, status, name_at_bank, verified_at, failure_reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id, created_at, updated_at`,
-		b.PublicID, b.CustomerID, b.Kind, b.Name, b.AccountNumber, b.IFSC, b.VPA, b.Status,
+		b.PublicID, b.CustomerID, b.Kind, b.Name, b.AccountNumber, b.AccountLast4, b.AccountFingerprint, b.IFSC, b.VPA, b.Status,
 		b.NameAtBank, b.VerifiedAt, b.FailureReason,
 	).Scan(&b.ID, &b.CreatedAt, &b.UpdatedAt)
 	if err != nil {
@@ -77,7 +77,8 @@ func (r *Repository) ListBeneficiaries(ctx context.Context, customerID int64) ([
 
 func scanBeneficiary(row rowScanner) (*dao.Beneficiary, error) {
 	var b dao.Beneficiary
-	err := row.Scan(&b.ID, &b.PublicID, &b.CustomerID, &b.Kind, &b.Name, &b.AccountNumber, &b.IFSC, &b.VPA, &b.Status,
+	err := row.Scan(&b.ID, &b.PublicID, &b.CustomerID, &b.Kind, &b.Name, &b.AccountNumber, &b.AccountLast4, &b.AccountFingerprint,
+		&b.IFSC, &b.VPA, &b.Status,
 		&b.NameAtBank, &b.VerifiedAt, &b.FailureReason, &b.CreatedAt, &b.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -245,4 +246,36 @@ func (r *Repository) WithdrawnSince(ctx context.Context, customerID int64, walle
 		return 0, 0, apperrors.Wrap(err, apperrors.Internal, "failed to total withdrawals")
 	}
 	return amount, count, nil
+}
+
+// ListPlaintextBeneficiaries finds bank accounts stored before encryption,
+// for the one-time backfill.
+func (r *Repository) ListPlaintextBeneficiaries(ctx context.Context) ([]*dao.Beneficiary, error) {
+	rows, err := r.executor(ctx).QueryContext(ctx, `SELECT `+beneficiaryColumns+` FROM beneficiaries
+		WHERE account_number IS NOT NULL AND account_number NOT LIKE 'v1:%'`)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to list plaintext beneficiaries")
+	}
+	defer rows.Close()
+	var out []*dao.Beneficiary
+	for rows.Next() {
+		b, err := scanBeneficiary(rows)
+		if err != nil {
+			return nil, apperrors.Wrap(err, apperrors.Internal, "failed to scan beneficiary")
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+// SealBeneficiaryAccount replaces a plaintext account number with its sealed
+// form, last four and fingerprint — refusing if it is no longer plaintext.
+func (r *Repository) SealBeneficiaryAccount(ctx context.Context, id int64, sealed, last4, fingerprint string) error {
+	_, err := r.executor(ctx).ExecContext(ctx, `
+		UPDATE beneficiaries SET account_number = $2, account_last4 = $3, account_fingerprint = $4
+		WHERE id = $1 AND account_number NOT LIKE 'v1:%'`, id, sealed, last4, fingerprint)
+	if err != nil {
+		return apperrors.Wrap(err, apperrors.Internal, "failed to seal beneficiary account")
+	}
+	return nil
 }

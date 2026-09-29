@@ -26,7 +26,7 @@ func testService(t *testing.T) *service.Service {
 	return service.NewService(context.Background(), &service.Config{Payments: payment.Config{
 		Providers: []string{mock.Name},
 		Mock:      payment.MockConfig{Enabled: true, WebhookSecret: "test", CheckoutURL: "https://mock.test/checkout/"},
-	}}, repo)
+	}, Encryption: testsupport.EncryptionConfig()}, repo)
 }
 
 func as(perms ...string) context.Context {

@@ -1283,7 +1283,12 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       IP allowlist for admin APIs, secret rotation runbook, dependency and container
       scanning
 - [ ] PII: column-level encryption for contact details; log redaction verified by test;
-      data retention and deletion policy
+      data retention and deletion policy.
+      **Done:** bank account numbers sealed with AES-256-GCM (`pkg/fieldcrypt`, key id
+      tagged for rotation; the service refuses to start without a key), last four kept
+      for display, keyed fingerprint for uniqueness, legacy rows sealed by a worker
+      backfill; a test proves neither the column nor the provider request log holds
+      the plaintext. **Open:** retention/deletion policy (a decision, then a job)
 - [ ] Reliability: a **sanity-level** load test of the posting engine (confirm it holds
       up at a multiple of expected volume, not a scaling exercise), connection pool
       tuning, graceful shutdown already in place, DR drill with documented RPO/RTO.

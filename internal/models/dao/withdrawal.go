@@ -12,20 +12,24 @@ const (
 
 // Beneficiary is where a customer's withdrawals may go.
 type Beneficiary struct {
-	ID            int64
-	PublicID      string
-	CustomerID    int64
-	Kind          string // bank_account or vpa
-	Name          string
-	AccountNumber *string
-	IFSC          *string
-	VPA           *string
-	Status        BeneficiaryStatus
-	NameAtBank    *string
-	VerifiedAt    *time.Time
-	FailureReason *string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID         int64
+	PublicID   string
+	CustomerID int64
+	Kind       string // bank_account or vpa
+	Name       string
+	// AccountNumber is sealed with pkg/fieldcrypt in the database; the
+	// engines open it only to send a payout.
+	AccountNumber      *string
+	AccountLast4       *string
+	AccountFingerprint *string
+	IFSC               *string
+	VPA                *string
+	Status             BeneficiaryStatus
+	NameAtBank         *string
+	VerifiedAt         *time.Time
+	FailureReason      *string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type WithdrawalStatus string

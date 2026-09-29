@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ func setup(t *testing.T, cfg withdrawal.Config) *fixture {
 	registry := provider.NewRegistry([]string{mock.Name}, f.mock)
 	f.wallets = wallet.New(f.repo, wallet.Limits{})
 	f.payments = payment.New(f.repo, registry, f.wallets, payment.Config{})
-	f.withdrawals = withdrawal.New(f.repo, registry, f.wallets, f.payments, cfg)
+	f.withdrawals = withdrawal.New(f.repo, registry, f.wallets, f.payments, testsupport.Cipher(t), cfg)
 	f.webhooks = payment.WebhookHandler(webhookPrefix, registry, f.repo)
 
 	f.product = &dao.Product{PublicID: ids.New(ids.Product), Code: "zshala", Name: "Zshala", Status: dao.ProductActive, DefaultCurrency: "INR"}
@@ -394,4 +395,60 @@ func TestCustomerDailyWithdrawalCount(t *testing.T) {
 	f.mustRequest(10000)
 	_, err := f.request(10000, "scr")
 	wantCode(t, "third withdrawal of the day", err, apperrors.WalletOperationDenied)
+}
+
+// A bank account number never sits in the database in the clear — not in
+// its own column, and not in the provider request log — yet payouts still
+// reach it, and the same account cannot be registered twice.
+func TestAccountNumbersAreEncrypted(t *testing.T) {
+	f := setup(t, withdrawal.Config{})
+	x := f.mustRequest(300000) // sends a payout, which opens the account
+
+	var stored string
+	testsupport.Query(t, `SELECT account_number FROM beneficiaries WHERE public_id = '`+f.beneficiary.PublicID+`'`, &stored)
+	if strings.Contains(stored, "12345678901") || !strings.HasPrefix(stored, "v1:") {
+		t.Errorf("stored account = %q, want a sealed value", stored)
+	}
+	var leaks int
+	testsupport.Query(t, `SELECT COUNT(*) FROM provider_request_log
+		WHERE request::text LIKE '%12345678901%' OR response::text LIKE '%12345678901%'`, &leaks)
+	if leaks != 0 {
+		t.Errorf("%d request log rows contain the account number", leaks)
+	}
+	if x.Status != dao.WithdrawalProcessing {
+		t.Errorf("payout to the sealed account: withdrawal %s, want processing", x.Status)
+	}
+
+	account, ifsc := "12345678901", "HDFC0000001"
+	_, err := f.withdrawals.AddBeneficiary(f.ctx, &dao.Beneficiary{CustomerID: f.customer.ID, Kind: "bank_account",
+		Name: "Asha Rao", AccountNumber: &account, IFSC: &ifsc})
+	wantCode(t, "the same account twice", err, apperrors.AlreadyExists)
+}
+
+// Accounts stored before encryption are sealed by the backfill, and still work.
+func TestLegacyAccountsAreSealed(t *testing.T) {
+	f := setup(t, withdrawal.Config{})
+	testsupport.Exec(t, `INSERT INTO beneficiaries (public_id, customer_id, kind, name, account_number, ifsc, status, verified_at)
+		VALUES ('bnf_legacy', $1, 'bank_account', 'Old Row', '999988887777', 'HDFC0000002', 'verified', NOW())`, f.customer.ID)
+
+	n, err := f.withdrawals.SealLegacyAccounts(f.ctx, f.repo)
+	if err != nil || n != 1 {
+		t.Fatalf("sealed %d (%v), want 1", n, err)
+	}
+	if n, _ := f.withdrawals.SealLegacyAccounts(f.ctx, f.repo); n != 0 {
+		t.Errorf("second backfill sealed %d, want 0", n)
+	}
+	var stored, last4 string
+	testsupport.Query(t, `SELECT account_number, account_last4 FROM beneficiaries WHERE public_id = 'bnf_legacy'`, &stored, &last4)
+	if !strings.HasPrefix(stored, "v1:") || last4 != "7777" {
+		t.Errorf("legacy row = %q / %q, want sealed with last four 7777", stored, last4)
+	}
+
+	legacy, err := f.repo.GetBeneficiaryByPublicID(f.ctx, "bnf_legacy")
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if _, err := f.withdrawals.Request(f.ctx, withdrawal.Request{Wallet: f.cash, Beneficiary: legacy, Amount: 20000, RequestedBy: "scr"}); err != nil {
+		t.Errorf("payout to a backfilled account: %v", err)
+	}
 }

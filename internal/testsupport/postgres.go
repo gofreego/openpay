@@ -14,6 +14,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/gofreego/openpay/internal/repository/postgresql"
+	"github.com/gofreego/openpay/pkg/fieldcrypt"
 )
 
 var (
@@ -91,4 +92,22 @@ func Query(t *testing.T, query string, dest ...any) {
 	if err := db.QueryRow(query).Scan(dest...); err != nil {
 		t.Fatalf("%s: %v", query, err)
 	}
+}
+
+// testKey is a fixed 32-byte key for tests only.
+const testKey = "b3BlbnBheS10ZXN0LWtleS0zMi1ieXRlcy1sb25nISE="
+
+// Cipher is a field cipher with a test key.
+func Cipher(t *testing.T) *fieldcrypt.Cipher {
+	t.Helper()
+	c, err := fieldcrypt.New(EncryptionConfig())
+	if err != nil {
+		t.Fatalf("cipher: %v", err)
+	}
+	return c
+}
+
+// EncryptionConfig is the test key as configuration.
+func EncryptionConfig() fieldcrypt.Config {
+	return fieldcrypt.Config{CurrentKeyID: "test", Keys: map[string]string{"test": testKey}}
 }

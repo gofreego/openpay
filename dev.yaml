@@ -73,6 +73,12 @@ Service:
     # Per-person daily caps across all wallets (paise / count). 0 = none.
     MaxCustomerDailyWithdrawal: 0
     MaxCustomerDailyWithdrawals: 0
+  # DEV ONLY. Production keys come from the secret store, never a committed
+  # file. Rotate by adding a key and switching CurrentKeyID; old values still open.
+  Encryption:
+    CurrentKeyID: dev1
+    Keys:
+      dev1: ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxuZyE=
   ReconAlerts:
     AgedAfter: 48h
     # Alert when a provider's suspense holds more than this, either way (paise).

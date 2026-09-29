@@ -255,9 +255,8 @@ func toProtoBeneficiary(b *dao.Beneficiary, customerID string) *openpay_v1.Benef
 		Status: string(b.Status), NameAtBank: deref(b.NameAtBank), FailureReason: deref(b.FailureReason),
 		CreatedAt: timestamppb.New(b.CreatedAt),
 	}
-	if b.AccountNumber != nil {
-		n := *b.AccountNumber
-		out.AccountNumberMasked = "XXXX" + n[max(len(n)-4, 0):]
+	if b.AccountLast4 != nil {
+		out.AccountNumberMasked = "XXXX" + *b.AccountLast4
 	}
 	if b.VerifiedAt != nil {
 		out.VerifiedAt = timestamppb.New(*b.VerifiedAt)
