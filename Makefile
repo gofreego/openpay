@@ -27,10 +27,12 @@ clean:
 	rm -f application
 	rm -rf ui/dist/assets ui/dist/index.html
 
-# The console is embedded in the binary (main.go), so build it first.
-docker: ui build-linux
-	docker build -t openpay .
-	rm -f application
+# Builds the console and the binary inside the image (see Dockerfile). Pass
+# VITE_API_BASE_URL / VITE_LOGIN_URL to point the console elsewhere.
+docker:
+	DOCKER_BUILDKIT=1 docker build -t openpay \
+		$(if $(VITE_API_BASE_URL),--build-arg VITE_API_BASE_URL=$(VITE_API_BASE_URL)) \
+		$(if $(VITE_LOGIN_URL),--build-arg VITE_LOGIN_URL=$(VITE_LOGIN_URL)) .
 
 docker-run: docker
 	@echo "Tagging image as latest"

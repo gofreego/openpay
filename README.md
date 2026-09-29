@@ -35,6 +35,20 @@ go run . -env=dev   # HTTP :8085, gRPC :8086, and the background worker
 never be enabled in production. The API explorer is at
 `http://localhost:8085/openpay/v1/swagger`.
 
+## Build the image
+
+```sh
+make docker   # builds the console and the binary inside Docker; image `openpay`
+```
+
+The console is embedded in the binary and served at `/payments/`, next to the API
+under `/openpay/v1/`. Its API and login URLs are fixed at build time and default to
+production; for another environment:
+
+```sh
+make docker VITE_API_BASE_URL=https://api.staging.example VITE_LOGIN_URL=https://…/login
+```
+
 ## Test
 
 ```sh

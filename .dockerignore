@@ -1,0 +1,6 @@
+# Built inside the image; local copies would only slow the context down.
+ui/node_modules
+ui/dist
+ui/.env*
+application
+.git
