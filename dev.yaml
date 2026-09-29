@@ -110,6 +110,7 @@ Worker:
   PaymentEventInterval: 1s
   PaymentPollInterval: 1m
   ReconInterval: 1h
+  OpsMetricsInterval: 1m
 # Platform chart of accounts: each provider gets a receivable and a suspense
 # account, each bank a current account. Adding one here creates its accounts
 # the next time the worker starts; removing one never deletes anything.

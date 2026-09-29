@@ -15,6 +15,7 @@ import (
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/models/dao"
+	"github.com/gofreego/openpay/internal/opsmetrics"
 	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/outbox"
 	"github.com/gofreego/openpay/internal/payment"
@@ -77,7 +78,18 @@ func (w *Worker) Run(ctx context.Context) error {
 		logger.Error(ctx, "beneficiaries %v duplicate another account of the same customer and were left under their old key; merge them", duplicates)
 	}
 
-	w.done.Add(14)
+	w.done.Add(15)
+	go func() {
+		defer w.done.Done()
+		payments := w.cfg.Service.Payments
+		payments.WithDefaults()
+		cfg := opsmetrics.Config{StuckAfter: payments.TTL + 10*time.Minute}
+		w.every(ctx, "operational metrics", w.cfg.Worker.OpsMetricsInterval, func() {
+			if _, err := opsmetrics.Collect(ctx, repo, cfg, time.Now()); err != nil {
+				logger.Error(ctx, "failed to collect operational metrics: %v", err)
+			}
+		})
+	}()
 	go func() {
 		defer w.done.Done()
 		w.every(ctx, "withdrawal poller", w.cfg.Worker.PaymentPollInterval, func() { w.pollWithdrawals(ctx, repo, withdrawals) })

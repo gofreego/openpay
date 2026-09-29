@@ -18,6 +18,7 @@ import (
 	"github.com/gofreego/openpay/internal/auth"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/models/filter"
+	"github.com/gofreego/openpay/internal/opsmetrics"
 	"github.com/gofreego/openpay/pkg/apperrors"
 	"github.com/gofreego/openpay/pkg/money"
 
@@ -117,11 +118,8 @@ func (s *Service) GetProviderStats(ctx context.Context, req *openpay_v1.GetProvi
 // out of both sides: counting them as failures would make a busy minute look
 // like an outage.
 func successRateBps(st *dao.ProviderStats) int32 {
-	finished := st.Attempts - st.Open
-	if finished <= 0 {
-		return 0
-	}
-	return int32(st.Captured * 10_000 / finished)
+	rate, _ := opsmetrics.SuccessRateBps(st)
+	return int32(rate)
 }
 
 func (s *Service) ExportAccountStatement(ctx context.Context, req *openpay_v1.ExportAccountStatementRequest) (*httpbody.HttpBody, error) {

@@ -79,6 +79,7 @@ type ReportRepository interface {
 	ProductPnL(ctx context.Context, scope *filter.ProductScope, from, to time.Time) ([]*dao.PnLLine, error)
 	ProviderStats(ctx context.Context, scope *filter.ProductScope, from, to time.Time) ([]*dao.ProviderStats, error)
 	ListStatementRange(ctx context.Context, accountID int64, from, to time.Time, afterPostingID int64, limit int) ([]*dao.StatementEntry, error)
+	OpsSnapshot(ctx context.Context, openBefore, holdsBefore time.Time) (*dao.OpsSnapshot, error)
 }
 
 type PaymentRepository interface {

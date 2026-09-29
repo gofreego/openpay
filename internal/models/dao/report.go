@@ -1,5 +1,7 @@
 package dao
 
+import "time"
+
 // PnLLine is one income or expense account's movement over a period, in the
 // account's natural direction (income earned, expense incurred).
 type PnLLine struct {
@@ -29,4 +31,19 @@ type ProviderStats struct {
 type FailureCount struct {
 	Code  string
 	Count int64
+}
+
+// OpsSnapshot is the operational state alerts watch: things that should be
+// zero, or close to it, when the background jobs are keeping up.
+type OpsSnapshot struct {
+	// StuckPayments are open past the point the expiry job should have
+	// closed them.
+	StuckPayments int64
+	// EventBacklog is stored webhooks not yet processed; OldestEvent is when
+	// the oldest of them arrived (nil when there are none).
+	EventBacklog int64
+	OldestEvent  *time.Time
+	// OverdueHolds are active holds past their expiry that the sweeper has
+	// not released: customer money locked for nothing.
+	OverdueHolds int64
 }

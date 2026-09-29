@@ -1334,7 +1334,16 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       already existed. All product-scoped. **Open:** PDF — deferred until someone
       needs a PDF rather than a spreadsheet
 - [ ] Dashboards & alerts: payment success rate by provider/method, webhook lag, stuck
-      payments, suspense balance, ledger drift, hold leakage
+      payments, suspense balance, ledger drift, hold leakage.
+      **Done (metrics + alert spec):** `internal/opsmetrics`, run by the worker every
+      minute, reads from the database (so it reports only what committed):
+      `openpay.payments.success_rate_bps` / `finished_attempts` per provider,
+      `openpay.payments.stuck`, `openpay.webhooks.backlog` / `oldest_age`,
+      `openpay.holds.overdue` — alongside the existing ledger-check, recon and outbox
+      metrics. `docs/alerts.md` gives each alert its condition, severity and runbook,
+      plus the dashboard layout. By *method* is not possible yet: attempts do not
+      record the method; it arrives with real providers. **Open:** building the
+      dashboard and alert rules in the monitoring stack (infra)
 - [x] Runbooks: stuck payment, provider outage, webhook storm, ledger drift detected,
       recon break backlog, key compromise.
       `docs/runbooks/`: each starts from the signal on-call will actually see, and

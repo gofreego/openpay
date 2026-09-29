@@ -73,6 +73,11 @@ type Worker struct {
 
 	// ReconInterval is how often settlements are ingested and reconciled.
 	ReconInterval time.Duration `yaml:"ReconInterval"`
+
+	// OpsMetricsInterval is how often the operational gauges (stuck
+	// payments, webhook backlog, hold leakage, provider success rates) are
+	// read from the database.
+	OpsMetricsInterval time.Duration `yaml:"OpsMetricsInterval"`
 }
 
 func (w *Worker) WithDefaults() {
@@ -99,6 +104,9 @@ func (w *Worker) WithDefaults() {
 	}
 	if w.ReconInterval <= 0 {
 		w.ReconInterval = time.Hour
+	}
+	if w.OpsMetricsInterval <= 0 {
+		w.OpsMetricsInterval = time.Minute
 	}
 }
 

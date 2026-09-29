@@ -178,3 +178,22 @@ func (r *Repository) ListStatementRange(ctx context.Context, accountID int64, fr
 	}
 	return entries, nil
 }
+
+// OpsSnapshot reads the operational figures alerts watch in one statement,
+// so they describe the same moment. Each count is served by a partial index
+// over the few rows that are open, so it stays cheap as history grows.
+func (r *Repository) OpsSnapshot(ctx context.Context, openBefore, holdsBefore time.Time) (*dao.OpsSnapshot, error) {
+	var s dao.OpsSnapshot
+	err := r.executor(ctx).QueryRowContext(ctx, `
+		SELECT
+		  (SELECT COUNT(*) FROM payments
+		    WHERE status IN ('created', 'pending', 'authorized') AND created_at < $1),
+		  (SELECT COUNT(*) FROM provider_events WHERE processed_at IS NULL),
+		  (SELECT MIN(received_at) FROM provider_events WHERE processed_at IS NULL),
+		  (SELECT COUNT(*) FROM ledger_holds WHERE status = 'active' AND expires_at < $2)`,
+		openBefore, holdsBefore).Scan(&s.StuckPayments, &s.EventBacklog, &s.OldestEvent, &s.OverdueHolds)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.Internal, "failed to read operational snapshot")
+	}
+	return &s, nil
+}
