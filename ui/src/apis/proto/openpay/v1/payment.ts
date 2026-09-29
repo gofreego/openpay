@@ -282,3 +282,60 @@ export interface SubmitDisputeEvidenceRequest {
 export interface SubmitDisputeEvidenceResponse {
   dispute: Dispute | undefined;
 }
+
+/** SearchRefundsRequest lists refunds across payments, for the refunds queue. */
+export interface SearchRefundsRequest {
+  status: RefundStatus;
+  productId: string;
+  limit: number;
+  offset: number;
+}
+
+export interface SearchRefundsResponse {
+  /** Newest first. */
+  refunds: Refund[];
+  total: string;
+}
+
+export interface GetPaymentActivityRequest {
+  id: string;
+}
+
+/** ProviderEventRecord is a webhook as received, before any interpretation. */
+export interface ProviderEventRecord {
+  provider: string;
+  eventId: string;
+  eventType: string;
+  objectKind: string;
+  objectId: string;
+  /** The raw body, as the provider sent it. */
+  payload: string;
+  receivedAt: string | undefined;
+  processedAt: string | undefined;
+  attempts: number;
+  lastError: string;
+}
+
+/** ProviderRequestRecord is one call we made to a provider. */
+export interface ProviderRequestRecord {
+  provider: string;
+  operation: string;
+  /** Our reference the call was about: an attempt, refund or provider id. */
+  reference: string;
+  /** JSON, as sent and received. Carries no credentials. */
+  request: string;
+  response: string;
+  error: string;
+  durationMs: number;
+  createdAt: string | undefined;
+}
+
+/**
+ * GetPaymentActivityResponse is everything that passed between us and the
+ * provider about one payment, and its refunds, oldest first — what a
+ * payment's timeline is built from, next to its transitions.
+ */
+export interface GetPaymentActivityResponse {
+  events: ProviderEventRecord[];
+  requests: ProviderRequestRecord[];
+}

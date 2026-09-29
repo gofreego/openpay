@@ -65,6 +65,66 @@
     "application/json"
   ],
   "paths": {
+    "/openpay/v1/audit": {
+      "get": {
+        "summary": "Who changed what",
+        "description": "Operators: requires openpay:audit:read. Product operators see their products' entries; platform entries are central only.",
+        "operationId": "OpenPay_ListAuditLog",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListAuditLogResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "resourceType",
+            "description": "Narrow to one resource, e.g. wallet_type + wty_….",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "actorId",
+            "description": "Or to one actor.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "cursor",
+            "description": "next_cursor from the previous page; empty for the newest entries.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Products"
+        ]
+      }
+    },
     "/openpay/v1/beneficiaries": {
       "post": {
         "summary": "Add a withdrawal destination",
@@ -915,6 +975,73 @@
       }
     },
     "/openpay/v1/orders": {
+      "get": {
+        "summary": "List orders",
+        "description": "Operators: requires openpay:payments:read; limited to the caller's product scope.",
+        "operationId": "OpenPay_ListOrders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListOrdersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": " - ORDER_STATUS_PENDING_PAYMENT: Waiting for the card share; wallet shares are held.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "ORDER_STATUS_UNSPECIFIED",
+              "ORDER_STATUS_PENDING_PAYMENT",
+              "ORDER_STATUS_PAID",
+              "ORDER_STATUS_FAILED",
+              "ORDER_STATUS_CANCELLED",
+              "ORDER_STATUS_PARTIALLY_REFUNDED",
+              "ORDER_STATUS_REFUNDED"
+            ],
+            "default": "ORDER_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Orders"
+        ]
+      },
       "post": {
         "summary": "Create and pay for an order",
         "description": "Product backend only. Checks the amounts add up, then settles from wallets at once, or holds the wallet shares and returns a checkout for the card share. Requires an Idempotency-Key; also idempotent on external_ref.",
@@ -1180,6 +1307,38 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/v1GetPaymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/openpay/v1/payments/{id}/activity": {
+      "get": {
+        "summary": "Webhooks received and provider calls made for a payment",
+        "description": "Operators: requires openpay:payments:read. The raw evidence behind a payment's timeline.",
+        "operationId": "OpenPay_GetPaymentActivity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetPaymentActivityResponse"
             }
           },
           "default": {
@@ -1713,6 +1872,67 @@
         },
         "tags": [
           "Reconciliation"
+        ]
+      }
+    },
+    "/openpay/v1/refunds": {
+      "get": {
+        "summary": "List refunds across payments",
+        "description": "Operators: requires openpay:payments:read; limited to the caller's product scope.",
+        "operationId": "OpenPay_SearchRefunds",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SearchRefundsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "status",
+            "description": " - REFUND_STATUS_INITIATED: Money reserved; the provider has not yet confirmed it has the request.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "REFUND_STATUS_UNSPECIFIED",
+              "REFUND_STATUS_INITIATED",
+              "REFUND_STATUS_PENDING",
+              "REFUND_STATUS_PROCESSED",
+              "REFUND_STATUS_FAILED"
+            ],
+            "default": "REFUND_STATUS_UNSPECIFIED"
+          },
+          {
+            "name": "productId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "Refunds"
         ]
       }
     },
@@ -2840,6 +3060,50 @@
         }
       }
     },
+    "v1AuditEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "actorType": {
+          "type": "string",
+          "description": "operator, service or system."
+        },
+        "actorId": {
+          "type": "string",
+          "description": "The OpenAuth user, the service credential, or \"system\"."
+        },
+        "action": {
+          "type": "string",
+          "description": "Dotted past tense, e.g. wallet_type.updated."
+        },
+        "resourceType": {
+          "type": "string"
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "productId": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string",
+          "description": "JSON, as recorded. Empty before a creation."
+        },
+        "after": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "AuditEntry is one recorded change: who, what, to which resource, and the\nstate before and after."
+    },
     "v1Beneficiary": {
       "type": "object",
       "properties": {
@@ -3453,6 +3717,26 @@
         }
       }
     },
+    "v1GetPaymentActivityResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderEventRecord"
+          }
+        },
+        "requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderRequestRecord"
+          }
+        }
+      },
+      "description": "GetPaymentActivityResponse is everything that passed between us and the\nprovider about one payment, and its refunds, oldest first — what a\npayment's timeline is built from, next to its transitions."
+    },
     "v1GetPaymentResponse": {
       "type": "object",
       "properties": {
@@ -3837,6 +4121,22 @@
       "default": "LEDGER_CHECK_STATUS_UNSPECIFIED",
       "description": " - LEDGER_CHECK_STATUS_OK: Every invariant held.\n - LEDGER_CHECK_STATUS_DRIFT: At least one invariant was broken. Never fixed automatically.\n - LEDGER_CHECK_STATUS_ERROR: The check itself could not complete, so nothing is known."
     },
+    "v1ListAuditLogResponse": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AuditEntry"
+          },
+          "description": "Newest first."
+        },
+        "nextCursor": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListBeneficiariesResponse": {
       "type": "object",
       "properties": {
@@ -3912,6 +4212,23 @@
             "$ref": "#/definitions/v1LedgerCheckRun"
           },
           "description": "Newest first."
+        }
+      }
+    },
+    "v1ListOrdersResponse": {
+      "type": "object",
+      "properties": {
+        "orders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Order"
+          },
+          "description": "Newest first. Summaries: lines, tenders and refunds come with GetOrder."
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -4567,6 +4884,46 @@
       "default": "PRODUCT_STATUS_UNSPECIFIED",
       "description": " - PRODUCT_STATUS_SUSPENDED: Suspended stops new activity. Products are never deleted: money has moved\nagainst them and the ledger must stay interpretable."
     },
+    "v1ProviderEventRecord": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "eventId": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "objectKind": {
+          "type": "string"
+        },
+        "objectId": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "description": "The raw body, as the provider sent it."
+        },
+        "receivedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "processedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastError": {
+          "type": "string"
+        }
+      },
+      "description": "ProviderEventRecord is a webhook as received, before any interpretation."
+    },
     "v1ProviderOverride": {
       "type": "string",
       "enum": [
@@ -4577,6 +4934,40 @@
       ],
       "default": "PROVIDER_OVERRIDE_UNSPECIFIED",
       "description": " - PROVIDER_OVERRIDE_NONE: Back to normal routing by priority and health.\n - PROVIDER_OVERRIDE_DISABLED: Take out of rotation: no new attempts.\n - PROVIDER_OVERRIDE_FORCED: Send every new attempt here, whatever its priority or health."
+    },
+    "v1ProviderRequestRecord": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string",
+          "description": "Our reference the call was about: an attempt, refund or provider id."
+        },
+        "request": {
+          "type": "string",
+          "description": "JSON, as sent and received. Carries no credentials."
+        },
+        "response": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "ProviderRequestRecord is one call we made to a provider."
     },
     "v1ProviderStats": {
       "type": "object",
@@ -4879,6 +5270,23 @@
       "properties": {
         "summary": {
           "$ref": "#/definitions/v1ReconSummary"
+        }
+      }
+    },
+    "v1SearchRefundsResponse": {
+      "type": "object",
+      "properties": {
+        "refunds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Refund"
+          },
+          "description": "Newest first."
+        },
+        "total": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

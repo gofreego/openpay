@@ -202,3 +202,17 @@ export interface CancelOrderRequest {
 export interface CancelOrderResponse {
   order: Order | undefined;
 }
+
+export interface ListOrdersRequest {
+  productId: string;
+  customerId: string;
+  status: OrderStatus;
+  limit: number;
+  offset: number;
+}
+
+export interface ListOrdersResponse {
+  /** Newest first. Summaries: lines, tenders and refunds come with GetOrder. */
+  orders: Order[];
+  total: string;
+}

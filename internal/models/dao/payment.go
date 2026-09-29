@@ -125,6 +125,14 @@ type ProviderEvent struct {
 	LastError     *string
 }
 
+// ProviderRequestRecord is a request-log row as read back.
+type ProviderRequestRecord struct {
+	Provider, Operation, Reference string
+	Request, Response, Error       string
+	DurationMs                     int
+	CreatedAt                      time.Time
+}
+
 // ProviderRequest is one call to a provider, for the request log.
 type ProviderRequest struct {
 	Provider   string

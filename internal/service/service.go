@@ -80,6 +80,13 @@ type ReportRepository interface {
 	ProviderStats(ctx context.Context, scope *filter.ProductScope, from, to time.Time) ([]*dao.ProviderStats, error)
 	ListStatementRange(ctx context.Context, accountID int64, from, to time.Time, afterPostingID int64, limit int) ([]*dao.StatementEntry, error)
 	OpsSnapshot(ctx context.Context, openBefore, holdsBefore time.Time) (*dao.OpsSnapshot, error)
+
+	// Console listings.
+	ListOrders(ctx context.Context, f *filter.Order) ([]*dao.Order, int64, error)
+	SearchRefunds(ctx context.Context, f *filter.Refund) ([]*dao.Refund, int64, error)
+	ListAuditLog(ctx context.Context, f *filter.Audit) ([]*dao.AuditEntry, error)
+	ListProviderRequests(ctx context.Context, refs []string) ([]*dao.ProviderRequestRecord, error)
+	ListProviderEventsFor(ctx context.Context, provider string, objectIDs []string) ([]*dao.ProviderEvent, error)
 }
 
 type PaymentRepository interface {

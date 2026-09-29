@@ -6,6 +6,7 @@
 
 /* eslint-disable */
 import type { HttpBody } from "../../../google/api/httpbody";
+import type { ListAuditLogRequest, ListAuditLogResponse } from "./audit";
 import type {
   CreateServiceCredentialRequest,
   CreateServiceCredentialResponse,
@@ -48,6 +49,8 @@ import type {
   GetOrderResponse,
   ListItemsRequest,
   ListItemsResponse,
+  ListOrdersRequest,
+  ListOrdersResponse,
   RefundOrderRequest,
   RefundOrderResponse,
 } from "./order";
@@ -58,6 +61,8 @@ import type {
   CreateRefundResponse,
   GetDisputeRequest,
   GetDisputeResponse,
+  GetPaymentActivityRequest,
+  GetPaymentActivityResponse,
   GetPaymentRequest,
   GetPaymentResponse,
   GetRefundRequest,
@@ -68,6 +73,8 @@ import type {
   ListPaymentsResponse,
   ListRefundsRequest,
   ListRefundsResponse,
+  SearchRefundsRequest,
+  SearchRefundsResponse,
   SubmitDisputeEvidenceRequest,
   SubmitDisputeEvidenceResponse,
   SyncPaymentRequest,
@@ -229,4 +236,8 @@ export interface OpenPay {
   ExportAccountStatement(request: ExportAccountStatementRequest): Promise<HttpBody>;
   ExportWalletStatement(request: ExportWalletStatementRequest): Promise<HttpBody>;
   GetMe(request: GetMeRequest): Promise<GetMeResponse>;
+  ListOrders(request: ListOrdersRequest): Promise<ListOrdersResponse>;
+  SearchRefunds(request: SearchRefundsRequest): Promise<SearchRefundsResponse>;
+  GetPaymentActivity(request: GetPaymentActivityRequest): Promise<GetPaymentActivityResponse>;
+  ListAuditLog(request: ListAuditLogRequest): Promise<ListAuditLogResponse>;
 }

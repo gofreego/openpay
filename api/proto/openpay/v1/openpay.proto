@@ -19,6 +19,7 @@ import "proto/openpay/v1/withdrawal.proto";
 import "proto/openpay/v1/provider.proto";
 import "proto/openpay/v1/report.proto";
 import "proto/openpay/v1/me.proto";
+import "proto/openpay/v1/audit.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -886,6 +887,50 @@ service OpenPay {
             tags: "Products"
             summary: "Who the calling operator is and what they may reach"
             description: "Operators only. Permissions and the resolved product scope, for the admin console to shape itself; the server still checks every call."
+        };
+    }
+
+    rpc ListOrders (ListOrdersRequest) returns (ListOrdersResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/orders"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "List orders"
+            description: "Operators: requires openpay:payments:read; limited to the caller's product scope."
+        };
+    }
+
+    rpc SearchRefunds (SearchRefundsRequest) returns (SearchRefundsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/refunds"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Refunds"
+            summary: "List refunds across payments"
+            description: "Operators: requires openpay:payments:read; limited to the caller's product scope."
+        };
+    }
+
+    rpc GetPaymentActivity (GetPaymentActivityRequest) returns (GetPaymentActivityResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/payments/{id}/activity"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Payments"
+            summary: "Webhooks received and provider calls made for a payment"
+            description: "Operators: requires openpay:payments:read. The raw evidence behind a payment's timeline."
+        };
+    }
+
+    rpc ListAuditLog (ListAuditLogRequest) returns (ListAuditLogResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/audit"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "Who changed what"
+            description: "Operators: requires openpay:audit:read. Product operators see their products' entries; platform entries are central only."
         };
     }
 }

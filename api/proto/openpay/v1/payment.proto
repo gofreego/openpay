@@ -265,3 +265,58 @@ message SubmitDisputeEvidenceRequest {
 message SubmitDisputeEvidenceResponse {
   Dispute dispute = 1;
 }
+
+// SearchRefundsRequest lists refunds across payments, for the refunds queue.
+message SearchRefundsRequest {
+  RefundStatus status = 1 [(validate.rules).enum = {defined_only: true}];
+  string product_id = 2;
+  int32 limit = 3 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  int32 offset = 4 [(validate.rules).int32 = {gte: 0}];
+}
+
+message SearchRefundsResponse {
+  // Newest first.
+  repeated Refund refunds = 1;
+  int64 total = 2;
+}
+
+message GetPaymentActivityRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+}
+
+// ProviderEventRecord is a webhook as received, before any interpretation.
+message ProviderEventRecord {
+  string provider = 1;
+  string event_id = 2;
+  string event_type = 3;
+  string object_kind = 4;
+  string object_id = 5;
+  // The raw body, as the provider sent it.
+  string payload = 6;
+  google.protobuf.Timestamp received_at = 7;
+  google.protobuf.Timestamp processed_at = 8;
+  int32 attempts = 9;
+  string last_error = 10;
+}
+
+// ProviderRequestRecord is one call we made to a provider.
+message ProviderRequestRecord {
+  string provider = 1;
+  string operation = 2;
+  // Our reference the call was about: an attempt, refund or provider id.
+  string reference = 3;
+  // JSON, as sent and received. Carries no credentials.
+  string request = 4;
+  string response = 5;
+  string error = 6;
+  int32 duration_ms = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// GetPaymentActivityResponse is everything that passed between us and the
+// provider about one payment, and its refunds, oldest first — what a
+// payment's timeline is built from, next to its transitions.
+message GetPaymentActivityResponse {
+  repeated ProviderEventRecord events = 1;
+  repeated ProviderRequestRecord requests = 2;
+}

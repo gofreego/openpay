@@ -80,6 +80,10 @@ const (
 	// PermLedgerCheck runs the invariant checks on demand. They read the whole
 	// ledger in one snapshot, which is not free, hence its own permission.
 	PermLedgerCheck = "openpay:ledger:check"
+
+	// PermAuditRead reads the audit log: product operators see their
+	// products' entries, central ops everything.
+	PermAuditRead = "openpay:audit:read"
 )
 
 // RequireOperator asserts the caller is an operator holding permission.

@@ -1,0 +1,44 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// AuditEntry is one recorded change: who, what, to which resource, and the
+// state before and after.
+message AuditEntry {
+  string id = 1;
+  // operator, service or system.
+  string actor_type = 2;
+  // The OpenAuth user, the service credential, or "system".
+  string actor_id = 3;
+  // Dotted past tense, e.g. wallet_type.updated.
+  string action = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  string product_id = 7;
+  string request_id = 8;
+  // JSON, as recorded. Empty before a creation.
+  string before = 9;
+  string after = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+
+message ListAuditLogRequest {
+  // Narrow to one resource, e.g. wallet_type + wty_….
+  string resource_type = 1 [(validate.rules).string = {max_len: 50}];
+  string resource_id = 2 [(validate.rules).string = {max_len: 100}];
+  // Or to one actor.
+  string actor_id = 3 [(validate.rules).string = {max_len: 200}];
+  int32 limit = 4 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  // next_cursor from the previous page; empty for the newest entries.
+  string cursor = 5 [(validate.rules).string = {max_len: 30}];
+}
+
+message ListAuditLogResponse {
+  // Newest first.
+  repeated AuditEntry entries = 1;
+  string next_cursor = 2;
+}

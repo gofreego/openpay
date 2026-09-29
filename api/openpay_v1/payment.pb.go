@@ -2039,6 +2039,448 @@ func (x *SubmitDisputeEvidenceResponse) GetDispute() *Dispute {
 	return nil
 }
 
+// SearchRefundsRequest lists refunds across payments, for the refunds queue.
+type SearchRefundsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        RefundStatus           `protobuf:"varint,1,opt,name=status,proto3,enum=v1.RefundStatus" json:"status,omitempty"`
+	ProductId     string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchRefundsRequest) Reset() {
+	*x = SearchRefundsRequest{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchRefundsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchRefundsRequest) ProtoMessage() {}
+
+func (x *SearchRefundsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchRefundsRequest.ProtoReflect.Descriptor instead.
+func (*SearchRefundsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SearchRefundsRequest) GetStatus() RefundStatus {
+	if x != nil {
+		return x.Status
+	}
+	return RefundStatus_REFUND_STATUS_UNSPECIFIED
+}
+
+func (x *SearchRefundsRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *SearchRefundsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *SearchRefundsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type SearchRefundsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Newest first.
+	Refunds       []*Refund `protobuf:"bytes,1,rep,name=refunds,proto3" json:"refunds,omitempty"`
+	Total         int64     `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchRefundsResponse) Reset() {
+	*x = SearchRefundsResponse{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchRefundsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchRefundsResponse) ProtoMessage() {}
+
+func (x *SearchRefundsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchRefundsResponse.ProtoReflect.Descriptor instead.
+func (*SearchRefundsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *SearchRefundsResponse) GetRefunds() []*Refund {
+	if x != nil {
+		return x.Refunds
+	}
+	return nil
+}
+
+func (x *SearchRefundsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetPaymentActivityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPaymentActivityRequest) Reset() {
+	*x = GetPaymentActivityRequest{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPaymentActivityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPaymentActivityRequest) ProtoMessage() {}
+
+func (x *GetPaymentActivityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPaymentActivityRequest.ProtoReflect.Descriptor instead.
+func (*GetPaymentActivityRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetPaymentActivityRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// ProviderEventRecord is a webhook as received, before any interpretation.
+type ProviderEventRecord struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Provider   string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	EventId    string                 `protobuf:"bytes,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EventType  string                 `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	ObjectKind string                 `protobuf:"bytes,4,opt,name=object_kind,json=objectKind,proto3" json:"object_kind,omitempty"`
+	ObjectId   string                 `protobuf:"bytes,5,opt,name=object_id,json=objectId,proto3" json:"object_id,omitempty"`
+	// The raw body, as the provider sent it.
+	Payload       string                 `protobuf:"bytes,6,opt,name=payload,proto3" json:"payload,omitempty"`
+	ReceivedAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty"`
+	ProcessedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=processed_at,json=processedAt,proto3" json:"processed_at,omitempty"`
+	Attempts      int32                  `protobuf:"varint,9,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	LastError     string                 `protobuf:"bytes,10,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProviderEventRecord) Reset() {
+	*x = ProviderEventRecord{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProviderEventRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProviderEventRecord) ProtoMessage() {}
+
+func (x *ProviderEventRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProviderEventRecord.ProtoReflect.Descriptor instead.
+func (*ProviderEventRecord) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ProviderEventRecord) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetObjectKind() string {
+	if x != nil {
+		return x.ObjectKind
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetObjectId() string {
+	if x != nil {
+		return x.ObjectId
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
+func (x *ProviderEventRecord) GetReceivedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReceivedAt
+	}
+	return nil
+}
+
+func (x *ProviderEventRecord) GetProcessedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ProcessedAt
+	}
+	return nil
+}
+
+func (x *ProviderEventRecord) GetAttempts() int32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *ProviderEventRecord) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+// ProviderRequestRecord is one call we made to a provider.
+type ProviderRequestRecord struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Provider  string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	Operation string                 `protobuf:"bytes,2,opt,name=operation,proto3" json:"operation,omitempty"`
+	// Our reference the call was about: an attempt, refund or provider id.
+	Reference string `protobuf:"bytes,3,opt,name=reference,proto3" json:"reference,omitempty"`
+	// JSON, as sent and received. Carries no credentials.
+	Request       string                 `protobuf:"bytes,4,opt,name=request,proto3" json:"request,omitempty"`
+	Response      string                 `protobuf:"bytes,5,opt,name=response,proto3" json:"response,omitempty"`
+	Error         string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	DurationMs    int32                  `protobuf:"varint,7,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProviderRequestRecord) Reset() {
+	*x = ProviderRequestRecord{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProviderRequestRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProviderRequestRecord) ProtoMessage() {}
+
+func (x *ProviderRequestRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProviderRequestRecord.ProtoReflect.Descriptor instead.
+func (*ProviderRequestRecord) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ProviderRequestRecord) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetOperation() string {
+	if x != nil {
+		return x.Operation
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetReference() string {
+	if x != nil {
+		return x.Reference
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetRequest() string {
+	if x != nil {
+		return x.Request
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ProviderRequestRecord) GetDurationMs() int32 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *ProviderRequestRecord) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+// GetPaymentActivityResponse is everything that passed between us and the
+// provider about one payment, and its refunds, oldest first — what a
+// payment's timeline is built from, next to its transitions.
+type GetPaymentActivityResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Events        []*ProviderEventRecord   `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	Requests      []*ProviderRequestRecord `protobuf:"bytes,2,rep,name=requests,proto3" json:"requests,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPaymentActivityResponse) Reset() {
+	*x = GetPaymentActivityResponse{}
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPaymentActivityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPaymentActivityResponse) ProtoMessage() {}
+
+func (x *GetPaymentActivityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_payment_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPaymentActivityResponse.ProtoReflect.Descriptor instead.
+func (*GetPaymentActivityResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_payment_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetPaymentActivityResponse) GetEvents() []*ProviderEventRecord {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *GetPaymentActivityResponse) GetRequests() []*ProviderRequestRecord {
+	if x != nil {
+		return x.Requests
+	}
+	return nil
+}
+
 var File_proto_openpay_v1_payment_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_payment_proto_rawDesc = "" +
@@ -2195,7 +2637,49 @@ const file_proto_openpay_v1_payment_proto_rawDesc = "" +
 	"\bevidence\x18\x02 \x01(\tB\n" +
 	"\xfaB\ar\x05\x10\x01\x18\x90NR\bevidence\"F\n" +
 	"\x1dSubmitDisputeEvidenceResponse\x12%\n" +
-	"\adispute\x18\x01 \x01(\v2\v.v1.DisputeR\adispute*\xb6\x03\n" +
+	"\adispute\x18\x01 \x01(\v2\v.v1.DisputeR\adispute\"\xab\x01\n" +
+	"\x14SearchRefundsRequest\x122\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x10.v1.RefundStatusB\b\xfaB\x05\x82\x01\x02\x10\x01R\x06status\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\x12\x1f\n" +
+	"\x05limit\x18\x03 \x01(\x05B\t\xfaB\x06\x1a\x04\x18d(\x00R\x05limit\x12\x1f\n" +
+	"\x06offset\x18\x04 \x01(\x05B\a\xfaB\x04\x1a\x02(\x00R\x06offset\"S\n" +
+	"\x15SearchRefundsResponse\x12$\n" +
+	"\arefunds\x18\x01 \x03(\v2\n" +
+	".v1.RefundR\arefunds\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"4\n" +
+	"\x19GetPaymentActivityRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\"\xfa\x02\n" +
+	"\x13ProviderEventRecord\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\tR\aeventId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x03 \x01(\tR\teventType\x12\x1f\n" +
+	"\vobject_kind\x18\x04 \x01(\tR\n" +
+	"objectKind\x12\x1b\n" +
+	"\tobject_id\x18\x05 \x01(\tR\bobjectId\x12\x18\n" +
+	"\apayload\x18\x06 \x01(\tR\apayload\x12;\n" +
+	"\vreceived_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"receivedAt\x12=\n" +
+	"\fprocessed_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vprocessedAt\x12\x1a\n" +
+	"\battempts\x18\t \x01(\x05R\battempts\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\n" +
+	" \x01(\tR\tlastError\"\x97\x02\n" +
+	"\x15ProviderRequestRecord\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x1c\n" +
+	"\toperation\x18\x02 \x01(\tR\toperation\x12\x1c\n" +
+	"\treference\x18\x03 \x01(\tR\treference\x12\x18\n" +
+	"\arequest\x18\x04 \x01(\tR\arequest\x12\x1a\n" +
+	"\bresponse\x18\x05 \x01(\tR\bresponse\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\x12\x1f\n" +
+	"\vduration_ms\x18\a \x01(\x05R\n" +
+	"durationMs\x129\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x84\x01\n" +
+	"\x1aGetPaymentActivityResponse\x12/\n" +
+	"\x06events\x18\x01 \x03(\v2\x17.v1.ProviderEventRecordR\x06events\x125\n" +
+	"\brequests\x18\x02 \x03(\v2\x19.v1.ProviderRequestRecordR\brequests*\xb6\x03\n" +
 	"\rPaymentStatus\x12\x1e\n" +
 	"\x1aPAYMENT_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_STATUS_CREATED\x10\x01\x12\x1a\n" +
@@ -2248,7 +2732,7 @@ func file_proto_openpay_v1_payment_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_openpay_v1_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_proto_openpay_v1_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_proto_openpay_v1_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_proto_openpay_v1_payment_proto_goTypes = []any{
 	(PaymentStatus)(0),                    // 0: v1.PaymentStatus
 	(PaymentPurpose)(0),                   // 1: v1.PaymentPurpose
@@ -2280,24 +2764,30 @@ var file_proto_openpay_v1_payment_proto_goTypes = []any{
 	(*ListDisputesResponse)(nil),          // 27: v1.ListDisputesResponse
 	(*SubmitDisputeEvidenceRequest)(nil),  // 28: v1.SubmitDisputeEvidenceRequest
 	(*SubmitDisputeEvidenceResponse)(nil), // 29: v1.SubmitDisputeEvidenceResponse
-	(*timestamppb.Timestamp)(nil),         // 30: google.protobuf.Timestamp
+	(*SearchRefundsRequest)(nil),          // 30: v1.SearchRefundsRequest
+	(*SearchRefundsResponse)(nil),         // 31: v1.SearchRefundsResponse
+	(*GetPaymentActivityRequest)(nil),     // 32: v1.GetPaymentActivityRequest
+	(*ProviderEventRecord)(nil),           // 33: v1.ProviderEventRecord
+	(*ProviderRequestRecord)(nil),         // 34: v1.ProviderRequestRecord
+	(*GetPaymentActivityResponse)(nil),    // 35: v1.GetPaymentActivityResponse
+	(*timestamppb.Timestamp)(nil),         // 36: google.protobuf.Timestamp
 }
 var file_proto_openpay_v1_payment_proto_depIdxs = []int32{
-	30, // 0: v1.PaymentAttempt.created_at:type_name -> google.protobuf.Timestamp
+	36, // 0: v1.PaymentAttempt.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 1: v1.PaymentTransition.from:type_name -> v1.PaymentStatus
 	0,  // 2: v1.PaymentTransition.to:type_name -> v1.PaymentStatus
-	30, // 3: v1.PaymentTransition.at:type_name -> google.protobuf.Timestamp
+	36, // 3: v1.PaymentTransition.at:type_name -> google.protobuf.Timestamp
 	1,  // 4: v1.Payment.purpose:type_name -> v1.PaymentPurpose
 	0,  // 5: v1.Payment.status:type_name -> v1.PaymentStatus
 	2,  // 6: v1.Payment.application:type_name -> v1.PaymentApplication
-	30, // 7: v1.Payment.expires_at:type_name -> google.protobuf.Timestamp
-	30, // 8: v1.Payment.created_at:type_name -> google.protobuf.Timestamp
-	30, // 9: v1.Payment.updated_at:type_name -> google.protobuf.Timestamp
+	36, // 7: v1.Payment.expires_at:type_name -> google.protobuf.Timestamp
+	36, // 8: v1.Payment.created_at:type_name -> google.protobuf.Timestamp
+	36, // 9: v1.Payment.updated_at:type_name -> google.protobuf.Timestamp
 	5,  // 10: v1.Payment.attempts:type_name -> v1.PaymentAttempt
 	6,  // 11: v1.Payment.transitions:type_name -> v1.PaymentTransition
 	3,  // 12: v1.Refund.status:type_name -> v1.RefundStatus
-	30, // 13: v1.Refund.processed_at:type_name -> google.protobuf.Timestamp
-	30, // 14: v1.Refund.created_at:type_name -> google.protobuf.Timestamp
+	36, // 13: v1.Refund.processed_at:type_name -> google.protobuf.Timestamp
+	36, // 14: v1.Refund.created_at:type_name -> google.protobuf.Timestamp
 	8,  // 15: v1.CreateRefundResponse.refund:type_name -> v1.Refund
 	8,  // 16: v1.GetRefundResponse.refund:type_name -> v1.Refund
 	8,  // 17: v1.ListRefundsResponse.refunds:type_name -> v1.Refund
@@ -2308,19 +2798,26 @@ var file_proto_openpay_v1_payment_proto_depIdxs = []int32{
 	7,  // 22: v1.ListPaymentsResponse.payments:type_name -> v1.Payment
 	7,  // 23: v1.SyncPaymentResponse.payment:type_name -> v1.Payment
 	4,  // 24: v1.Dispute.status:type_name -> v1.DisputeStatus
-	30, // 25: v1.Dispute.evidence_due_by:type_name -> google.protobuf.Timestamp
-	30, // 26: v1.Dispute.evidence_submitted_at:type_name -> google.protobuf.Timestamp
-	30, // 27: v1.Dispute.resolved_at:type_name -> google.protobuf.Timestamp
-	30, // 28: v1.Dispute.created_at:type_name -> google.protobuf.Timestamp
+	36, // 25: v1.Dispute.evidence_due_by:type_name -> google.protobuf.Timestamp
+	36, // 26: v1.Dispute.evidence_submitted_at:type_name -> google.protobuf.Timestamp
+	36, // 27: v1.Dispute.resolved_at:type_name -> google.protobuf.Timestamp
+	36, // 28: v1.Dispute.created_at:type_name -> google.protobuf.Timestamp
 	23, // 29: v1.GetDisputeResponse.dispute:type_name -> v1.Dispute
 	4,  // 30: v1.ListDisputesRequest.status:type_name -> v1.DisputeStatus
 	23, // 31: v1.ListDisputesResponse.disputes:type_name -> v1.Dispute
 	23, // 32: v1.SubmitDisputeEvidenceResponse.dispute:type_name -> v1.Dispute
-	33, // [33:33] is the sub-list for method output_type
-	33, // [33:33] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	3,  // 33: v1.SearchRefundsRequest.status:type_name -> v1.RefundStatus
+	8,  // 34: v1.SearchRefundsResponse.refunds:type_name -> v1.Refund
+	36, // 35: v1.ProviderEventRecord.received_at:type_name -> google.protobuf.Timestamp
+	36, // 36: v1.ProviderEventRecord.processed_at:type_name -> google.protobuf.Timestamp
+	36, // 37: v1.ProviderRequestRecord.created_at:type_name -> google.protobuf.Timestamp
+	33, // 38: v1.GetPaymentActivityResponse.events:type_name -> v1.ProviderEventRecord
+	34, // 39: v1.GetPaymentActivityResponse.requests:type_name -> v1.ProviderRequestRecord
+	40, // [40:40] is the sub-list for method output_type
+	40, // [40:40] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_proto_openpay_v1_payment_proto_init() }
@@ -2334,7 +2831,7 @@ func file_proto_openpay_v1_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_openpay_v1_payment_proto_rawDesc), len(file_proto_openpay_v1_payment_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   25,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

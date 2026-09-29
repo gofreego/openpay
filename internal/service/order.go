@@ -161,7 +161,9 @@ func (s *Service) GetOrder(ctx context.Context, req *openpay_v1.GetOrderRequest)
 	return &openpay_v1.GetOrderResponse{Order: out}, nil
 }
 
-func (s *Service) orderDetail(ctx context.Context, o *dao.Order) (*openpay_v1.Order, error) {
+// orderSummary is an order without its lines, tenders and refunds: what a
+// listing shows.
+func orderSummary(o *dao.Order) *openpay_v1.Order {
 	out := &openpay_v1.Order{
 		Id: o.PublicID, ExternalRef: o.ExternalRef, InvoiceRef: o.InvoiceRef, ProductId: o.ProductPublicID,
 		CustomerId: deref(o.CustomerPublicID), Currency: o.Currency,
@@ -173,7 +175,11 @@ func (s *Service) orderDetail(ctx context.Context, o *dao.Order) (*openpay_v1.Or
 	if o.PaidAt != nil {
 		out.PaidAt = timestamppb.New(*o.PaidAt)
 	}
+	return out
+}
 
+func (s *Service) orderDetail(ctx context.Context, o *dao.Order) (*openpay_v1.Order, error) {
+	out := orderSummary(o)
 	lines, err := s.repo.ListOrderLines(ctx, o.ID)
 	if err != nil {
 		return nil, err

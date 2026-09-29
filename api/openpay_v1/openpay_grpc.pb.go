@@ -85,6 +85,10 @@ const (
 	OpenPay_ExportAccountStatement_FullMethodName  = "/v1.OpenPay/ExportAccountStatement"
 	OpenPay_ExportWalletStatement_FullMethodName   = "/v1.OpenPay/ExportWalletStatement"
 	OpenPay_GetMe_FullMethodName                   = "/v1.OpenPay/GetMe"
+	OpenPay_ListOrders_FullMethodName              = "/v1.OpenPay/ListOrders"
+	OpenPay_SearchRefunds_FullMethodName           = "/v1.OpenPay/SearchRefunds"
+	OpenPay_GetPaymentActivity_FullMethodName      = "/v1.OpenPay/GetPaymentActivity"
+	OpenPay_ListAuditLog_FullMethodName            = "/v1.OpenPay/ListAuditLog"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -160,6 +164,10 @@ type OpenPayClient interface {
 	ExportAccountStatement(ctx context.Context, in *ExportAccountStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 	ExportWalletStatement(ctx context.Context, in *ExportWalletStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 	GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*GetMeResponse, error)
+	ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error)
+	SearchRefunds(ctx context.Context, in *SearchRefundsRequest, opts ...grpc.CallOption) (*SearchRefundsResponse, error)
+	GetPaymentActivity(ctx context.Context, in *GetPaymentActivityRequest, opts ...grpc.CallOption) (*GetPaymentActivityResponse, error)
+	ListAuditLog(ctx context.Context, in *ListAuditLogRequest, opts ...grpc.CallOption) (*ListAuditLogResponse, error)
 }
 
 type openPayClient struct {
@@ -820,6 +828,46 @@ func (c *openPayClient) GetMe(ctx context.Context, in *GetMeRequest, opts ...grp
 	return out, nil
 }
 
+func (c *openPayClient) ListOrders(ctx context.Context, in *ListOrdersRequest, opts ...grpc.CallOption) (*ListOrdersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrdersResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListOrders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) SearchRefunds(ctx context.Context, in *SearchRefundsRequest, opts ...grpc.CallOption) (*SearchRefundsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchRefundsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_SearchRefunds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetPaymentActivity(ctx context.Context, in *GetPaymentActivityRequest, opts ...grpc.CallOption) (*GetPaymentActivityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPaymentActivityResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetPaymentActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ListAuditLog(ctx context.Context, in *ListAuditLogRequest, opts ...grpc.CallOption) (*ListAuditLogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAuditLogResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListAuditLog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -893,6 +941,10 @@ type OpenPayServer interface {
 	ExportAccountStatement(context.Context, *ExportAccountStatementRequest) (*httpbody.HttpBody, error)
 	ExportWalletStatement(context.Context, *ExportWalletStatementRequest) (*httpbody.HttpBody, error)
 	GetMe(context.Context, *GetMeRequest) (*GetMeResponse, error)
+	ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error)
+	SearchRefunds(context.Context, *SearchRefundsRequest) (*SearchRefundsResponse, error)
+	GetPaymentActivity(context.Context, *GetPaymentActivityRequest) (*GetPaymentActivityResponse, error)
+	ListAuditLog(context.Context, *ListAuditLogRequest) (*ListAuditLogResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -1097,6 +1149,18 @@ func (UnimplementedOpenPayServer) ExportWalletStatement(context.Context, *Export
 }
 func (UnimplementedOpenPayServer) GetMe(context.Context, *GetMeRequest) (*GetMeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMe not implemented")
+}
+func (UnimplementedOpenPayServer) ListOrders(context.Context, *ListOrdersRequest) (*ListOrdersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListOrders not implemented")
+}
+func (UnimplementedOpenPayServer) SearchRefunds(context.Context, *SearchRefundsRequest) (*SearchRefundsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchRefunds not implemented")
+}
+func (UnimplementedOpenPayServer) GetPaymentActivity(context.Context, *GetPaymentActivityRequest) (*GetPaymentActivityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPaymentActivity not implemented")
+}
+func (UnimplementedOpenPayServer) ListAuditLog(context.Context, *ListAuditLogRequest) (*ListAuditLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAuditLog not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -2289,6 +2353,78 @@ func _OpenPay_GetMe_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_ListOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrdersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListOrders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListOrders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListOrders(ctx, req.(*ListOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_SearchRefunds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchRefundsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).SearchRefunds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_SearchRefunds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).SearchRefunds(ctx, req.(*SearchRefundsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetPaymentActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPaymentActivityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetPaymentActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetPaymentActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetPaymentActivity(ctx, req.(*GetPaymentActivityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ListAuditLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAuditLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListAuditLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListAuditLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListAuditLog(ctx, req.(*ListAuditLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2555,6 +2691,22 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMe",
 			Handler:    _OpenPay_GetMe_Handler,
+		},
+		{
+			MethodName: "ListOrders",
+			Handler:    _OpenPay_ListOrders_Handler,
+		},
+		{
+			MethodName: "SearchRefunds",
+			Handler:    _OpenPay_SearchRefunds_Handler,
+		},
+		{
+			MethodName: "GetPaymentActivity",
+			Handler:    _OpenPay_GetPaymentActivity_Handler,
+		},
+		{
+			MethodName: "ListAuditLog",
+			Handler:    _OpenPay_ListAuditLog_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

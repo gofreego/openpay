@@ -27,7 +27,9 @@ type AuditEntry struct {
 	ResourceID   string
 
 	ProductID *int64
-	RequestID string
+	// ProductPublicID is filled on reads.
+	ProductPublicID *string
+	RequestID       string
 
 	// Before and After are JSON. Keeping both means an entry answers what
 	// changed, not merely that something did. Before is nil on creation.

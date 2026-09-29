@@ -199,3 +199,17 @@ message CancelOrderRequest {
 message CancelOrderResponse {
   Order order = 1;
 }
+
+message ListOrdersRequest {
+  string product_id = 1;
+  string customer_id = 2;
+  OrderStatus status = 3 [(validate.rules).enum = {defined_only: true}];
+  int32 limit = 4 [(validate.rules).int32 = {gte: 0, lte: 100}];
+  int32 offset = 5 [(validate.rules).int32 = {gte: 0}];
+}
+
+message ListOrdersResponse {
+  // Newest first. Summaries: lines, tenders and refunds come with GetOrder.
+  repeated Order orders = 1;
+  int64 total = 2;
+}
