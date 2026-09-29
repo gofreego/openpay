@@ -95,6 +95,8 @@ func (s *Service) buildWalletType(ctx context.Context, req *openpay_v1.CreateWal
 		walletType.MaxBalance = optionalLimit(limits.GetMaxBalance())
 		walletType.MaxTxnAmount = optionalLimit(limits.GetMaxTxnAmount())
 		walletType.DailyLoadLimit = optionalLimit(limits.GetDailyLoadLimit())
+		walletType.MinWithdrawalAmount = optionalLimit(limits.GetMinWithdrawalAmount())
+		walletType.WithdrawalApprovalThreshold = optionalLimit(limits.GetWithdrawalApprovalThreshold())
 	}
 
 	if walletType.Withdrawable {
@@ -137,6 +139,10 @@ func checkWalletCapabilities(req *openpay_v1.CreateWalletTypeRequest) error {
 	if caps.GetWithdrawable() && req.GetWithdrawalApprovalRef() == "" {
 		return apperrors.New(apperrors.InvalidArgument,
 			"withdrawal_approval_ref is required to enable withdrawable: it records the compliance sign-off this configuration rests on")
+	}
+
+	if err := checkWithdrawalPolicy(caps.GetWithdrawable(), req.GetLimits()); err != nil {
+		return err
 	}
 
 	policy := req.GetExpiryPolicy()
@@ -239,6 +245,9 @@ func (s *Service) UpdateWalletType(ctx context.Context, req *openpay_v1.UpdateWa
 				return nil, err
 			}
 
+			if err := checkWithdrawalPolicy(before.Withdrawable, req.GetLimits()); err != nil {
+				return nil, err
+			}
 			updated := &dao.WalletType{
 				PublicID: req.GetId(),
 				Name:     req.GetName(),
@@ -248,6 +257,8 @@ func (s *Service) UpdateWalletType(ctx context.Context, req *openpay_v1.UpdateWa
 				updated.MaxBalance = optionalLimit(limits.GetMaxBalance())
 				updated.MaxTxnAmount = optionalLimit(limits.GetMaxTxnAmount())
 				updated.DailyLoadLimit = optionalLimit(limits.GetDailyLoadLimit())
+				updated.MinWithdrawalAmount = optionalLimit(limits.GetMinWithdrawalAmount())
+				updated.WithdrawalApprovalThreshold = optionalLimit(limits.GetWithdrawalApprovalThreshold())
 			}
 
 			if err := s.repo.UpdateWalletType(ctx, updated); err != nil {
@@ -265,6 +276,26 @@ func (s *Service) UpdateWalletType(ctx context.Context, req *openpay_v1.UpdateWa
 			}
 			return &openpay_v1.UpdateWalletTypeResponse{WalletType: toProtoWalletType(updated)}, nil
 		})
+}
+
+// checkWithdrawalPolicy: withdrawal settings belong only on a withdrawable
+// type — on any other they read like permission that does not exist — and a
+// minimum above the per-transaction limit would make every withdrawal
+// impossible. The database enforces the first too; this says why.
+func checkWithdrawalPolicy(withdrawable bool, limits *openpay_v1.WalletLimits) error {
+	if limits == nil {
+		return nil
+	}
+	min, threshold := limits.GetMinWithdrawalAmount(), limits.GetWithdrawalApprovalThreshold()
+	if !withdrawable && (min != 0 || threshold != 0) {
+		return apperrors.New(apperrors.InvalidArgument,
+			"min_withdrawal_amount and withdrawal_approval_threshold apply only to a withdrawable wallet type")
+	}
+	if max := limits.GetMaxTxnAmount(); max != 0 && min > max {
+		return apperrors.New(apperrors.InvalidArgument,
+			"min_withdrawal_amount %d is above max_txn_amount %d: no withdrawal could ever satisfy both", min, max)
+	}
+	return nil
 }
 
 // optionalLimit turns the proto's zero-means-unlimited into a nullable column.
@@ -292,9 +323,11 @@ func toProtoWalletType(w *dao.WalletType) *openpay_v1.WalletType {
 		},
 		ExpiryPolicy: toProtoExpiryPolicy(w.ExpiryPolicy),
 		Limits: &openpay_v1.WalletLimits{
-			MaxBalance:     derefLimit(w.MaxBalance),
-			MaxTxnAmount:   derefLimit(w.MaxTxnAmount),
-			DailyLoadLimit: derefLimit(w.DailyLoadLimit),
+			MaxBalance:                  derefLimit(w.MaxBalance),
+			MaxTxnAmount:                derefLimit(w.MaxTxnAmount),
+			DailyLoadLimit:              derefLimit(w.DailyLoadLimit),
+			MinWithdrawalAmount:         derefLimit(w.MinWithdrawalAmount),
+			WithdrawalApprovalThreshold: derefLimit(w.WithdrawalApprovalThreshold),
 		},
 		Status:    toProtoWalletTypeStatus(w.Status),
 		CreatedAt: timestamppb.New(w.CreatedAt),

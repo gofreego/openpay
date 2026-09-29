@@ -29,7 +29,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
 | 8 | Settlement & Reconciliation | ✅ Complete against the mock (real report formats arrive with each provider in P5) |
-| 9 | Payouts & Withdrawals | ☐ Not started |
+| 9 | Payouts & Withdrawals | ◐ Withdrawal policy on wallet types done; beneficiaries, withdrawals, approval and payouts next |
 | 10 | Hardening, Compliance & Go-Live | ☐ Not started |
 
 **Admin UI track** (React — see Part III; runs in parallel, each phase trails its backend dependency)
@@ -1232,6 +1232,11 @@ mismatch is detected, classified, and alerted within one cycle.
 > `withdrawable` type be enabled in production before the Q1 answer is in writing.
 
 - [ ] `payouts` + `beneficiaries` (bank account / VPA), with verification (penny-drop)
+- [x] Withdrawal policy per wallet type, on withdrawable types only:
+      `min_withdrawal_amount` (smaller requests are refused) and
+      `withdrawal_approval_threshold` (larger ones wait for an approver). Both live in
+      `WalletLimits` and can be tightened later; a CHECK refuses them on a closed-loop
+      type, where they would read like permission that does not exist
 - [ ] Payout state machine, maker-checker approval above configurable thresholds
 - [ ] Ledger: `Dr wallet (liability)`, `Cr bank` — with an in-transit account between
       initiation and confirmation, because payouts fail *after* you thought they left

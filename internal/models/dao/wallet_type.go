@@ -75,6 +75,13 @@ type WalletType struct {
 	MaxTxnAmount   *int64
 	DailyLoadLimit *int64
 
+	// Withdrawal policy, for withdrawable types only. MinWithdrawalAmount is
+	// the smallest withdrawal accepted; a withdrawal above
+	// WithdrawalApprovalThreshold waits for a person to approve it. nil
+	// means no minimum, and no approval needed at any size.
+	MinWithdrawalAmount         *int64
+	WithdrawalApprovalThreshold *int64
+
 	Status WalletTypeStatus
 
 	WithdrawableApprovedBy  *string

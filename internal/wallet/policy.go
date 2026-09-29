@@ -113,6 +113,11 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 		return denied("wallet type %s does not allow %s", walletType.Code, op)
 	}
 
+	if op == OpWithdraw && walletType.MinWithdrawalAmount != nil && amount < *walletType.MinWithdrawalAmount {
+		return denied("%d is below the %s wallet's minimum withdrawal of %d",
+			amount, walletType.Code, *walletType.MinWithdrawalAmount)
+	}
+
 	// A refund returns an earlier top-up or spend, which already passed this limit.
 	if op != OpRefundOut && op != OpRefundIn && walletType.MaxTxnAmount != nil && amount > *walletType.MaxTxnAmount {
 		return denied("%d exceeds the %s wallet's per-transaction limit of %d",
@@ -123,4 +128,11 @@ func assertAllowed(walletType *dao.WalletType, wallet *dao.Wallet, op Operation,
 
 func denied(format string, args ...any) error {
 	return apperrors.New(apperrors.WalletOperationDenied, format, args...)
+}
+
+// NeedsApproval says whether a withdrawal of amount must wait for a person:
+// above the type's approval threshold it is paid out only once someone other
+// than the requester approves it.
+func NeedsApproval(walletType *dao.WalletType, amount int64) bool {
+	return walletType.WithdrawalApprovalThreshold != nil && amount > *walletType.WithdrawalApprovalThreshold
 }

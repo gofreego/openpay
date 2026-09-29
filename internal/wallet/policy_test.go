@@ -72,3 +72,28 @@ func TestAssertAllowedLimitsAndStatus(t *testing.T) {
 		t.Errorf("adjustment refused: %v", err)
 	}
 }
+
+func TestWithdrawalPolicy(t *testing.T) {
+	min, threshold := int64(10000), int64(500000)
+	cashable := &dao.WalletType{Code: "CASH", Fundable: true, Withdrawable: true,
+		MinWithdrawalAmount: &min, WithdrawalApprovalThreshold: &threshold}
+
+	if err := assertAllowed(cashable, active, OpWithdraw, 9999); !apperrors.Is(err, apperrors.WalletOperationDenied) {
+		t.Errorf("below the minimum: error code = %q", apperrors.CodeOf(err))
+	}
+	if err := assertAllowed(cashable, active, OpWithdraw, 10000); err != nil {
+		t.Errorf("exactly the minimum refused: %v", err)
+	}
+	if NeedsApproval(cashable, 500000) {
+		t.Error("a withdrawal at the threshold should go out automatically")
+	}
+	if !NeedsApproval(cashable, 500001) {
+		t.Error("a withdrawal above the threshold should wait for approval")
+	}
+	if NeedsApproval(mainType, 1_000_000_00) {
+		t.Error("a type with no threshold needs no approval")
+	}
+	if err := assertAllowed(mainType, active, OpWithdraw, 10000); !apperrors.Is(err, apperrors.WalletOperationDenied) {
+		t.Error("a non-withdrawable type allowed a withdrawal")
+	}
+}

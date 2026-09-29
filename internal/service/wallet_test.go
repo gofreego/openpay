@@ -206,3 +206,50 @@ func TestAdjustIsCentralOnly(t *testing.T) {
 		t.Errorf("zshala float = %d, want 700", zshalaFloat)
 	}
 }
+
+// Withdrawal policy lives on withdrawable types only, and can be tightened
+// after creation like any other limit.
+func TestWithdrawalPolicyConfiguration(t *testing.T) {
+	e := setupEstate(t)
+	approver := as(append(readPerms, auth.PermScopeAll, auth.PermWalletTypesApproveWithdrawal)...)
+	req := &openpay_v1.CreateWalletTypeRequest{
+		ProductId: e.zshala.GetId(), Code: "CASH", Name: "Cash", Currency: "INR",
+		Capabilities:          &openpay_v1.WalletCapabilities{Fundable: true, Withdrawable: true},
+		ExpiryPolicy:          openpay_v1.ExpiryPolicy_EXPIRY_POLICY_NONE,
+		WithdrawalApprovalRef: "COMPLIANCE-2026-17",
+		Limits:                &openpay_v1.WalletLimits{MinWithdrawalAmount: 10000, WithdrawalApprovalThreshold: 500000},
+	}
+	created, err := e.svc.CreateWalletType(withKey(approver, "wt-create"), req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if l := created.GetWalletType().GetLimits(); l.GetMinWithdrawalAmount() != 10000 || l.GetWithdrawalApprovalThreshold() != 500000 {
+		t.Errorf("limits = %+v, want the withdrawal policy stored", l)
+	}
+
+	updated, err := e.svc.UpdateWalletType(withKey(approver, "wt-update"), &openpay_v1.UpdateWalletTypeRequest{
+		Id: created.GetWalletType().GetId(), Name: "Cash", Status: openpay_v1.WalletTypeStatus_WALLET_TYPE_STATUS_ACTIVE,
+		Limits: &openpay_v1.WalletLimits{MinWithdrawalAmount: 20000, WithdrawalApprovalThreshold: 200000},
+	})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if got := updated.GetWalletType().GetLimits().GetWithdrawalApprovalThreshold(); got != 200000 {
+		t.Errorf("threshold after update = %d, want 200000", got)
+	}
+
+	// On a closed-loop type, withdrawal settings would read like permission.
+	_, err = e.svc.CreateWalletType(central(), &openpay_v1.CreateWalletTypeRequest{
+		ProductId: e.zshala.GetId(), Code: "CLOSED", Name: "Closed", Currency: "INR",
+		Capabilities: &openpay_v1.WalletCapabilities{Fundable: true},
+		ExpiryPolicy: openpay_v1.ExpiryPolicy_EXPIRY_POLICY_NONE,
+		Limits:       &openpay_v1.WalletLimits{MinWithdrawalAmount: 100},
+	})
+	wantCode(t, "withdrawal policy on a non-withdrawable type", err, apperrors.InvalidArgument)
+
+	bad := req
+	bad.Code = "CASH2"
+	bad.Limits = &openpay_v1.WalletLimits{MaxTxnAmount: 5000, MinWithdrawalAmount: 10000}
+	_, err = e.svc.CreateWalletType(withKey(approver, "wt-bad"), bad)
+	wantCode(t, "minimum above the per-transaction limit", err, apperrors.InvalidArgument)
+}

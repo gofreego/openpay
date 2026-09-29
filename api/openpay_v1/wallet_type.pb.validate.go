@@ -204,6 +204,28 @@ func (m *WalletLimits) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if m.GetMinWithdrawalAmount() < 0 {
+		err := WalletLimitsValidationError{
+			field:  "MinWithdrawalAmount",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if m.GetWithdrawalApprovalThreshold() < 0 {
+		err := WalletLimitsValidationError{
+			field:  "WithdrawalApprovalThreshold",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if len(errors) > 0 {
 		return WalletLimitsMultiError(errors)
 	}

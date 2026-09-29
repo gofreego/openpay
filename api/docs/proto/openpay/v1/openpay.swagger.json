@@ -4262,6 +4262,16 @@
         "dailyLoadLimit": {
           "type": "string",
           "format": "int64"
+        },
+        "minWithdrawalAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Withdrawal policy, for withdrawable types only (rejected otherwise).\nThe smallest withdrawal accepted; smaller requests are refused."
+        },
+        "withdrawalApprovalThreshold": {
+          "type": "string",
+          "format": "int64",
+          "description": "Withdrawals up to this amount are paid out automatically; larger ones\nwait for an approver other than the requester. Zero: none need approval."
         }
       },
       "description": "WalletLimits are in minor units. Zero means no limit."

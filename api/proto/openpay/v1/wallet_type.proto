@@ -59,6 +59,13 @@ message WalletLimits {
   int64 max_balance = 1 [(validate.rules).int64 = {gte: 0}];
   int64 max_txn_amount = 2 [(validate.rules).int64 = {gte: 0}];
   int64 daily_load_limit = 3 [(validate.rules).int64 = {gte: 0}];
+
+  // Withdrawal policy, for withdrawable types only (rejected otherwise).
+  // The smallest withdrawal accepted; smaller requests are refused.
+  int64 min_withdrawal_amount = 4 [(validate.rules).int64 = {gte: 0}];
+  // Withdrawals up to this amount are paid out automatically; larger ones
+  // wait for an approver other than the requester. Zero: none need approval.
+  int64 withdrawal_approval_threshold = 5 [(validate.rules).int64 = {gte: 0}];
 }
 
 // WithdrawalApproval records who signed off on enabling withdrawal.
