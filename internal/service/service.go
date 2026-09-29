@@ -70,6 +70,15 @@ type Repository interface {
 	LedgerRepository
 	WalletRepository
 	PaymentRepository
+	ReportRepository
+}
+
+// ReportRepository reads the figures reports are made of. Every period is
+// half-open, [from, to).
+type ReportRepository interface {
+	ProductPnL(ctx context.Context, scope *filter.ProductScope, from, to time.Time) ([]*dao.PnLLine, error)
+	ProviderStats(ctx context.Context, scope *filter.ProductScope, from, to time.Time) ([]*dao.ProviderStats, error)
+	ListStatementRange(ctx context.Context, accountID int64, from, to time.Time, afterPostingID int64, limit int) ([]*dao.StatementEntry, error)
 }
 
 type PaymentRepository interface {

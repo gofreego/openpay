@@ -36,6 +36,16 @@ func IncomingHeaderMatcher(key string) (string, bool) {
 	return runtime.DefaultHeaderMatcher(key)
 }
 
+// OutgoingHeaderMatcher sends response metadata a browser must see as a real
+// header (an export's file name) under its own name, and everything else
+// the gateway's default way, prefixed Grpc-Metadata-.
+func OutgoingHeaderMatcher(key string) (string, bool) {
+	if strings.ToLower(key) == appcontext.HeaderContentDisposition {
+		return "Content-Disposition", true
+	}
+	return runtime.MetadataHeaderPrefix + key, true
+}
+
 // CallerMiddleware authenticates and populates the caller for requests arriving
 // over HTTP.
 //

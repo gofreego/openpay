@@ -47,6 +47,10 @@
       "description": "Payment provider routing, health and the kill-switch"
     },
     {
+      "name": "Reports",
+      "description": "Per-product P\u0026L, provider success rates and statement exports"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -657,6 +661,53 @@
         ],
         "tags": [
           "Ledger"
+        ]
+      }
+    },
+    "/openpay/v1/ledger/accounts/{accountId}/statement.csv": {
+      "get": {
+        "summary": "Download an account statement as CSV",
+        "description": "Oldest first, amounts in minor units and rupees. A period over the row cap is refused, never truncated. Requires openpay:ledger:read.",
+        "operationId": "OpenPay_ExportAccountStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "accountId",
+            "description": "An account id or code, as for GetLedgerAccount.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Reports"
         ]
       }
     },
@@ -1673,6 +1724,100 @@
         ]
       }
     },
+    "/openpay/v1/reports/pnl": {
+      "get": {
+        "summary": "Income and expense per product for a period",
+        "description": "Read off the ledger's income and expense accounts. Requires openpay:ledger:read; limited to the caller's product scope.",
+        "operationId": "OpenPay_GetProductPnL",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProductPnLResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "productId",
+            "description": "One product. Empty for every product in the caller's scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/openpay/v1/reports/providers": {
+      "get": {
+        "summary": "Payment success rate per provider for a period",
+        "description": "Counts payment attempts started in the period by outcome. Requires openpay:payments:read; limited to the caller's product scope.",
+        "operationId": "OpenPay_GetProviderStats",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetProviderStatsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "productId",
+            "description": "One product. Empty for every product in the caller's scope.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
     "/openpay/v1/settlements": {
       "get": {
         "summary": "List settlements",
@@ -2112,6 +2257,52 @@
         ]
       }
     },
+    "/openpay/v1/wallets/{walletId}/statement.csv": {
+      "get": {
+        "summary": "Download a wallet statement as CSV",
+        "description": "Oldest first. A period over the row cap is refused, never truncated. Operators need openpay:wallets:read; a product backend may export its own customers' wallets.",
+        "operationId": "OpenPay_ExportWalletStatement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
     "/openpay/v1/withdrawals": {
       "get": {
         "summary": "List withdrawals",
@@ -2529,14 +2720,39 @@
       },
       "description": "UpdateWalletTypeRequest carries only what stays safe to change once wallets\nexist. Currency, scope and capabilities are absent on purpose: a balance\nalready held under one set of rules must not have them rewritten underneath\nit."
     },
+    "apiHttpBody": {
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "The HTTP Content-Type header value specifying the content type of the body."
+        },
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "The HTTP request/response body as raw binary."
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          },
+          "description": "Application specific response metadata. Must be set in the first response\nfor streaming APIs."
+        }
+      },
+      "description": "Message that represents an arbitrary HTTP body. It should only be used for\npayload formats that can't be represented as JSON, such as raw binary or\nan HTML page.\n\n\nThis message can be used both in streaming and non-streaming API methods in\nthe request as well as the response.\n\nIt can be used as a top-level request field, which is convenient if one\nwants to extract parameters from either the URL or HTTP template into the\nrequest fields and also want access to the raw HTTP body.\n\nExample:\n\n    message GetResourceRequest {\n      // A unique request id.\n      string request_id = 1;\n\n      // The raw HTTP body is bound to this field.\n      google.api.HttpBody http_body = 2;\n\n    }\n\n    service ResourceService {\n      rpc GetResource(GetResourceRequest)\n        returns (google.api.HttpBody);\n      rpc UpdateResource(google.api.HttpBody)\n        returns (google.protobuf.Empty);\n\n    }\n\nExample with streaming methods:\n\n    service CaldavService {\n      rpc GetCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n      rpc UpdateCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n\n    }\n\nUse of this type only changes how the request and response bodies are\nhandled, all other features will continue to work unchanged."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
         "@type": {
-          "type": "string"
+          "type": "string",
+          "description": "Identifies the type of the serialized Protobuf message with a URI reference\nconsisting of a prefix ending in a slash and the fully-qualified type name.\n\nExample: type.googleapis.com/google.protobuf.StringValue\n\nThis string must contain at least one `/` character, and the content after\nthe last `/` must be the fully-qualified name of the type in canonical\nform, without a leading dot. Do not write a scheme on these URI references\nso that clients do not attempt to contact them.\n\nThe prefix is arbitrary and Protobuf implementations are expected to\nsimply strip off everything up to and including the last `/` to identify\nthe type. `type.googleapis.com/` is a common default prefix that some\nlegacy implementations require. This prefix does not indicate the origin of\nthe type, and URIs containing it are not expected to respond to any\nrequests.\n\nAll type URL strings must be legal URI references with the additional\nrestriction (for the text format) that the content of the reference\nmust consist only of alphanumeric characters, percent-encoded escapes, and\ncharacters in the following set (not including the outer backticks):\n`/-.~_!$\u0026()*+,;=`. Despite our allowing percent encodings, implementations\nshould not unescape them to prevent confusion with existing parsers. For\nexample, `type.googleapis.com%2FFoo` should be rejected.\n\nIn the original design of `Any`, the possibility of launching a type\nresolution service at these type URLs was considered but Protobuf never\nimplemented one and considers contacting these URLs to be problematic and\na potential security issue. Do not attempt to contact type URLs."
         }
       },
-      "additionalProperties": {}
+      "additionalProperties": {},
+      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nIn its binary encoding, an `Any` is an ordinary message; but in other wire\nforms like JSON, it has a special encoding. The format of the type URL is\ndescribed on the `type_url` field.\n\nProtobuf APIs provide utilities to interact with `Any` values:\n\n- A 'pack' operation accepts a message and constructs a generic `Any` wrapper\n  around it.\n- An 'unpack' operation reads the content of an `Any` message, either into an\n  existing message or a new one. Unpack operations must check the type of the\n  value they unpack against the declared `type_url`.\n- An 'is' operation decides whether an `Any` contains a message of the given\n  type, i.e. whether it can 'unpack' that type.\n\nThe JSON format representation of an `Any` follows one of these cases:\n\n- For types without special-cased JSON encodings, the JSON format\n  representation of the `Any` is the same as that of the message, with an\n  additional `@type` field which contains the type URL.\n- For types with special-cased JSON encodings (typically called 'well-known'\n  types, listed in https://protobuf.dev/programming-guides/json/#any), the\n  JSON format representation has a key `@type` which contains the type URL\n  and a key `value` which contains the JSON-serialized value.\n\nThe text format representation of an `Any` is like a message with one field\nwhose name is the type URL in brackets. For example, an `Any` containing a\n`foo.Bar` message may be written `[type.googleapis.com/foo.Bar] { a: 2 }`."
     },
     "rpcStatus": {
       "type": "object",
@@ -3042,6 +3258,18 @@
       "default": "EXPIRY_POLICY_UNSPECIFIED",
       "description": " - EXPIRY_POLICY_FIXED: Expires a fixed period after the balance was credited.\n - EXPIRY_POLICY_ROLLING: Pushes expiry out on every use."
     },
+    "v1FailureCount": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1FeeVarianceLine": {
       "type": "object",
       "properties": {
@@ -3182,11 +3410,35 @@
         }
       }
     },
+    "v1GetProductPnLResponse": {
+      "type": "object",
+      "properties": {
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProductPnL"
+          }
+        }
+      }
+    },
     "v1GetProductResponse": {
       "type": "object",
       "properties": {
         "product": {
           "$ref": "#/definitions/v1Product"
+        }
+      }
+    },
+    "v1GetProviderStatsResponse": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderStats"
+          }
         }
       }
     },
@@ -4160,6 +4412,24 @@
         }
       }
     },
+    "v1PnLLine": {
+      "type": "object",
+      "properties": {
+        "accountCode": {
+          "type": "string",
+          "description": "An income or expense account, e.g. income:zshala:product_sales."
+        },
+        "type": {
+          "type": "string",
+          "description": "income or expense."
+        },
+        "amount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Movement in the period in the account's natural direction: income\nearned, expense incurred. Negative when the period reversed more than it\nbooked (refunds after a quiet month)."
+        }
+      }
+    },
     "v1PostingDirection": {
       "type": "string",
       "enum": [
@@ -4202,6 +4472,40 @@
       },
       "description": "Product is one of our own apps. It is the scoping dimension for wallets,\norders and revenue."
     },
+    "v1ProductPnL": {
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string"
+        },
+        "productCode": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PnLLine"
+          }
+        },
+        "income": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expense": {
+          "type": "string",
+          "format": "int64"
+        },
+        "net": {
+          "type": "string",
+          "format": "int64",
+          "description": "income - expense."
+        }
+      }
+    },
     "v1ProductStatus": {
       "type": "string",
       "enum": [
@@ -4222,6 +4526,58 @@
       ],
       "default": "PROVIDER_OVERRIDE_UNSPECIFIED",
       "description": " - PROVIDER_OVERRIDE_NONE: Back to normal routing by priority and health.\n - PROVIDER_OVERRIDE_DISABLED: Take out of rotation: no new attempts.\n - PROVIDER_OVERRIDE_FORCED: Send every new attempt here, whatever its priority or health."
+    },
+    "v1ProviderStats": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "string",
+          "format": "int64",
+          "description": "Attempts started in the period, by where they are now."
+        },
+        "captured": {
+          "type": "string",
+          "format": "int64"
+        },
+        "failed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expired": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cancelled": {
+          "type": "string",
+          "format": "int64"
+        },
+        "open": {
+          "type": "string",
+          "format": "int64",
+          "description": "Still open: not yet counted either way."
+        },
+        "successRateBps": {
+          "type": "integer",
+          "format": "int32",
+          "description": "captured / (attempts - open), in basis points (9500 = 95.00%). 0 when\nnothing has finished."
+        },
+        "capturedAmount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Sum captured by this provider's attempts in the period, minor units."
+        },
+        "topFailures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1FailureCount"
+          },
+          "description": "The most common failure codes, most frequent first."
+        }
+      }
     },
     "v1ProviderStatus": {
       "type": "object",

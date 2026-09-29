@@ -1302,9 +1302,20 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       is the whole job at this scale. **No partitioning now.** Note the one way low
       throughput still accumulates: postings are append-only forever, so the table grows
       steadily with time rather than with load. Write down a row-count trigger at which
-      to revisit partitioning, and leave it alone until then
+      to revisit partitioning, and leave it alone until then.
+      **Started:** `(account_id, created_at, id)` on postings so period reads (P&L,
+      exports) touch only the period (migration 20)
 - [ ] Reporting: per-product revenue, float held, unreconciled exposure, provider
-      success rates, statement exports (CSV/PDF) for finance
+      success rates, statement exports (CSV/PDF) for finance.
+      **Done:** `GetProductPnL` (every product income/expense account's movement in a
+      period, with income/expense/net per product and currency), `GetProviderStats`
+      (attempts by outcome, success rate over *finished* attempts, captured amount, top
+      failure codes), CSV exports of account and wallet statements (oldest first, minor
+      units and rupees, formula-injection safe, a period over 50k rows refused rather
+      than truncated, named via Content-Disposition). Float held (`GetFloatHeld`) and
+      unreconciled exposure (`GetReconSummary`: suspense, receivable, open/aged breaks)
+      already existed. All product-scoped. **Open:** PDF — deferred until someone
+      needs a PDF rather than a spreadsheet
 - [ ] Dashboards & alerts: payment success rate by provider/method, webhook lag, stuck
       payments, suspense balance, ledger drift, hold leakage
 - [ ] Runbooks: stuck payment, provider outage, webhook storm, ledger drift detected,

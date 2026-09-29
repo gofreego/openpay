@@ -1,0 +1,95 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Reports are read straight off the ledger and the payment tables, so they
+// agree with the statements by construction: there is no second copy of the
+// numbers to drift. Every period is half-open, [from, to).
+
+message PnLLine {
+  // An income or expense account, e.g. income:zshala:product_sales.
+  string account_code = 1;
+  // income or expense.
+  string type = 2;
+  // Movement in the period in the account's natural direction: income
+  // earned, expense incurred. Negative when the period reversed more than it
+  // booked (refunds after a quiet month).
+  int64 amount = 3;
+}
+
+message ProductPnL {
+  string product_id = 1;
+  string product_code = 2;
+  string currency = 3;
+  repeated PnLLine lines = 4;
+  int64 income = 5;
+  int64 expense = 6;
+  // income - expense.
+  int64 net = 7;
+}
+
+message GetProductPnLRequest {
+  google.protobuf.Timestamp from = 1 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp to = 2 [(validate.rules).timestamp.required = true];
+  // One product. Empty for every product in the caller's scope.
+  string product_id = 3;
+}
+
+message GetProductPnLResponse {
+  repeated ProductPnL products = 1;
+}
+
+message ProviderStats {
+  string provider = 1;
+  // Attempts started in the period, by where they are now.
+  int64 attempts = 2;
+  int64 captured = 3;
+  int64 failed = 4;
+  int64 expired = 5;
+  int64 cancelled = 6;
+  // Still open: not yet counted either way.
+  int64 open = 7;
+  // captured / (attempts - open), in basis points (9500 = 95.00%). 0 when
+  // nothing has finished.
+  int32 success_rate_bps = 8;
+  // Sum captured by this provider's attempts in the period, minor units.
+  int64 captured_amount = 9;
+  // The most common failure codes, most frequent first.
+  repeated FailureCount top_failures = 10;
+}
+
+message FailureCount {
+  string code = 1;
+  int64 count = 2;
+}
+
+message GetProviderStatsRequest {
+  google.protobuf.Timestamp from = 1 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp to = 2 [(validate.rules).timestamp.required = true];
+  // One product. Empty for every product in the caller's scope.
+  string product_id = 3;
+}
+
+message GetProviderStatsResponse {
+  repeated ProviderStats providers = 1;
+}
+
+// Statement exports are CSV, oldest first, for finance and for customers who
+// ask. A period too large to export in one file is refused rather than cut
+// short: a truncated statement looks complete and is not.
+message ExportAccountStatementRequest {
+  // An account id or code, as for GetLedgerAccount.
+  string account_id = 1 [(validate.rules).string = {min_len: 1, max_len: 300}];
+  google.protobuf.Timestamp from = 2 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp to = 3 [(validate.rules).timestamp.required = true];
+}
+
+message ExportWalletStatementRequest {
+  string wallet_id = 1 [(validate.rules).string = {min_len: 1}];
+  google.protobuf.Timestamp from = 2 [(validate.rules).timestamp.required = true];
+  google.protobuf.Timestamp to = 3 [(validate.rules).timestamp.required = true];
+}

@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "proto/openpay/v1/payment.proto",
+    "title": "proto/openpay/v1/report.proto",
     "version": "version not set"
   },
   "consumes": [

@@ -8,6 +8,7 @@ package openpay_v1
 
 import (
 	context "context"
+	httpbody "google.golang.org/genproto/googleapis/api/httpbody"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -79,6 +80,10 @@ const (
 	OpenPay_CancelOrder_FullMethodName             = "/v1.OpenPay/CancelOrder"
 	OpenPay_ListProviders_FullMethodName           = "/v1.OpenPay/ListProviders"
 	OpenPay_SetProviderOverride_FullMethodName     = "/v1.OpenPay/SetProviderOverride"
+	OpenPay_GetProductPnL_FullMethodName           = "/v1.OpenPay/GetProductPnL"
+	OpenPay_GetProviderStats_FullMethodName        = "/v1.OpenPay/GetProviderStats"
+	OpenPay_ExportAccountStatement_FullMethodName  = "/v1.OpenPay/ExportAccountStatement"
+	OpenPay_ExportWalletStatement_FullMethodName   = "/v1.OpenPay/ExportWalletStatement"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -149,6 +154,10 @@ type OpenPayClient interface {
 	CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error)
 	ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error)
 	SetProviderOverride(ctx context.Context, in *SetProviderOverrideRequest, opts ...grpc.CallOption) (*SetProviderOverrideResponse, error)
+	GetProductPnL(ctx context.Context, in *GetProductPnLRequest, opts ...grpc.CallOption) (*GetProductPnLResponse, error)
+	GetProviderStats(ctx context.Context, in *GetProviderStatsRequest, opts ...grpc.CallOption) (*GetProviderStatsResponse, error)
+	ExportAccountStatement(ctx context.Context, in *ExportAccountStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	ExportWalletStatement(ctx context.Context, in *ExportWalletStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 }
 
 type openPayClient struct {
@@ -759,6 +768,46 @@ func (c *openPayClient) SetProviderOverride(ctx context.Context, in *SetProvider
 	return out, nil
 }
 
+func (c *openPayClient) GetProductPnL(ctx context.Context, in *GetProductPnLRequest, opts ...grpc.CallOption) (*GetProductPnLResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProductPnLResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetProductPnL_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) GetProviderStats(ctx context.Context, in *GetProviderStatsRequest, opts ...grpc.CallOption) (*GetProviderStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProviderStatsResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetProviderStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ExportAccountStatement(ctx context.Context, in *ExportAccountStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, OpenPay_ExportAccountStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) ExportWalletStatement(ctx context.Context, in *ExportWalletStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, OpenPay_ExportWalletStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -827,6 +876,10 @@ type OpenPayServer interface {
 	CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error)
 	ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
 	SetProviderOverride(context.Context, *SetProviderOverrideRequest) (*SetProviderOverrideResponse, error)
+	GetProductPnL(context.Context, *GetProductPnLRequest) (*GetProductPnLResponse, error)
+	GetProviderStats(context.Context, *GetProviderStatsRequest) (*GetProviderStatsResponse, error)
+	ExportAccountStatement(context.Context, *ExportAccountStatementRequest) (*httpbody.HttpBody, error)
+	ExportWalletStatement(context.Context, *ExportWalletStatementRequest) (*httpbody.HttpBody, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -1016,6 +1069,18 @@ func (UnimplementedOpenPayServer) ListProviders(context.Context, *ListProvidersR
 }
 func (UnimplementedOpenPayServer) SetProviderOverride(context.Context, *SetProviderOverrideRequest) (*SetProviderOverrideResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetProviderOverride not implemented")
+}
+func (UnimplementedOpenPayServer) GetProductPnL(context.Context, *GetProductPnLRequest) (*GetProductPnLResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProductPnL not implemented")
+}
+func (UnimplementedOpenPayServer) GetProviderStats(context.Context, *GetProviderStatsRequest) (*GetProviderStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProviderStats not implemented")
+}
+func (UnimplementedOpenPayServer) ExportAccountStatement(context.Context, *ExportAccountStatementRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExportAccountStatement not implemented")
+}
+func (UnimplementedOpenPayServer) ExportWalletStatement(context.Context, *ExportWalletStatementRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExportWalletStatement not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -2118,6 +2183,78 @@ func _OpenPay_SetProviderOverride_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_GetProductPnL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProductPnLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetProductPnL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetProductPnL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetProductPnL(ctx, req.(*GetProductPnLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_GetProviderStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProviderStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetProviderStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetProviderStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetProviderStats(ctx, req.(*GetProviderStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ExportAccountStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportAccountStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ExportAccountStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ExportAccountStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ExportAccountStatement(ctx, req.(*ExportAccountStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_ExportWalletStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportWalletStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ExportWalletStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ExportWalletStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ExportWalletStatement(ctx, req.(*ExportWalletStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2364,6 +2501,22 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetProviderOverride",
 			Handler:    _OpenPay_SetProviderOverride_Handler,
+		},
+		{
+			MethodName: "GetProductPnL",
+			Handler:    _OpenPay_GetProductPnL_Handler,
+		},
+		{
+			MethodName: "GetProviderStats",
+			Handler:    _OpenPay_GetProviderStats_Handler,
+		},
+		{
+			MethodName: "ExportAccountStatement",
+			Handler:    _OpenPay_ExportAccountStatement_Handler,
+		},
+		{
+			MethodName: "ExportWalletStatement",
+			Handler:    _OpenPay_ExportWalletStatement_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

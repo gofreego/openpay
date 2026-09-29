@@ -64,6 +64,7 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 	// interceptors — so the gateway needs its own copies of the same concerns.
 	mux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(middleware.IncomingHeaderMatcher),
+		runtime.WithOutgoingHeaderMatcher(middleware.OutgoingHeaderMatcher),
 		// Middlewares run in the order listed: authenticate, then count
 		// against that credential's limit.
 		runtime.WithMiddlewares(

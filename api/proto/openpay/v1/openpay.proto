@@ -4,6 +4,7 @@ package v1;
 option go_package = "./openpay_v1";
 
 import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 import "proto/openpay/v1/product.proto";
 import "proto/openpay/v1/wallet_type.proto";
@@ -16,6 +17,7 @@ import "proto/openpay/v1/order.proto";
 import "proto/openpay/v1/recon.proto";
 import "proto/openpay/v1/withdrawal.proto";
 import "proto/openpay/v1/provider.proto";
+import "proto/openpay/v1/report.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -63,6 +65,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Providers"
       description: "Payment provider routing, health and the kill-switch"
+    },
+    {
+      name: "Reports"
+      description: "Per-product P&L, provider success rates and statement exports"
     },
     {
       name: "Ledger"
@@ -820,6 +826,52 @@ service OpenPay {
             tags: "Providers"
             summary: "Disable, force, or restore a provider"
             description: "The kill-switch. Takes effect on the next payment attempt in every process. Central ops: requires openpay:providers:manage and openpay:scope:all; reason required; audited."
+        };
+    }
+
+    // ---- Reports ----
+
+    rpc GetProductPnL (GetProductPnLRequest) returns (GetProductPnLResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/reports/pnl"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reports"
+            summary: "Income and expense per product for a period"
+            description: "Read off the ledger's income and expense accounts. Requires openpay:ledger:read; limited to the caller's product scope."
+        };
+    }
+
+    rpc GetProviderStats (GetProviderStatsRequest) returns (GetProviderStatsResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/reports/providers"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reports"
+            summary: "Payment success rate per provider for a period"
+            description: "Counts payment attempts started in the period by outcome. Requires openpay:payments:read; limited to the caller's product scope."
+        };
+    }
+
+    rpc ExportAccountStatement (ExportAccountStatementRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/openpay/v1/ledger/accounts/{account_id}/statement.csv"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reports"
+            summary: "Download an account statement as CSV"
+            description: "Oldest first, amounts in minor units and rupees. A period over the row cap is refused, never truncated. Requires openpay:ledger:read."
+        };
+    }
+
+    rpc ExportWalletStatement (ExportWalletStatementRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/openpay/v1/wallets/{wallet_id}/statement.csv"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Reports"
+            summary: "Download a wallet statement as CSV"
+            description: "Oldest first. A period over the row cap is refused, never truncated. Operators need openpay:wallets:read; a product backend may export its own customers' wallets."
         };
     }
 }

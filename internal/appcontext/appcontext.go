@@ -26,6 +26,10 @@ const (
 	// HeaderAuthorization carries a service credential as
 	// "Bearer <key_id>.<secret>" when a product backend is the caller.
 	HeaderAuthorization = "authorization"
+
+	// HeaderContentDisposition is response metadata: it names a downloaded
+	// file (a statement export) and is forwarded to HTTP as a real header.
+	HeaderContentDisposition = "content-disposition"
 )
 
 type contextKey int
