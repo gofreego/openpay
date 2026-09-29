@@ -1297,14 +1297,29 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
 - [ ] Reliability: a **sanity-level** load test of the posting engine (confirm it holds
       up at a multiple of expected volume, not a scaling exercise), connection pool
       tuning, graceful shutdown already in place, DR drill with documented RPO/RTO.
-      No read replicas, no sharding — single Postgres is the right answer at this volume
+      No read replicas, no sharding — single Postgres is the right answer at this volume.
+      **Done (load test, pool):** `internal/wallet/load_test.go` (`OPENPAY_LOAD_TEST=1`)
+      drives top-ups, grants, spends and transfers from many goroutines over shared
+      customers, then requires zero invariant findings and wallet totals equal to
+      exactly what went in less what came out. On a laptop Postgres: **~460 ops/s**,
+      p99 ≈ 15 ms at 4 workers; 16 workers give the same throughput with p95 ≈ 180 ms
+      on top-ups. The ceiling is the **hot accounts** — every top-up locks
+      `psp:<provider>:receivable`, every sale `income:<product>:product_sales` — held to
+      commit, not the pool. Far above expected volume; if it ever is not, the fix is
+      to stop tracking a running balance on those few platform accounts (or split
+      them into sub-accounts), not more hardware. Pool settings made explicit in
+      dev.yaml with the reasoning. **Open:** DR drill with documented RPO/RTO (infra)
 - [ ] Ledger growth: get the indexes right so statement queries stay index-only — that
       is the whole job at this scale. **No partitioning now.** Note the one way low
       throughput still accumulates: postings are append-only forever, so the table grows
       steadily with time rather than with load. Write down a row-count trigger at which
       to revisit partitioning, and leave it alone until then.
-      **Started:** `(account_id, created_at, id)` on postings so period reads (P&L,
-      exports) touch only the period (migration 20)
+      **Done (indexes):** every repository predicate checked against the indexes.
+      Added `(account_id, created_at, id)` on postings so period reads (P&L, exports)
+      touch only the period (migration 20), and `payment_attempts (payment_id, id)` —
+      only *live* attempts were indexed, so every payment read scanned all attempts
+      (migration 21). **Revisit partitioning when** `ledger_postings` passes ~50M rows
+      or a statement page p95 exceeds 50 ms, whichever comes first
 - [ ] Reporting: per-product revenue, float held, unreconciled exposure, provider
       success rates, statement exports (CSV/PDF) for finance.
       **Done:** `GetProductPnL` (every product income/expense account's movement in a

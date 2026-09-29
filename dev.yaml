@@ -40,6 +40,15 @@ Repository:
         Password: openpay
         DBName: openpay
         SSLMode: disable
+        # One pool per process, shared by the HTTP, gRPC and worker apps.
+        # The load test (internal/wallet/load_test.go) saturates the posting
+        # engine at ~4 concurrent writers — hot accounts serialise, not the
+        # pool — so 20 is ample; raising it adds queueing, not throughput.
+        # Keep instances × MaxOpenConns well under Postgres max_connections.
+        MaxOpenConns: 20
+        MaxIdleConns: 10
+        ConnMaxLifetime: 30m
+        ConnMaxIdleTime: 5m
       replica: []
 Service:
   # Per-person caps across every fundable wallet a customer holds, in minor
