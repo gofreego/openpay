@@ -1424,26 +1424,28 @@ login/redirect checks are deferred to the end-to-end test pass.*
 
 ## UI Phase U1 — Products & Catalog Screens
 
-- [ ] Products: list, detail, create/edit; feeds the global product filter
-- [ ] Wallet Types: config form rendering the full D10 capability matrix, with a plain-
+*Code complete (except as noted); not yet exercised end to end — pending the combined test pass.*
+
+- [x] Products: list, detail, create/edit; feeds the global product filter
+- [x] Wallet Types: config form rendering the full D10 capability matrix, with a plain-
       language summary of what the chosen combination means ("customers can top this up
       and spend it in Zshala; they cannot cash it out") — operators should never have to
       infer behaviour from a grid of checkboxes
-- [ ] Unmistakable warnings on fields that become immutable once a wallet of that type
+- [x] Unmistakable warnings on fields that become immutable once a wallet of that type
       exists; disable them outright once one does, with an explanatory tooltip
-- [ ] `withdrawable` is a **ceremony, not a checkbox** (D10): elevated permission, an
+- [x] `withdrawable` is a **ceremony, not a checkbox** (D10): elevated permission, an
       explicit compliance-acknowledgement step naming the approver, and a distinct
       visual treatment on any wallet type that has it enabled
 - [ ] Fee policy per `(product, purpose)` (D12) with a worked example rendered live —
       "customer pays ₹510, wallet receives ₹500" beats naming a mode; `PASSED_ON`
-      carries the same compliance ceremony as `withdrawable`
-- [ ] Service credentials: create (**secret displayed exactly once**, copy-to-clipboard,
+      carries the same compliance ceremony as `withdrawable` — **deferred with D12** (no fee policies server-side)
+- [x] Service credentials: create (**secret displayed exactly once**, copy-to-clipboard,
       never re-fetchable), rotate, revoke with confirmation
-- [ ] Customers: search by `external_ref` (OpenAuth user id); detail page showing one
+- [x] Customers: search by `external_ref` (OpenAuth user id); detail page showing one
       person with their wallets grouped by product
 - [ ] Merge ceremony for duplicate OpenAuth accounts: preview the balance-transfer
-      journal before committing; merged records resolve to the survivor, not a 404
-- [ ] Audit log panel embedded on each detail page (who changed what, when)
+      journal before committing; merged records resolve to the survivor, not a 404 — **not built**: no merge API yet
+- [x] Audit log panel embedded on each detail page (who changed what, when)
 
 **Exit criteria:** a product with two wallet types and a customer can be created
 entirely through the UI, and every write shows up in that entity's audit panel.
@@ -1452,21 +1454,23 @@ entirely through the UI, and every write shows up in that entity's audit panel.
 
 ## UI Phase U2 — Wallet & Ledger Explorer
 
-- [ ] Customer wallet list: balance, held, available — all via `<Money>`; grouped by
+*Code complete (except as noted); pending the combined test pass.*
+
+- [x] Customer wallet list: balance, held, available — all via `<Money>`; grouped by
       product, with a cross-product total, since ops see the whole person
-- [ ] Unified customer statement spanning every product — a capability the platform-wide
+- [x] Unified customer statement spanning every product — a capability the platform-wide
       customer model gives for free, and the first thing support will ask for.
       **Central ops only** (U-D6); product operators see their own product's slice
-- [ ] Wallet statement: paginated postings with running `balance_after`, date/type
+- [x] Wallet statement: paginated postings with running `balance_after`, date/type
       filters, CSV export
-- [ ] Ledger account browser: filter by type/owner/currency, drill into an account
-- [ ] **Journal viewer**: postings in a debit/credit table that visibly sums to zero,
+- [x] Ledger account browser: filter by type/owner/currency, drill into an account
+- [x] **Journal viewer**: postings in a debit/credit table that visibly sums to zero,
       links to source object and to any reversal
-- [ ] Trial balance view (platform-wide, filterable per product); prominent banner when
+- [x] Trial balance view (platform-wide, filterable per product); prominent banner when
       the invariant checker reports drift (never let drift be discoverable only in logs)
-- [ ] Manual adjustment flow: reason code, note, **journal preview before submit**,
+- [x] Manual adjustment flow: reason code, note, **journal preview before submit**,
       permission-gated, maker-checker above threshold
-- [ ] Reversal flow from a journal, with the reason ceremony
+- [ ] Reversal flow from a journal, with the reason ceremony — **decided against a generic reversal**: reversing e.g. a top-up journal would take the money back while the payment still says captured. Corrections go through the domain operation (refund, counter-adjustment with reason error_correction — the adjust dialog says so)
 
 **Exit criteria:** an operator can trace a rupee from wallet statement → posting →
 journal → the payment that created it, without leaving the UI or reading a log.
@@ -1475,17 +1479,19 @@ journal → the payment that created it, without leaving the UI or reading a log
 
 ## UI Phase U3 — Payments Console
 
-- [ ] Payments list: filters on status, provider, method, amount band, date range,
+*Code complete (except as noted); pending the combined test pass. Backed by new `GET /payments/{id}/activity` (webhooks + provider calls).*
+
+- [x] Payments list: filters on status, provider, method, amount band, date range,
       customer; saved filter presets; CSV export
-- [ ] Payment detail: canonical status, amounts, provider refs, and a **unified
+- [x] Payment detail: canonical status, amounts, provider refs, and a **unified
       timeline** merging state transitions, received webhook events, and provider
       request/response log entries in one chronological view
-- [ ] Raw webhook payload inspector (read-only, pretty-printed)
-- [ ] "Sync status from provider" action for stuck payments (wraps the P4 poller)
-- [ ] Stuck-payment queue view fed by the poller
+- [x] Raw webhook payload inspector (read-only, pretty-printed)
+- [x] "Sync status from provider" action for stuck payments (wraps the P4 poller)
+- [x] Stuck-payment queue view fed by the poller
 - [ ] Provider config screens: credentials **write-only** (never rendered back),
-      sandbox/live toggle with an unmistakable environment indicator
-- [ ] Provider health / circuit-breaker panel, routing priority editor, and the manual
+      sandbox/live toggle with an unmistakable environment indicator — **not built**: provider credentials live in config/secret store; there is no API to write them, which is the safer place for them
+- [x] Provider health / circuit-breaker panel, routing priority editor, and the manual
       kill-switch to force new attempts onto one provider — with a clear readout of
       which provider is currently taking traffic and why
 
@@ -1497,13 +1503,15 @@ ledger did.
 
 ## UI Phase U4 — Refunds, Disputes & Orders
 
-- [ ] Refund initiation from a payment: full or partial, remaining-refundable shown
+*Code complete; pending the combined test pass. Backed by new `GET /orders` and `GET /refunds`.*
+
+- [x] Refund initiation from a payment: full or partial, remaining-refundable shown
       live, over-refund blocked in the form and by the server
-- [ ] Refund list and detail with async status tracking
-- [ ] Dispute queue: incoming disputes, due dates, evidence upload, outcome recording
-- [ ] Order list and detail: line items, pricing breakdown (subtotal, discount, fee,
+- [x] Refund list and detail with async status tracking
+- [x] Dispute queue: incoming disputes, due dates, evidence upload, outcome recording
+- [x] Order list and detail: line items, pricing breakdown (subtotal, discount, fee,
       tax), **tender breakdown** showing wallet vs gateway split
-- [ ] Saga step visualisation for split-tender orders — which holds are active,
+- [x] Saga step visualisation for split-tender orders — which holds are active,
       captured, or released; highlight stranded holds
 
 **Exit criteria:** a partial refund of a split-tender order is executable from the UI
@@ -1513,15 +1521,17 @@ and the resulting journals are inspectable in the ledger explorer.
 
 ## UI Phase U5 — Reconciliation & Payout Ops
 
-- [ ] Settlement browser: per provider per day, with totals vs ledger comparison
-- [ ] **Break queue** grouped by classification (missing-in-ledger, missing-at-provider,
+*Code complete (except as noted); pending the combined test pass.*
+
+- [x] Settlement browser: per provider per day, with totals vs ledger comparison
+- [x] **Break queue** grouped by classification (missing-in-ledger, missing-at-provider,
       amount mismatch, fee mismatch, duplicate), with age highlighting
-- [ ] Break resolution actions: resolve, force-match with reason, write-off — all
+- [x] Break resolution actions: resolve, force-match with reason, write-off — all
       permission-gated ceremonies producing journals
-- [ ] Suspense account trend chart; it should visibly trend to zero
-- [ ] Payout queue with maker-checker approval UI (approver ≠ requester, enforced
+- [ ] Suspense account trend chart; it should visibly trend to zero — **not built**: needs a time-series endpoint; current suspense per provider is on the recon screen and dashboard
+- [x] Payout queue with maker-checker approval UI (approver ≠ requester, enforced
       server-side and reflected in the UI)
-- [ ] Beneficiary verification status and payout failure/reversal handling
+- [x] Beneficiary verification status and payout failure/reversal handling
 
 **Exit criteria:** a day's recon can be closed from the UI, and an injected mismatch is
 visible, classifiable, and resolvable with a full audit trail.
@@ -1530,17 +1540,23 @@ visible, classifiable, and resolvable with a full audit trail.
 
 ## UI Phase U6 — Dashboard, Polish & Hardening
 
-- [ ] Operations dashboard: payment success rate by provider/method, float held,
+*Partly built; pending the combined test pass. Backed by new `GET /audit`.*
+
+- [x] Operations dashboard: payment success rate by provider/method, float held,
       suspense balance, unreconciled count/amount, ledger drift status, webhook lag,
-      stuck payment count
-- [ ] Charts for volume and success-rate trends
-- [ ] Global search (payment id, order id, customer ref, provider ref)
-- [ ] Table virtualization for large result sets; verify statement pages stay fast
-- [ ] Accessibility pass: keyboard navigation, focus management in dialogs, contrast
+      stuck payment count. *Built without by-method (attempts do not record the method
+      yet) and without webhook lag (a metric — `openpay.webhooks.oldest_age` — not an
+      API); pending approvals and open disputes added*
+- [ ] Charts for volume and success-rate trends — **not built**: needs time-series; the metrics in docs/alerts.md feed Grafana instead
+- [x] Global search (payment id, order id, customer ref, provider ref) — any OpenPay id
+      or a customer's OpenAuth id; **provider refs not yet** (no lookup endpoint)
+- [ ] Table virtualization for large result sets; verify statement pages stay fast — not needed yet: every table is server-paged (≤100 rows)
+- [ ] Accessibility pass: keyboard navigation, focus management in dialogs, contrast — with the test pass
 - [ ] Playwright e2e on the critical ceremonies: manual adjustment, refund, payout
-      approval, break resolution
-- [ ] Ops audit log viewer, idempotency key lookup, outbox/DLQ inspector
-- [ ] Bundle/chunk tuning following the `manualChunks` pattern already used in the
+      approval, break resolution — with the test pass
+- [ ] Ops audit log viewer, idempotency key lookup, outbox/DLQ inspector — **audit log
+      viewer built**; idempotency lookup and outbox inspector not (no endpoints yet)
+- [x] Bundle/chunk tuning following the `manualChunks` pattern already used in the
       sibling admins
 
 **Exit criteria:** an on-call engineer can answer "is payments healthy right now?" from

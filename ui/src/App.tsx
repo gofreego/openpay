@@ -1,12 +1,33 @@
-import {
-  LoginCallbackPage, NotFoundPage, NotificationProvider, ProtectedRoute, SidebarLayout, ThemeProvider,
-} from '@gofreego/tsutils'
+import { LoginCallbackPage, NotFoundPage, NotificationProvider, ProtectedRoute, ThemeProvider } from '@gofreego/tsutils'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import { DashboardPage } from './pages/dashboard'
-import { Shell } from './layout/Shell'
 import { ConsoleProvider } from './hooks'
+import { ConsoleLayout } from './layout/ConsoleLayout'
+import { Shell } from './layout/Shell'
 import { authService, sessionManager } from './services'
+import { DashboardPage } from './pages/dashboard'
+import { ProductsPage } from './pages/catalog/ProductsPage'
+import { ProductDetailPage } from './pages/catalog/ProductDetailPage'
+import { WalletTypesPage } from './pages/catalog/WalletTypesPage'
+import { WalletTypeDetailPage } from './pages/catalog/WalletTypeDetailPage'
+import { CustomersPage } from './pages/customers/CustomersPage'
+import { CustomerDetailPage } from './pages/customers/CustomerDetailPage'
+import { WalletDetailPage } from './pages/wallets/WalletDetailPage'
+import { AccountsPage } from './pages/ledger/AccountsPage'
+import { AccountPage } from './pages/ledger/AccountPage'
+import { JournalPage } from './pages/ledger/JournalPage'
+import { TrialBalancePage } from './pages/ledger/TrialBalancePage'
+import { ChecksPage } from './pages/ledger/ChecksPage'
+import { PaymentsPage } from './pages/payments/PaymentsPage'
+import { PaymentDetailPage } from './pages/payments/PaymentDetailPage'
+import { RefundRedirect, RefundsPage } from './pages/payments/RefundsPage'
+import { DisputesPage, DisputeDetailPage } from './pages/payments/DisputesPage'
+import { OrdersPage } from './pages/orders/OrdersPage'
+import { OrderDetailPage } from './pages/orders/OrderDetailPage'
+import { ProvidersPage } from './pages/providers/ProvidersPage'
+import { ReconPage } from './pages/recon/ReconPage'
+import { WithdrawalsPage, WithdrawalDetailPage } from './pages/withdrawals/WithdrawalsPage'
+import { ReportsPage } from './pages/reports/ReportsPage'
+import { AuditLogPage } from './pages/audit/AuditLogPage'
 
 // The console lives under /payments/ (vite.config.ts base). OpenAuth sends
 // the operator back to the callback with a login token.
@@ -19,18 +40,14 @@ const CALLBACK = '/login-callback'
 // build, so this branch does not exist there.
 const SKIP_LOGIN = import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_LOGIN === 'true'
 
-// Only screens that exist appear; each later phase adds its own, gated on
-// usePermissions() so operators are not shown what they cannot do.
-const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-]
-
 // Restores a stored session's Authorization header before anything renders,
 // so the first request already carries it.
 authService.initializeAuth()
 
 function App() {
-  const layout = <SidebarLayout menuItems={menuItems} isRouter={true} isBrowserRouter={false} style={{ height: '100vh' }} />
+  // The operator (GET /me) is loaded above the sidebar, so navigation can be
+  // shaped by their permissions.
+  const layout = <ConsoleProvider><ConsoleLayout /></ConsoleProvider>
 
   return (
     <ThemeProvider>
@@ -46,9 +63,35 @@ function App() {
                 </ProtectedRoute>
               )}
             >
-              <Route element={<ConsoleProvider><Shell /></ConsoleProvider>}>
+              <Route element={<Shell />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="products" element={<ProductsPage />} />
+                <Route path="products/:id" element={<ProductDetailPage />} />
+                <Route path="wallet-types" element={<WalletTypesPage />} />
+                <Route path="wallet-types/:id" element={<WalletTypeDetailPage />} />
+                <Route path="customers" element={<CustomersPage />} />
+                <Route path="customers/:id" element={<CustomerDetailPage />} />
+                <Route path="wallets/:id" element={<WalletDetailPage />} />
+                <Route path="ledger/accounts" element={<AccountsPage />} />
+                <Route path="ledger/accounts/:id" element={<AccountPage />} />
+                <Route path="ledger/journals/:id" element={<JournalPage />} />
+                <Route path="ledger/trial-balance" element={<TrialBalancePage />} />
+                <Route path="ledger/checks" element={<ChecksPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="payments/:id" element={<PaymentDetailPage />} />
+                <Route path="refunds" element={<RefundsPage />} />
+                <Route path="refunds/:id" element={<RefundRedirect />} />
+                <Route path="disputes" element={<DisputesPage />} />
+                <Route path="disputes/:id" element={<DisputeDetailPage />} />
+                <Route path="orders" element={<OrdersPage />} />
+                <Route path="orders/:id" element={<OrderDetailPage />} />
+                <Route path="providers" element={<ProvidersPage />} />
+                <Route path="recon" element={<ReconPage />} />
+                <Route path="withdrawals" element={<WithdrawalsPage />} />
+                <Route path="withdrawals/:id" element={<WithdrawalDetailPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="audit" element={<AuditLogPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>

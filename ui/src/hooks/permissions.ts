@@ -63,4 +63,5 @@ export const Perm = {
   walletsAdjust: 'openpay:wallets:adjust',
   ledgerRead: 'openpay:ledger:read',
   ledgerCheck: 'openpay:ledger:check',
+  auditRead: 'openpay:audit:read',
 } as const

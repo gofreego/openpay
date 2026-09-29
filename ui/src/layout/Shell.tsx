@@ -5,6 +5,7 @@ import {
 import LockIcon from '@mui/icons-material/Lock'
 import { useConsole } from '../hooks'
 import { ApiErrorAlert } from '../components'
+import { GlobalSearch } from './GlobalSearch'
 
 /**
  * Shell is every page's frame inside the sidebar: breadcrumbs, the product
@@ -59,6 +60,7 @@ function Header() {
             : <Link key={to} component={RouterLink} to={to} underline="hover" color="inherit" sx={{ textTransform: 'capitalize' }}>{label}</Link>
         })}
       </Breadcrumbs>
+      <GlobalSearch />
       <ProductFilter />
       <Operator />
     </Box>
