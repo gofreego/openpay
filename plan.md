@@ -1286,7 +1286,9 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       (default plus per-credential overrides, `Server.RateLimit`), applied on both
       edges after authentication; over the limit is `rate_limited` / HTTP 429 with
       `Retry-After`, nothing done. Per instance by design (N instances ⇒ up to N×);
-      operators are limited by opengate, not here
+      operators are limited by opengate, not here; secret rotation runbook done
+      (`docs/runbooks/key-compromise.md`: credentials, provider keys, webhook
+      secret, field-encryption key with reseal, DB, operator-header trust)
 - [ ] PII: column-level encryption for contact details; log redaction verified by test;
       data retention and deletion policy.
       **Done:** bank account numbers sealed with AES-256-GCM (`pkg/fieldcrypt`, key id
@@ -1333,8 +1335,13 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       needs a PDF rather than a spreadsheet
 - [ ] Dashboards & alerts: payment success rate by provider/method, webhook lag, stuck
       payments, suspense balance, ledger drift, hold leakage
-- [ ] Runbooks: stuck payment, provider outage, webhook storm, ledger drift detected,
-      recon break backlog, key compromise
+- [x] Runbooks: stuck payment, provider outage, webhook storm, ledger drift detected,
+      recon break backlog, key compromise.
+      `docs/runbooks/`: each starts from the signal on-call will actually see, and
+      every endpoint, log line, table and config key in them was checked against
+      the code. Writing the key-compromise one exposed a real bug (fingerprints broke
+      after an encryption-key rotation) — fixed. *Exercising* them is part of the
+      exit criteria and still to do
 - [ ] API docs published from the generated swagger; an internal Go client package the
       other product backends import, so integration is not copy-pasted HTTP calls;
       staging environment pointed at PSP sandboxes
