@@ -1155,8 +1155,10 @@ and partly from a card.
       component on the order, per tender. The card share goes through Phase 6's
       provider refunds (source `order`). Product backends refund their own orders:
       unlike top-up refunds, every share goes back the way it came
-- [ ] Cancelling a pending order from the product side; FULFILLED state (the product
-      owns entitlement, so possibly never)
+- [x] Cancelling a pending order from the product side (`POST /orders/{id}/cancel`):
+      asks the provider first, so a customer who just paid gets their order, then
+      cancels the checkout and releases held wallet shares; emits `order.cancelled`.
+      FULFILLED is not built: the product owns entitlement (see "No subscriptions")
 
 **Exit criteria:** an order paid ₹200 wallet + ₹300 card results in one balanced
 journal; killing the process mid-saga leaves no stuck holds after the sweeper runs.

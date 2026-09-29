@@ -315,3 +315,33 @@ func toProtoOrderRefund(x *dao.OrderRefund, parts []*dao.OrderRefundPart) *openp
 	}
 	return out
 }
+
+func (s *Service) CancelOrder(ctx context.Context, req *openpay_v1.CancelOrderRequest) (*openpay_v1.CancelOrderResponse, error) {
+	productID, err := auth.RequireService(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validate(req); err != nil {
+		return nil, err
+	}
+	o, err := s.repo.GetOrderByPublicID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	if err := requireVisible(filter.OnlyProducts(productID), &o.ProductID, "order", req.GetId()); err != nil {
+		return nil, err
+	}
+	reason := req.GetReason()
+	if reason == "" {
+		reason = "cancelled by the product"
+	}
+	current, err := s.orders.Cancel(ctx, o, reason)
+	if err != nil {
+		return nil, err
+	}
+	out, err := s.orderDetail(ctx, current)
+	if err != nil {
+		return nil, err
+	}
+	return &openpay_v1.CancelOrderResponse{Order: out}, nil
+}

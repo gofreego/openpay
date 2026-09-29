@@ -233,13 +233,28 @@ func (e *Engine) Poll(ctx context.Context, payment *dao.Payment, source string) 
 // be credited, not expired. Only a payment the provider confirms as unpaid
 // is cancelled there and expired here.
 func (e *Engine) Expire(ctx context.Context, payment *dao.Payment) (*dao.Payment, error) {
+	return e.close(ctx, payment, dao.PaymentExpired, "sweeper",
+		"not paid before "+payment.ExpiresAt.Format(time.RFC3339))
+}
+
+// Cancel closes an open payment on request — its product cancelled the order
+// it was collecting for. Like Expire, it asks the provider first: a payment
+// the customer completed a moment ago is settled, not cancelled, and the
+// caller sees it was paid.
+func (e *Engine) Cancel(ctx context.Context, payment *dao.Payment, reason string) (*dao.Payment, error) {
+	return e.close(ctx, payment, dao.PaymentCancelled, "api", reason)
+}
+
+// close ends an open payment the provider confirms unpaid: cancelled there,
+// then expired or cancelled here.
+func (e *Engine) close(ctx context.Context, payment *dao.Payment, to dao.PaymentStatus, source, detail string) (*dao.Payment, error) {
 	attempt, err := e.latestAttempt(ctx, payment)
 	if err != nil {
 		return nil, err
 	}
 
 	if attempt != nil && attempt.ProviderPaymentID != nil {
-		synced, err := e.syncFromProvider(ctx, attempt, "sweeper", "expiry check")
+		synced, err := e.syncFromProvider(ctx, attempt, source, string(to)+" check")
 		if err != nil {
 			return nil, err
 		}
@@ -257,13 +272,13 @@ func (e *Engine) Expire(ctx context.Context, payment *dao.Payment) (*dao.Payment
 		}
 	}
 
-	var expired *dao.Payment
+	var closed *dao.Payment
 	err = e.repo.WithTx(ctx, func(ctx context.Context) error {
 		locked, err := e.repo.LockPayment(ctx, payment.ID)
 		if err != nil {
 			return err
 		}
-		expired = locked
+		closed = locked
 		if !locked.Status.IsOpen() {
 			return nil
 		}
@@ -273,7 +288,7 @@ func (e *Engine) Expire(ctx context.Context, payment *dao.Payment) (*dao.Payment
 				return err
 			}
 		}
-		return e.transition(ctx, locked, dao.PaymentExpired, "sweeper", "", "not paid before "+locked.ExpiresAt.Format(time.RFC3339))
+		return e.transition(ctx, locked, to, source, "", detail)
 	})
-	return expired, err
+	return closed, err
 }

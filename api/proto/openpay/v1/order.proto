@@ -190,3 +190,12 @@ message GetOrderRequest {
 message GetOrderResponse {
   Order order = 1;
 }
+
+message CancelOrderRequest {
+  string id = 1 [(validate.rules).string = {min_len: 1}];
+  string reason = 2 [(validate.rules).string = {max_len: 500}];
+}
+
+message CancelOrderResponse {
+  Order order = 1;
+}

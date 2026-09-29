@@ -594,11 +594,20 @@ func (e *Engine) PaymentEnded(ctx context.Context, p *dao.Payment) error {
 	if o.Status != dao.OrderPendingPayment {
 		return nil
 	}
+	if p.Status == dao.PaymentCancelled {
+		return e.end(ctx, o, dao.OrderCancelled, "cancelled")
+	}
 	return e.fail(ctx, o, "card payment "+string(p.Status))
 }
 
 // fail marks an order failed and lets go of every hold it has.
 func (e *Engine) fail(ctx context.Context, o *dao.Order, reason string) error {
+	return e.end(ctx, o, dao.OrderFailed, reason)
+}
+
+// end closes an order that will not be paid — failed or cancelled — and lets
+// go of every hold it has.
+func (e *Engine) end(ctx context.Context, o *dao.Order, status dao.OrderStatus, reason string) error {
 	tenders, err := e.repo.ListOrderTenders(ctx, o.ID)
 	if err != nil {
 		return err
@@ -622,12 +631,16 @@ func (e *Engine) fail(ctx context.Context, o *dao.Order, reason string) error {
 			return err
 		}
 	}
-	o.Status, o.FailureReason = dao.OrderFailed, &reason
+	o.Status, o.FailureReason = status, &reason
 	if err := e.repo.UpdateOrder(ctx, o); err != nil {
 		return err
 	}
-	logger.Info(ctx, "order %s failed: %s", o.PublicID, reason)
-	return e.emit(ctx, o, TopicOrderFailed)
+	logger.Info(ctx, "order %s %s: %s", o.PublicID, status, reason)
+	topic := TopicOrderFailed
+	if status == dao.OrderCancelled {
+		topic = TopicOrderCancelled
+	}
+	return e.emit(ctx, o, topic)
 }
 
 func (e *Engine) markPaid(ctx context.Context, o *dao.Order) error {
@@ -664,8 +677,9 @@ func (e *Engine) Expire(ctx context.Context, o *dao.Order) error {
 
 // Order event topics, delivered to the owning product's backend.
 const (
-	TopicOrderPaid   = "order.paid"
-	TopicOrderFailed = "order.failed"
+	TopicOrderPaid      = "order.paid"
+	TopicOrderFailed    = "order.failed"
+	TopicOrderCancelled = "order.cancelled"
 )
 
 type orderEvent struct {
@@ -709,4 +723,34 @@ func (e *Engine) result(ctx context.Context, o *dao.Order) (*Result, error) {
 		r.Payment = p
 	}
 	return r, nil
+}
+
+// Cancel cancels an order still awaiting its card share, releasing the held
+// wallet shares. It goes through the payment, which asks the provider first:
+// if the customer paid a moment ago, the order is settled instead, and
+// Cancel reports that it could not cancel a paid order.
+func (e *Engine) Cancel(ctx context.Context, o *dao.Order, reason string) (*dao.Order, error) {
+	if o.Status != dao.OrderPendingPayment {
+		return nil, apperrors.New(apperrors.FailedPrecondition, "order %s is %s; only an order awaiting payment can be cancelled", o.PublicID, o.Status)
+	}
+	p, err := e.repo.GetOrderPayment(ctx, o.ID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := e.payments.Cancel(ctx, p, reason); err != nil {
+		return nil, err
+	}
+	var current *dao.Order
+	err = e.repo.WithTx(ctx, func(ctx context.Context) error {
+		var err error
+		current, err = e.repo.LockOrder(ctx, o.ID)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if current.Status == dao.OrderPaid {
+		return current, apperrors.New(apperrors.FailedPrecondition, "order %s was paid before it could be cancelled", o.PublicID)
+	}
+	return current, nil
 }

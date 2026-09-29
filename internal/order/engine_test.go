@@ -555,3 +555,45 @@ func TestOrderStaysWithinItsProduct(t *testing.T) {
 	}
 	f.assertLedgerHealthy()
 }
+
+// A product cancels an order still awaiting its card share: the provider's
+// checkout is cancelled and the held wallet share released at once.
+func TestCancelPendingOrder(t *testing.T) {
+	f := setup(t)
+	f.fund(f.main, 100000)
+	req := taxed("zs-cancel")
+	req.Tenders = []order.WalletTender{{Wallet: f.main, Amount: 10000}}
+	r := f.mustCreate(req)
+
+	cancelled, err := f.orders.Cancel(f.ctx, r.Order, "customer changed their mind")
+	if err != nil {
+		t.Fatalf("cancel: %v", err)
+	}
+	if cancelled.Status != dao.OrderCancelled {
+		t.Errorf("order is %s, want cancelled", cancelled.Status)
+	}
+	if _, a := f.wallet(f.main); a != 100000 {
+		t.Errorf("available = %d, want the hold released", a)
+	}
+	if _, err := f.orders.Cancel(f.ctx, cancelled, "again"); !apperrors.Is(err, apperrors.FailedPrecondition) {
+		t.Errorf("cancelling twice: error code = %q", apperrors.CodeOf(err))
+	}
+	f.assertLedgerHealthy()
+}
+
+// The customer paid a moment before the cancel arrived: the order is
+// settled, not cancelled, and the caller is told.
+func TestCancelLosesToALatePayment(t *testing.T) {
+	f := setup(t)
+	f.fund(f.main, 100000)
+	req := taxed("zs-cancel-race")
+	req.Tenders = []order.WalletTender{{Wallet: f.main, Amount: 10000}}
+	r := f.mustCreate(req)
+	f.mock.Pay(f.providerID(r.Payment))
+
+	got, err := f.orders.Cancel(f.ctx, r.Order, "too late")
+	if !apperrors.Is(err, apperrors.FailedPrecondition) || got == nil || got.Status != dao.OrderPaid {
+		t.Errorf("cancel after payment: %v (order %v); want refused with the order paid", err, got)
+	}
+	f.assertLedgerHealthy()
+}

@@ -902,6 +902,46 @@
         ]
       }
     },
+    "/openpay/v1/orders/{id}/cancel": {
+      "post": {
+        "summary": "Cancel an order awaiting payment",
+        "description": "Product backend for its own orders. Cancels the card checkout and releases held wallet shares. If the customer paid first, the order is settled instead and this is refused.",
+        "operationId": "OpenPay_CancelOrder",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelOrderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPayCancelOrderBody"
+            }
+          }
+        ],
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
     "/openpay/v1/orders/{id}/refunds": {
       "post": {
         "summary": "Refund an order",
@@ -2242,6 +2282,14 @@
         }
       }
     },
+    "OpenPayCancelOrderBody": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
     "OpenPayCreateRefundBody": {
       "type": "object",
       "properties": {
@@ -2529,6 +2577,14 @@
       ],
       "default": "BREAK_ACTION_UNSPECIFIED",
       "description": " - BREAK_ACTION_RESOLVE: Explain it. Only for a break with nothing in suspense.\n - BREAK_ACTION_FORCE_MATCH: Attribute its money to a payment (payment_id): suspense → receivable.\n - BREAK_ACTION_WRITE_OFF: Give up on its money: suspense (or receivable) → write-offs."
+    },
+    "v1CancelOrderResponse": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/v1Order"
+        }
+      }
     },
     "v1CreateItemRequest": {
       "type": "object",

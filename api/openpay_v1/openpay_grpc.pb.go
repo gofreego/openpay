@@ -76,6 +76,7 @@ const (
 	OpenPay_RejectWithdrawal_FullMethodName        = "/v1.OpenPay/RejectWithdrawal"
 	OpenPay_GetWithdrawal_FullMethodName           = "/v1.OpenPay/GetWithdrawal"
 	OpenPay_ListWithdrawals_FullMethodName         = "/v1.OpenPay/ListWithdrawals"
+	OpenPay_CancelOrder_FullMethodName             = "/v1.OpenPay/CancelOrder"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -143,6 +144,7 @@ type OpenPayClient interface {
 	RejectWithdrawal(ctx context.Context, in *DecideWithdrawalRequest, opts ...grpc.CallOption) (*DecideWithdrawalResponse, error)
 	GetWithdrawal(ctx context.Context, in *GetWithdrawalRequest, opts ...grpc.CallOption) (*GetWithdrawalResponse, error)
 	ListWithdrawals(ctx context.Context, in *ListWithdrawalsRequest, opts ...grpc.CallOption) (*ListWithdrawalsResponse, error)
+	CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error)
 }
 
 type openPayClient struct {
@@ -723,6 +725,16 @@ func (c *openPayClient) ListWithdrawals(ctx context.Context, in *ListWithdrawals
 	return out, nil
 }
 
+func (c *openPayClient) CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelOrderResponse)
+	err := c.cc.Invoke(ctx, OpenPay_CancelOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -788,6 +800,7 @@ type OpenPayServer interface {
 	RejectWithdrawal(context.Context, *DecideWithdrawalRequest) (*DecideWithdrawalResponse, error)
 	GetWithdrawal(context.Context, *GetWithdrawalRequest) (*GetWithdrawalResponse, error)
 	ListWithdrawals(context.Context, *ListWithdrawalsRequest) (*ListWithdrawalsResponse, error)
+	CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -968,6 +981,9 @@ func (UnimplementedOpenPayServer) GetWithdrawal(context.Context, *GetWithdrawalR
 }
 func (UnimplementedOpenPayServer) ListWithdrawals(context.Context, *ListWithdrawalsRequest) (*ListWithdrawalsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListWithdrawals not implemented")
+}
+func (UnimplementedOpenPayServer) CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelOrder not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -2016,6 +2032,24 @@ func _OpenPay_ListWithdrawals_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_CancelOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelOrderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).CancelOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_CancelOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).CancelOrder(ctx, req.(*CancelOrderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2250,6 +2284,10 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListWithdrawals",
 			Handler:    _OpenPay_ListWithdrawals_Handler,
+		},
+		{
+			MethodName: "CancelOrder",
+			Handler:    _OpenPay_CancelOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

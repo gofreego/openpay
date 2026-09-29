@@ -2693,3 +2693,258 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = GetOrderResponseValidationError{}
+
+// Validate checks the field values on CancelOrderRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *CancelOrderRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CancelOrderRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// CancelOrderRequestMultiError, or nil if none found.
+func (m *CancelOrderRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CancelOrderRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetId()) < 1 {
+		err := CancelOrderRequestValidationError{
+			field:  "Id",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetReason()) > 500 {
+		err := CancelOrderRequestValidationError{
+			field:  "Reason",
+			reason: "value length must be at most 500 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return CancelOrderRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// CancelOrderRequestMultiError is an error wrapping multiple validation errors
+// returned by CancelOrderRequest.ValidateAll() if the designated constraints
+// aren't met.
+type CancelOrderRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CancelOrderRequestMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CancelOrderRequestMultiError) AllErrors() []error { return m }
+
+// CancelOrderRequestValidationError is the validation error returned by
+// CancelOrderRequest.Validate if the designated constraints aren't met.
+type CancelOrderRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CancelOrderRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CancelOrderRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CancelOrderRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CancelOrderRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CancelOrderRequestValidationError) ErrorName() string {
+	return "CancelOrderRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e CancelOrderRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCancelOrderRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CancelOrderRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CancelOrderRequestValidationError{}
+
+// Validate checks the field values on CancelOrderResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *CancelOrderResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CancelOrderResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// CancelOrderResponseMultiError, or nil if none found.
+func (m *CancelOrderResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CancelOrderResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetOrder()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CancelOrderResponseValidationError{
+					field:  "Order",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CancelOrderResponseValidationError{
+					field:  "Order",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetOrder()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CancelOrderResponseValidationError{
+				field:  "Order",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return CancelOrderResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// CancelOrderResponseMultiError is an error wrapping multiple validation
+// errors returned by CancelOrderResponse.ValidateAll() if the designated
+// constraints aren't met.
+type CancelOrderResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CancelOrderResponseMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CancelOrderResponseMultiError) AllErrors() []error { return m }
+
+// CancelOrderResponseValidationError is the validation error returned by
+// CancelOrderResponse.Validate if the designated constraints aren't met.
+type CancelOrderResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e CancelOrderResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e CancelOrderResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e CancelOrderResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e CancelOrderResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e CancelOrderResponseValidationError) ErrorName() string {
+	return "CancelOrderResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e CancelOrderResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCancelOrderResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = CancelOrderResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = CancelOrderResponseValidationError{}

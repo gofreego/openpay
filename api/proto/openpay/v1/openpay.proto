@@ -780,4 +780,16 @@ service OpenPay {
             description: "Filter by status for the approval queue. Operator holding openpay:withdrawals:read within scope."
         };
     }
+
+    rpc CancelOrder (CancelOrderRequest) returns (CancelOrderResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/orders/{id}/cancel"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Orders"
+            summary: "Cancel an order awaiting payment"
+            description: "Product backend for its own orders. Cancels the card checkout and releases held wallet shares. If the customer paid first, the order is settled instead and this is refused."
+        };
+    }
 }

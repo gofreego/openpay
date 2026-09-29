@@ -1449,6 +1449,102 @@ func (x *GetOrderResponse) GetOrder() *Order {
 	return nil
 }
 
+type CancelOrderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelOrderRequest) Reset() {
+	*x = CancelOrderRequest{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderRequest) ProtoMessage() {}
+
+func (x *CancelOrderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderRequest.ProtoReflect.Descriptor instead.
+func (*CancelOrderRequest) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CancelOrderRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CancelOrderRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CancelOrderResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelOrderResponse) Reset() {
+	*x = CancelOrderResponse{}
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderResponse) ProtoMessage() {}
+
+func (x *CancelOrderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_openpay_v1_order_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderResponse.ProtoReflect.Descriptor instead.
+func (*CancelOrderResponse) Descriptor() ([]byte, []int) {
+	return file_proto_openpay_v1_order_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CancelOrderResponse) GetOrder() *Order {
+	if x != nil {
+		return x.Order
+	}
+	return nil
+}
+
 var File_proto_openpay_v1_order_proto protoreflect.FileDescriptor
 
 const file_proto_openpay_v1_order_proto_rawDesc = "" +
@@ -1583,6 +1679,11 @@ const file_proto_openpay_v1_order_proto_rawDesc = "" +
 	"\x0fGetOrderRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\"3\n" +
 	"\x10GetOrderResponse\x12\x1f\n" +
+	"\x05order\x18\x01 \x01(\v2\t.v1.OrderR\x05order\"O\n" +
+	"\x12CancelOrderRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\x02id\x12 \n" +
+	"\x06reason\x18\x02 \x01(\tB\b\xfaB\x05r\x03\x18\xf4\x03R\x06reason\"6\n" +
+	"\x13CancelOrderResponse\x12\x1f\n" +
 	"\x05order\x18\x01 \x01(\v2\t.v1.OrderR\x05order*\xd9\x01\n" +
 	"\vOrderStatus\x12\x1c\n" +
 	"\x18ORDER_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
@@ -1606,7 +1707,7 @@ func file_proto_openpay_v1_order_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_openpay_v1_order_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_openpay_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_proto_openpay_v1_order_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_proto_openpay_v1_order_proto_goTypes = []any{
 	(OrderStatus)(0),              // 0: v1.OrderStatus
 	(*Item)(nil),                  // 1: v1.Item
@@ -1626,32 +1727,35 @@ var file_proto_openpay_v1_order_proto_goTypes = []any{
 	(*CreateOrderResponse)(nil),   // 15: v1.CreateOrderResponse
 	(*GetOrderRequest)(nil),       // 16: v1.GetOrderRequest
 	(*GetOrderResponse)(nil),      // 17: v1.GetOrderResponse
-	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
+	(*CancelOrderRequest)(nil),    // 18: v1.CancelOrderRequest
+	(*CancelOrderResponse)(nil),   // 19: v1.CancelOrderResponse
+	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
 }
 var file_proto_openpay_v1_order_proto_depIdxs = []int32{
-	18, // 0: v1.Item.created_at:type_name -> google.protobuf.Timestamp
+	20, // 0: v1.Item.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 1: v1.CreateItemResponse.item:type_name -> v1.Item
 	1,  // 2: v1.ListItemsResponse.items:type_name -> v1.Item
 	0,  // 3: v1.Order.status:type_name -> v1.OrderStatus
 	6,  // 4: v1.Order.lines:type_name -> v1.OrderLine
 	8,  // 5: v1.Order.tenders:type_name -> v1.OrderTender
-	18, // 6: v1.Order.expires_at:type_name -> google.protobuf.Timestamp
-	18, // 7: v1.Order.paid_at:type_name -> google.protobuf.Timestamp
-	18, // 8: v1.Order.created_at:type_name -> google.protobuf.Timestamp
+	20, // 6: v1.Order.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 7: v1.Order.paid_at:type_name -> google.protobuf.Timestamp
+	20, // 8: v1.Order.created_at:type_name -> google.protobuf.Timestamp
 	10, // 9: v1.Order.refunds:type_name -> v1.OrderRefund
 	11, // 10: v1.OrderRefund.parts:type_name -> v1.OrderRefundPart
-	18, // 11: v1.OrderRefund.created_at:type_name -> google.protobuf.Timestamp
+	20, // 11: v1.OrderRefund.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 12: v1.RefundOrderResponse.order:type_name -> v1.Order
 	10, // 13: v1.RefundOrderResponse.refund:type_name -> v1.OrderRefund
 	6,  // 14: v1.CreateOrderRequest.lines:type_name -> v1.OrderLine
 	7,  // 15: v1.CreateOrderRequest.wallet_tenders:type_name -> v1.WalletTender
 	9,  // 16: v1.CreateOrderResponse.order:type_name -> v1.Order
 	9,  // 17: v1.GetOrderResponse.order:type_name -> v1.Order
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	9,  // 18: v1.CancelOrderResponse.order:type_name -> v1.Order
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_proto_openpay_v1_order_proto_init() }
@@ -1665,7 +1769,7 @@ func file_proto_openpay_v1_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_openpay_v1_order_proto_rawDesc), len(file_proto_openpay_v1_order_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
