@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/status"
 )
 
@@ -111,13 +112,25 @@ func (e *Error) Message() string {
 // GRPCStatus lets the gRPC runtime derive the right status automatically:
 // status.FromError checks for this interface, so a handler can simply return
 // the error and get the correct code without an interceptor translating it.
+//
+// The stable code travels as an ErrorInfo detail (domain "openpay"), because
+// several codes share one gRPC code — insufficient_balance and
+// wallet_operation_denied are both FailedPrecondition — and a gRPC caller
+// must be able to tell them apart as an HTTP caller can from the body.
 func (e *Error) GRPCStatus() *status.Status {
 	c, ok := grpcCodes[e.code]
 	if !ok {
 		c = codes.Internal
 	}
-	return status.New(c, e.Message())
+	s := status.New(c, e.Message())
+	if detailed, err := s.WithDetails(&errdetails.ErrorInfo{Reason: string(e.code), Domain: ErrorDomain}); err == nil {
+		return detailed
+	}
+	return s
 }
+
+// ErrorDomain marks OpenPay's ErrorInfo details.
+const ErrorDomain = "openpay"
 
 // GRPCCode reports the gRPC code an error maps to.
 func GRPCCode(err error) codes.Code {
@@ -152,7 +165,17 @@ func From(err error) *Error {
 	}
 	// Respect a status already set by gRPC or another library.
 	if s, ok := status.FromError(err); ok && s.Code() != codes.Unknown {
-		return &Error{code: codeFromGRPC(s.Code()), msg: s.Message(), cause: err}
+		code := codeFromGRPC(s.Code())
+		// An OpenPay server says exactly which code; prefer it to the
+		// lossy mapping from the gRPC code.
+		for _, d := range s.Details() {
+			if info, ok := d.(*errdetails.ErrorInfo); ok && info.GetDomain() == ErrorDomain {
+				if _, known := grpcCodes[Code(info.GetReason())]; known {
+					code = Code(info.GetReason())
+				}
+			}
+		}
+		return &Error{code: code, msg: s.Message(), cause: err}
 	}
 	return &Error{code: Internal, msg: err.Error(), cause: err}
 }

@@ -1344,7 +1344,16 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
       exit criteria and still to do
 - [ ] API docs published from the generated swagger; an internal Go client package the
       other product backends import, so integration is not copy-pasted HTTP calls;
-      staging environment pointed at PSP sandboxes
+      staging environment pointed at PSP sandboxes.
+      **Done:** `pkg/client` — credential on every call (TLS required unless
+      explicitly insecure), idempotency keys, a default deadline, stable error codes
+      and `Retry` limited to what is safe to retry; tested end to end through a real
+      gRPC server with the production interceptors. Domain error codes now travel
+      over gRPC too (an `ErrorInfo` detail), so `insufficient_balance` is no longer
+      a bare FailedPrecondition to gRPC callers. Swagger UI is served at
+      `/openpay/v1/swagger`; README covers running, testing and integrating.
+      **Open:** staging against PSP sandboxes (needs credentials); a separate
+      lightweight module for the client if importing the service module proves heavy
 - [ ] Compliance sign-off per Q1; finance sign-off on the chart of accounts
 
 **Exit criteria:** load test passes, DR drill completed, on-call runbooks exercised at

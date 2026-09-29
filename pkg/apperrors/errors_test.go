@@ -142,3 +142,19 @@ func TestCodeOfAndGRPCCode(t *testing.T) {
 		t.Errorf("GRPCCode(plain) = %v, want Internal", got)
 	}
 }
+
+// A domain code survives the trip through a gRPC status, so a gRPC client can
+// tell insufficient_balance from wallet_operation_denied (both
+// FailedPrecondition on the wire).
+func TestDomainCodeSurvivesGRPC(t *testing.T) {
+	for _, code := range []Code{InsufficientBalance, WalletOperationDenied, RateLimited, NotFound} {
+		wire := status.ErrorProto(New(code, "x").GRPCStatus().Proto())
+		if got := From(wire).Code(); got != code {
+			t.Errorf("%s came back as %s", code, got)
+		}
+	}
+	// A plain status from elsewhere still maps by its gRPC code.
+	if got := From(status.Error(codes.FailedPrecondition, "x")).Code(); got != FailedPrecondition {
+		t.Errorf("plain FailedPrecondition came back as %s", got)
+	}
+}
