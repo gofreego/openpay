@@ -230,3 +230,19 @@ func scanWithdrawal(row rowScanner) (*dao.Withdrawal, error) {
 	}
 	return &x, nil
 }
+
+// WithdrawnSince totals the withdrawals a wallet — or, with walletID nil, a
+// customer across all wallets — has made since a moment, counting every one
+// not undone (failed, rejected and reversed ones gave the money back).
+// Call it with the wallet's ledger lock held, and the customer row locked for
+// the customer-wide total, so concurrent requests cannot both fit under a cap.
+func (r *Repository) WithdrawnSince(ctx context.Context, customerID int64, walletID *int64, since time.Time) (amount int64, count int64, err error) {
+	err = r.executor(ctx).QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM withdrawals
+		WHERE customer_id = $1 AND ($2::BIGINT IS NULL OR wallet_id = $2) AND created_at >= $3
+		  AND status NOT IN ('failed', 'rejected', 'reversed')`, customerID, walletID, since).Scan(&amount, &count)
+	if err != nil {
+		return 0, 0, apperrors.Wrap(err, apperrors.Internal, "failed to total withdrawals")
+	}
+	return amount, count, nil
+}

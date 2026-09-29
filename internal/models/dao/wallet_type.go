@@ -81,6 +81,8 @@ type WalletType struct {
 	// means no minimum, and no approval needed at any size.
 	MinWithdrawalAmount         *int64
 	WithdrawalApprovalThreshold *int64
+	// DailyWithdrawalLimit caps what one wallet may cash out per day.
+	DailyWithdrawalLimit *int64
 
 	Status WalletTypeStatus
 

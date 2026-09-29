@@ -3,6 +3,8 @@ package withdrawal_test
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"sync"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -332,4 +334,64 @@ func TestWithdrawalRefusals(t *testing.T) {
 	cooling := setup(t, withdrawal.Config{BeneficiaryCooling: time.Hour})
 	_, err = cooling.request(20000, "scr")
 	wantCode(t, "to a destination still cooling", err, apperrors.FailedPrecondition)
+}
+
+// The wallet type's daily limit holds under concurrency: ten ₹1,000
+// withdrawals at once against a ₹3,000 daily limit give exactly three.
+func TestDailyWithdrawalLimitHoldsUnderConcurrency(t *testing.T) {
+	f := setup(t, withdrawal.Config{})
+	testsupport.Exec(t, `UPDATE wallet_types SET daily_withdrawal_limit = 300000 WHERE code = 'CASH'`)
+
+	const attempts = 10
+	var wg sync.WaitGroup
+	barrier := make(chan struct{})
+	errs := make([]error, attempts)
+	wg.Add(attempts)
+	for i := range attempts {
+		go func() {
+			defer wg.Done()
+			<-barrier
+			_, errs[i] = f.request(100000, fmt.Sprintf("scr_%d", i))
+		}()
+	}
+	close(barrier)
+	wg.Wait()
+
+	var ok int
+	for _, err := range errs {
+		if err == nil {
+			ok++
+		} else if !apperrors.Is(err, apperrors.WalletOperationDenied) {
+			t.Errorf("unexpected failure: %v", err)
+		}
+	}
+	if ok != 3 || f.wallet() != 700000 {
+		t.Errorf("%d withdrawals succeeded, wallet %d; want exactly 3 and 700000", ok, f.wallet())
+	}
+	f.assertLedgerHealthy()
+}
+
+// A failed withdrawal gave the money back, so it no longer counts towards
+// today's limit.
+func TestFailedWithdrawalFreesTheDailyLimit(t *testing.T) {
+	f := setup(t, withdrawal.Config{})
+	testsupport.Exec(t, `UPDATE wallet_types SET daily_withdrawal_limit = 300000 WHERE code = 'CASH'`)
+	x := f.mustRequest(300000)
+	if _, err := f.request(10000, "scr"); !apperrors.Is(err, apperrors.WalletOperationDenied) {
+		t.Fatalf("over the daily limit: error code = %q", apperrors.CodeOf(err))
+	}
+	f.mock.FailPayout(*x.ProviderPayoutID, "bank down")
+	f.webhook(x)
+	if _, err := f.request(10000, "scr"); err != nil {
+		t.Errorf("after the failed payout freed the limit: %v", err)
+	}
+}
+
+// Per-person caps count every withdrawal the customer makes today.
+func TestCustomerDailyWithdrawalCount(t *testing.T) {
+	f := setup(t, withdrawal.Config{MaxCustomerDailyWithdrawals: 2})
+	f.mustRequest(10000)
+	f.mustRequest(10000)
+	_, err := f.request(10000, "scr")
+	wantCode(t, "third withdrawal of the day", err, apperrors.WalletOperationDenied)
 }

@@ -1258,10 +1258,13 @@ mismatch is detected, classified, and alerted within one cycle.
 - [x] Provider payout APIs + webhooks + status poller (mock; RazorpayX / Cashfree
       Payouts with P5). A timeout leaves the withdrawal approved and the poller
       resubmits under the same id
-- [ ] Limits: per-txn, daily, velocity; risk holds; cooling period for new beneficiaries.
-      **Done:** per-txn (the type's `max_txn_amount`), minimum withdrawal, approval
-      threshold, beneficiary cooling (`Withdrawals.BeneficiaryCooling`).
-      **Deferred:** daily and velocity withdrawal limits, risk holds
+- [x] Limits: per-txn, daily, velocity; risk holds; cooling period for new beneficiaries.
+      Per-txn (the type's `max_txn_amount`), minimum withdrawal, approval threshold,
+      the type's `daily_withdrawal_limit`, per-person daily amount and count caps
+      across all wallets (`Withdrawals.MaxCustomerDailyWithdrawal[s]`), beneficiary
+      cooling. Checked under the wallet's ledger lock and the customer row lock, so
+      concurrent requests cannot both fit under a cap (10 concurrent → exactly 3).
+      Risk holds are covered by freezing the wallet, which refuses withdrawals
 - [ ] Inter-product accounting: no money actually moves between products (it is all one
       company, one bank account), so this is a reporting concern — per-product P&L and
       float attribution, not an internal payout

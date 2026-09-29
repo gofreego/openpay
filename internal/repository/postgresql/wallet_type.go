@@ -17,7 +17,7 @@ const walletTypeColumns = `wt.id, wt.public_id, wt.product_id, p.public_id, wt.s
 	wt.fundable, wt.grantable, wt.withdrawable, wt.transferable, wt.refundable_to_source,
 	wt.allow_negative, wt.expiry_policy, wt.expiry_days,
 	wt.max_balance, wt.max_txn_amount, wt.daily_load_limit,
-	wt.min_withdrawal_amount, wt.withdrawal_approval_threshold, wt.status,
+	wt.min_withdrawal_amount, wt.withdrawal_approval_threshold, wt.daily_withdrawal_limit, wt.status,
 	wt.withdrawable_approved_by, wt.withdrawable_approved_at, wt.withdrawable_approval_ref,
 	wt.created_at, wt.updated_at`
 
@@ -30,8 +30,8 @@ func (r *Repository) CreateWalletType(ctx context.Context, walletType *dao.Walle
 			fundable, grantable, withdrawable, transferable, refundable_to_source, allow_negative,
 			expiry_policy, expiry_days, max_balance, max_txn_amount, daily_load_limit, status,
 			withdrawable_approved_by, withdrawable_approved_at, withdrawable_approval_ref,
-			min_withdrawal_amount, withdrawal_approval_threshold
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+			min_withdrawal_amount, withdrawal_approval_threshold, daily_withdrawal_limit
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
 		RETURNING id, created_at, updated_at`
 
 	err := r.executor(ctx).QueryRowContext(ctx, query,
@@ -44,7 +44,7 @@ func (r *Repository) CreateWalletType(ctx context.Context, walletType *dao.Walle
 		walletType.Status,
 		walletType.WithdrawableApprovedBy, walletType.WithdrawableApprovedAt,
 		walletType.WithdrawableApprovalRef,
-		walletType.MinWithdrawalAmount, walletType.WithdrawalApprovalThreshold,
+		walletType.MinWithdrawalAmount, walletType.WithdrawalApprovalThreshold, walletType.DailyWithdrawalLimit,
 	).Scan(&walletType.ID, &walletType.CreatedAt, &walletType.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -127,7 +127,7 @@ func (r *Repository) UpdateWalletType(ctx context.Context, walletType *dao.Walle
 	const query = `
 		UPDATE wallet_types
 		SET name = $1, status = $2, max_balance = $3, max_txn_amount = $4, daily_load_limit = $5,
-		    min_withdrawal_amount = $7, withdrawal_approval_threshold = $8
+		    min_withdrawal_amount = $7, withdrawal_approval_threshold = $8, daily_withdrawal_limit = $9
 		WHERE public_id = $6
 		RETURNING id`
 
@@ -135,7 +135,7 @@ func (r *Repository) UpdateWalletType(ctx context.Context, walletType *dao.Walle
 	err := r.executor(ctx).QueryRowContext(ctx, query,
 		walletType.Name, walletType.Status, walletType.MaxBalance,
 		walletType.MaxTxnAmount, walletType.DailyLoadLimit, walletType.PublicID,
-		walletType.MinWithdrawalAmount, walletType.WithdrawalApprovalThreshold).Scan(&id)
+		walletType.MinWithdrawalAmount, walletType.WithdrawalApprovalThreshold, walletType.DailyWithdrawalLimit).Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return apperrors.New(apperrors.NotFound, "wallet type %q not found", walletType.PublicID)
@@ -160,7 +160,7 @@ func scanWalletType(row rowScanner) (*dao.WalletType, error) {
 		&w.Fundable, &w.Grantable, &w.Withdrawable, &w.Transferable,
 		&w.RefundableToSource, &w.AllowNegative,
 		&w.ExpiryPolicy, &w.ExpiryDays, &w.MaxBalance, &w.MaxTxnAmount, &w.DailyLoadLimit,
-		&w.MinWithdrawalAmount, &w.WithdrawalApprovalThreshold,
+		&w.MinWithdrawalAmount, &w.WithdrawalApprovalThreshold, &w.DailyWithdrawalLimit,
 		&w.Status, &w.WithdrawableApprovedBy, &w.WithdrawableApprovedAt, &w.WithdrawableApprovalRef,
 		&w.CreatedAt, &w.UpdatedAt,
 	)

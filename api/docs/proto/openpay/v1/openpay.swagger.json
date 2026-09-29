@@ -4762,6 +4762,11 @@
           "type": "string",
           "format": "int64",
           "description": "Withdrawals up to this amount are paid out automatically; larger ones\nwait for an approver other than the requester. Zero: none need approval."
+        },
+        "dailyWithdrawalLimit": {
+          "type": "string",
+          "format": "int64",
+          "description": "The most one wallet may cash out per day (Indian day). Zero: no limit."
         }
       },
       "description": "WalletLimits are in minor units. Zero means no limit."

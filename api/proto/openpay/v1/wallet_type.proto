@@ -66,6 +66,8 @@ message WalletLimits {
   // Withdrawals up to this amount are paid out automatically; larger ones
   // wait for an approver other than the requester. Zero: none need approval.
   int64 withdrawal_approval_threshold = 5 [(validate.rules).int64 = {gte: 0}];
+  // The most one wallet may cash out per day (Indian day). Zero: no limit.
+  int64 daily_withdrawal_limit = 6 [(validate.rules).int64 = {gte: 0}];
 }
 
 // WithdrawalApproval records who signed off on enabling withdrawal.

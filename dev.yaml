@@ -62,6 +62,9 @@ Service:
     # How long a newly verified destination waits before it can receive
     # money. 0 for local testing; 24h or more in production.
     BeneficiaryCooling: 0s
+    # Per-person daily caps across all wallets (paise / count). 0 = none.
+    MaxCustomerDailyWithdrawal: 0
+    MaxCustomerDailyWithdrawals: 0
   ReconAlerts:
     AgedAfter: 48h
     # Alert when a provider's suspense holds more than this, either way (paise).

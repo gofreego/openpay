@@ -31,6 +31,8 @@ type Repository interface {
 	CreateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	UpdateWithdrawal(ctx context.Context, x *dao.Withdrawal) error
 	LockWithdrawal(ctx context.Context, id int64) (*dao.Withdrawal, error)
+	WithdrawnSince(ctx context.Context, customerID int64, walletID *int64, since time.Time) (amount int64, count int64, err error)
+	LockCustomer(ctx context.Context, customerID int64) error
 	GetWithdrawalByProviderRef(ctx context.Context, providerName, providerPayoutID string) (*dao.Withdrawal, error)
 
 	GetWalletByPublicID(ctx context.Context, publicID string) (*dao.Wallet, error)
@@ -47,6 +49,12 @@ type Config struct {
 	// before it can receive money — time for a customer to notice a
 	// destination they did not add.
 	BeneficiaryCooling time.Duration `yaml:"BeneficiaryCooling"`
+
+	// Per-person caps across every wallet a customer holds, per Indian day.
+	// Zero means no cap. If a PPI licence is in scope (Q1), its limits are
+	// per person, which is why these exist beside each type's own limit.
+	MaxCustomerDailyWithdrawal  int64 `yaml:"MaxCustomerDailyWithdrawal"`
+	MaxCustomerDailyWithdrawals int64 `yaml:"MaxCustomerDailyWithdrawals"`
 }
 
 func (c *Config) WithDefaults() {
@@ -164,6 +172,9 @@ func (e *Engine) Request(ctx context.Context, req Request) (*dao.Withdrawal, err
 			Wallet: req.Wallet, Amount: x.Amount, CounterAccountCode: ledger.PayoutsInTransit,
 			ProductID: productOf(x), Kind: dao.JournalAdjustment, ExternalID: debitID(x),
 		}); err != nil {
+			return err
+		}
+		if err := e.checkDailyLimits(ctx, x, walletType); err != nil {
 			return err
 		}
 		if err := e.emit(ctx, x, "withdrawal.requested"); err != nil {
@@ -415,6 +426,49 @@ func (e *Engine) Poll(ctx context.Context, x *dao.Withdrawal) (*dao.Withdrawal, 
 		return nil, err
 	}
 	return e.Sync(ctx, x.ID, payout)
+}
+
+// ist is the day boundary for daily limits: v1 is India-only (D11).
+var ist = time.FixedZone("IST", 5*60*60+30*60)
+
+// checkDailyLimits runs after the withdrawal is recorded and its debit
+// posted, so the wallet's ledger row is locked: a concurrent request for the
+// same wallet waits, then counts this one. The customer-wide caps lock the
+// customer row too — after the ledger lock, the order every path uses.
+func (e *Engine) checkDailyLimits(ctx context.Context, x *dao.Withdrawal, walletType *dao.WalletType) error {
+	now := e.now().In(ist)
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, ist)
+
+	if limit := walletType.DailyWithdrawalLimit; limit != nil {
+		amount, _, err := e.repo.WithdrawnSince(ctx, x.CustomerID, &x.WalletID, startOfDay)
+		if err != nil {
+			return err
+		}
+		if amount > *limit {
+			return apperrors.New(apperrors.WalletOperationDenied,
+				"this would withdraw %d from the %s wallet today, above its daily limit of %d", amount, walletType.Code, *limit)
+		}
+	}
+
+	if e.cfg.MaxCustomerDailyWithdrawal == 0 && e.cfg.MaxCustomerDailyWithdrawals == 0 {
+		return nil
+	}
+	if err := e.repo.LockCustomer(ctx, x.CustomerID); err != nil {
+		return err
+	}
+	amount, count, err := e.repo.WithdrawnSince(ctx, x.CustomerID, nil, startOfDay)
+	if err != nil {
+		return err
+	}
+	if cap := e.cfg.MaxCustomerDailyWithdrawal; cap > 0 && amount > cap {
+		return apperrors.New(apperrors.WalletOperationDenied,
+			"this would withdraw %d for the customer today across all wallets, above the %d cap", amount, cap)
+	}
+	if cap := e.cfg.MaxCustomerDailyWithdrawals; cap > 0 && count > cap {
+		return apperrors.New(apperrors.WalletOperationDenied,
+			"this would be the customer's withdrawal number %d today, above the %d allowed", count, cap)
+	}
+	return nil
 }
 
 func debitID(x *dao.Withdrawal) string { return "withdrawal:" + x.PublicID + ":debit" }

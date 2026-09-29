@@ -289,8 +289,10 @@ type WalletLimits struct {
 	// Withdrawals up to this amount are paid out automatically; larger ones
 	// wait for an approver other than the requester. Zero: none need approval.
 	WithdrawalApprovalThreshold int64 `protobuf:"varint,5,opt,name=withdrawal_approval_threshold,json=withdrawalApprovalThreshold,proto3" json:"withdrawal_approval_threshold,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// The most one wallet may cash out per day (Indian day). Zero: no limit.
+	DailyWithdrawalLimit int64 `protobuf:"varint,6,opt,name=daily_withdrawal_limit,json=dailyWithdrawalLimit,proto3" json:"daily_withdrawal_limit,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *WalletLimits) Reset() {
@@ -354,6 +356,13 @@ func (x *WalletLimits) GetMinWithdrawalAmount() int64 {
 func (x *WalletLimits) GetWithdrawalApprovalThreshold() int64 {
 	if x != nil {
 		return x.WithdrawalApprovalThreshold
+	}
+	return 0
+}
+
+func (x *WalletLimits) GetDailyWithdrawalLimit() int64 {
+	if x != nil {
+		return x.DailyWithdrawalLimit
 	}
 	return 0
 }
@@ -1029,14 +1038,15 @@ const file_proto_openpay_v1_wallet_type_proto_rawDesc = "" +
 	"\fwithdrawable\x18\x03 \x01(\bR\fwithdrawable\x12\"\n" +
 	"\ftransferable\x18\x04 \x01(\bR\ftransferable\x120\n" +
 	"\x14refundable_to_source\x18\x05 \x01(\bR\x12refundableToSource\x12%\n" +
-	"\x0eallow_negative\x18\x06 \x01(\bR\rallowNegative\"\xa4\x02\n" +
+	"\x0eallow_negative\x18\x06 \x01(\bR\rallowNegative\"\xe3\x02\n" +
 	"\fWalletLimits\x12(\n" +
 	"\vmax_balance\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\n" +
 	"maxBalance\x12-\n" +
 	"\x0emax_txn_amount\x18\x02 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\fmaxTxnAmount\x121\n" +
 	"\x10daily_load_limit\x18\x03 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x0edailyLoadLimit\x12;\n" +
 	"\x15min_withdrawal_amount\x18\x04 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x13minWithdrawalAmount\x12K\n" +
-	"\x1dwithdrawal_approval_threshold\x18\x05 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x1bwithdrawalApprovalThreshold\"\x90\x01\n" +
+	"\x1dwithdrawal_approval_threshold\x18\x05 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x1bwithdrawalApprovalThreshold\x12=\n" +
+	"\x16daily_withdrawal_limit\x18\x06 \x01(\x03B\a\xfaB\x04\"\x02(\x00R\x14dailyWithdrawalLimit\"\x90\x01\n" +
 	"\x12WithdrawalApproval\x12\x1f\n" +
 	"\vapproved_by\x18\x01 \x01(\tR\n" +
 	"approvedBy\x12;\n" +

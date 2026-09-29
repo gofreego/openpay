@@ -143,6 +143,7 @@ type PaymentRepository interface {
 	GetWithdrawalByProviderRef(ctx context.Context, providerName, providerPayoutID string) (*dao.Withdrawal, error)
 	ListWithdrawals(ctx context.Context, scope *filter.ProductScope, status dao.WithdrawalStatus, customerID *int64, limit int) ([]*dao.Withdrawal, error)
 	ListOpenWithdrawals(ctx context.Context, before time.Time, limit int) ([]*dao.Withdrawal, error)
+	WithdrawnSince(ctx context.Context, customerID int64, walletID *int64, since time.Time) (amount int64, count int64, err error)
 
 	CreateDispute(ctx context.Context, d *dao.Dispute) error
 	UpdateDispute(ctx context.Context, d *dao.Dispute) error

@@ -97,6 +97,7 @@ func (s *Service) buildWalletType(ctx context.Context, req *openpay_v1.CreateWal
 		walletType.DailyLoadLimit = optionalLimit(limits.GetDailyLoadLimit())
 		walletType.MinWithdrawalAmount = optionalLimit(limits.GetMinWithdrawalAmount())
 		walletType.WithdrawalApprovalThreshold = optionalLimit(limits.GetWithdrawalApprovalThreshold())
+		walletType.DailyWithdrawalLimit = optionalLimit(limits.GetDailyWithdrawalLimit())
 	}
 
 	if walletType.Withdrawable {
@@ -259,6 +260,7 @@ func (s *Service) UpdateWalletType(ctx context.Context, req *openpay_v1.UpdateWa
 				updated.DailyLoadLimit = optionalLimit(limits.GetDailyLoadLimit())
 				updated.MinWithdrawalAmount = optionalLimit(limits.GetMinWithdrawalAmount())
 				updated.WithdrawalApprovalThreshold = optionalLimit(limits.GetWithdrawalApprovalThreshold())
+				updated.DailyWithdrawalLimit = optionalLimit(limits.GetDailyWithdrawalLimit())
 			}
 
 			if err := s.repo.UpdateWalletType(ctx, updated); err != nil {
@@ -286,10 +288,10 @@ func checkWithdrawalPolicy(withdrawable bool, limits *openpay_v1.WalletLimits) e
 	if limits == nil {
 		return nil
 	}
-	min, threshold := limits.GetMinWithdrawalAmount(), limits.GetWithdrawalApprovalThreshold()
-	if !withdrawable && (min != 0 || threshold != 0) {
+	min, threshold, daily := limits.GetMinWithdrawalAmount(), limits.GetWithdrawalApprovalThreshold(), limits.GetDailyWithdrawalLimit()
+	if !withdrawable && (min != 0 || threshold != 0 || daily != 0) {
 		return apperrors.New(apperrors.InvalidArgument,
-			"min_withdrawal_amount and withdrawal_approval_threshold apply only to a withdrawable wallet type")
+			"withdrawal limits apply only to a withdrawable wallet type")
 	}
 	if max := limits.GetMaxTxnAmount(); max != 0 && min > max {
 		return apperrors.New(apperrors.InvalidArgument,
@@ -328,6 +330,7 @@ func toProtoWalletType(w *dao.WalletType) *openpay_v1.WalletType {
 			DailyLoadLimit:              derefLimit(w.DailyLoadLimit),
 			MinWithdrawalAmount:         derefLimit(w.MinWithdrawalAmount),
 			WithdrawalApprovalThreshold: derefLimit(w.WithdrawalApprovalThreshold),
+			DailyWithdrawalLimit:        derefLimit(w.DailyWithdrawalLimit),
 		},
 		Status:    toProtoWalletTypeStatus(w.Status),
 		CreatedAt: timestamppb.New(w.CreatedAt),

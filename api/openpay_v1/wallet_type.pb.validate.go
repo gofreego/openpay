@@ -226,6 +226,17 @@ func (m *WalletLimits) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if m.GetDailyWithdrawalLimit() < 0 {
+		err := WalletLimitsValidationError{
+			field:  "DailyWithdrawalLimit",
+			reason: "value must be greater than or equal to 0",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if len(errors) > 0 {
 		return WalletLimitsMultiError(errors)
 	}
