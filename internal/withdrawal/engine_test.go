@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 

@@ -25,7 +25,7 @@ That single fact removes a large amount of regulatory surface — see Open Quest
 | 2 | Ledger Core | ✅ Complete |
 | 3 | Wallets | ✅ Complete (top-up and spend have no public API until P4/P7; FIXED expiry and `low_balance` deferred) |
 | 4 | Payment Orchestration + Mock Provider | ✅ Complete (wallet top-ups; ORDER payments arrive with P7, fee policies with the rate card in P5) |
-| 5 | Real Vendor Integrations | ☐ Not started |
+| 5 | Real Vendor Integrations | ◐ Vendor-independent half done (routing, failover, kill-switch, circuit breaker/retries/timeouts); Razorpay & Cashfree await sandbox credentials |
 | 6 | Refunds, Reversals & Disputes | ✅ Complete (refund tax split and destination policy landed with P7 orders; fee reconciliation with P8) |
 | 7 | Orders & Checkout (Split Tender) | ✅ Complete (product-side cancel and per-product tender policy deferred) |
 | 8 | Settlement & Reconciliation | ✅ Complete against the mock (real report formats arrive with each provider in P5) |
@@ -1011,16 +1011,16 @@ Two consequences:
       so alert when variance exceeds a threshold rather than letting it accumulate
 - [ ] Per-provider error → canonical failure-reason mapping (declined, insufficient
       funds, risk, technical) so retries and UX are provider-agnostic
-- [ ] Routing: primary/secondary with health-based failover, plus rules on method and
+- [x] Routing: primary/secondary with health-based failover, plus rules on method and
       amount band. Record the chosen provider *and the reason* on every attempt.
       Keep it a priority list, not a rules engine — two providers do not justify one
-- [ ] **Failover happens at attempt creation, never mid-payment.** Once a customer is on
+- [x] **Failover happens at attempt creation, never mid-payment.** Once a customer is on
       Razorpay's hosted checkout, that attempt lives and dies there; Cashfree picks up
       the *next* attempt. Design the retry UX around a fresh attempt on the healthy
       provider rather than imagining an in-flight handoff, which does not exist
-- [ ] Manual provider override (kill-switch): force all new attempts to one provider
+- [x] Manual provider override (kill-switch): force all new attempts to one provider
       without a deploy, for when one is degraded but not failing health checks
-- [ ] Circuit breaker + timeout + bounded retry with backoff on every outbound call;
+- [x] Circuit breaker + timeout + bounded retry with backoff on every outbound call;
       retries must be idempotent at the provider (use their idempotency keys)
 - [ ] Two of everything, tracked deliberately: credential sets, webhook endpoints and
       secrets, signature schemes, receivable accounts, suspense accounts, settlement

@@ -63,6 +63,10 @@ const (
 	// threshold. Platform-level, and never usable on your own request.
 	PermWithdrawalsApprove = "openpay:withdrawals:approve"
 
+	// Providers are shared by every product, so routing is platform-level.
+	PermProvidersRead   = "openpay:providers:read"
+	PermProvidersManage = "openpay:providers:manage"
+
 	PermWalletsRead  = "openpay:wallets:read"
 	PermWalletsGrant = "openpay:wallets:grant"
 	// PermWalletsAdjust moves money that no payment or grant explains, so it

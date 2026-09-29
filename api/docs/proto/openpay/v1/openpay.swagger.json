@@ -43,6 +43,10 @@
       "description": "Cashing withdrawable wallets out to a bank account or UPI id"
     },
     {
+      "name": "Providers",
+      "description": "Payment provider routing, health and the kill-switch"
+    },
+    {
       "name": "Ledger",
       "description": "Read-only view of the double-entry ledger, and its invariant checks"
     },
@@ -1395,6 +1399,70 @@
         ]
       }
     },
+    "/openpay/v1/providers": {
+      "get": {
+        "summary": "List providers with health and overrides",
+        "description": "Central ops: requires openpay:providers:read and openpay:scope:all.",
+        "operationId": "OpenPay_ListProviders",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListProvidersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Providers"
+        ]
+      }
+    },
+    "/openpay/v1/providers/{name}/override": {
+      "post": {
+        "summary": "Disable, force, or restore a provider",
+        "description": "The kill-switch. Takes effect on the next payment attempt in every process. Central ops: requires openpay:providers:manage and openpay:scope:all; reason required; audited.",
+        "operationId": "OpenPay_SetProviderOverride",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetProviderOverrideResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenPaySetProviderOverrideBody"
+            }
+          }
+        ],
+        "tags": [
+          "Providers"
+        ]
+      }
+    },
     "/openpay/v1/recon/breaks": {
       "get": {
         "summary": "List reconciliation breaks",
@@ -2392,6 +2460,18 @@
     },
     "OpenPayRevokeServiceCredentialBody": {
       "type": "object"
+    },
+    "OpenPaySetProviderOverrideBody": {
+      "type": "object",
+      "properties": {
+        "override": {
+          "$ref": "#/definitions/v1ProviderOverride"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "description": "SetProviderOverrideRequest is the kill-switch: takes effect in every\nprocess on the next routing decision, without a deploy. In-flight payments\nstay where they are — failover never happens mid-payment."
     },
     "OpenPaySubmitDisputeEvidenceBody": {
       "type": "object",
@@ -3565,6 +3645,18 @@
         }
       }
     },
+    "v1ListProvidersResponse": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ProviderStatus"
+          }
+        }
+      }
+    },
     "v1ListReconBreaksResponse": {
       "type": "object",
       "properties": {
@@ -4120,6 +4212,55 @@
       "default": "PRODUCT_STATUS_UNSPECIFIED",
       "description": " - PRODUCT_STATUS_SUSPENDED: Suspended stops new activity. Products are never deleted: money has moved\nagainst them and the ledger must stay interpretable."
     },
+    "v1ProviderOverride": {
+      "type": "string",
+      "enum": [
+        "PROVIDER_OVERRIDE_UNSPECIFIED",
+        "PROVIDER_OVERRIDE_NONE",
+        "PROVIDER_OVERRIDE_DISABLED",
+        "PROVIDER_OVERRIDE_FORCED"
+      ],
+      "default": "PROVIDER_OVERRIDE_UNSPECIFIED",
+      "description": " - PROVIDER_OVERRIDE_NONE: Back to normal routing by priority and health.\n - PROVIDER_OVERRIDE_DISABLED: Take out of rotation: no new attempts.\n - PROVIDER_OVERRIDE_FORCED: Send every new attempt here, whatever its priority or health."
+    },
+    "v1ProviderStatus": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Position in the configured priority list, 1 first."
+        },
+        "healthy": {
+          "type": "boolean",
+          "description": "False while the circuit is open after repeated outage failures."
+        },
+        "consecutiveFailures": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "circuitOpenUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastError": {
+          "type": "string"
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Operator override: no new attempts, or every new attempt."
+        },
+        "forced": {
+          "type": "boolean"
+        },
+        "overrideReason": {
+          "type": "string"
+        }
+      }
+    },
     "v1ReconBreak": {
       "type": "object",
       "properties": {
@@ -4368,6 +4509,14 @@
         }
       },
       "description": "ServiceCredential is how a product's backend authenticates. It never carries\nthe secret: that exists only in the response to CreateServiceCredential."
+    },
+    "v1SetProviderOverrideResponse": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "$ref": "#/definitions/v1ProviderStatus"
+        }
+      }
     },
     "v1Settlement": {
       "type": "object",

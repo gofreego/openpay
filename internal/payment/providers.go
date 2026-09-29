@@ -25,7 +25,8 @@ func Providers(cfg Config) (*provider.Registry, *mock.Provider) {
 		var all []provider.Provider
 		if cfg.Mock.Enabled {
 			mockProvider = mock.New(cfg.Mock.WebhookSecret, cfg.Mock.CheckoutURL)
-			all = append(all, mockProvider)
+			// Wrapped like any real provider: the mock is first-class.
+			all = append(all, provider.NewResilient(mockProvider, cfg.Resilience))
 		}
 		registry = provider.NewRegistry(cfg.Providers, all...)
 	})

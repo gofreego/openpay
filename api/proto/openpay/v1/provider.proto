@@ -1,0 +1,54 @@
+syntax = "proto3";
+package v1;
+
+option go_package = "./openpay_v1";
+
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// Payment providers as routing sees them: priority, circuit health, and any
+// operator override. Platform-level: one set of providers serves every product.
+
+message ProviderStatus {
+  string name = 1;
+  // Position in the configured priority list, 1 first.
+  int32 priority = 2;
+  // False while the circuit is open after repeated outage failures.
+  bool healthy = 3;
+  int32 consecutive_failures = 4;
+  google.protobuf.Timestamp circuit_open_until = 5;
+  string last_error = 6;
+  // Operator override: no new attempts, or every new attempt.
+  bool disabled = 7;
+  bool forced = 8;
+  string override_reason = 9;
+}
+
+message ListProvidersRequest {}
+
+message ListProvidersResponse {
+  repeated ProviderStatus providers = 1;
+}
+
+enum ProviderOverride {
+  PROVIDER_OVERRIDE_UNSPECIFIED = 0;
+  // Back to normal routing by priority and health.
+  PROVIDER_OVERRIDE_NONE = 1;
+  // Take out of rotation: no new attempts.
+  PROVIDER_OVERRIDE_DISABLED = 2;
+  // Send every new attempt here, whatever its priority or health.
+  PROVIDER_OVERRIDE_FORCED = 3;
+}
+
+// SetProviderOverrideRequest is the kill-switch: takes effect in every
+// process on the next routing decision, without a deploy. In-flight payments
+// stay where they are — failover never happens mid-payment.
+message SetProviderOverrideRequest {
+  string name = 1 [(validate.rules).string = {min_len: 1}];
+  ProviderOverride override = 2 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  string reason = 3 [(validate.rules).string = {min_len: 1, max_len: 500}];
+}
+
+message SetProviderOverrideResponse {
+  ProviderStatus provider = 1;
+}

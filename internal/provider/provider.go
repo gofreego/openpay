@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofreego/openpay/pkg/apperrors"
@@ -298,14 +299,63 @@ func (r *Registry) Get(name string) (Provider, error) {
 	return p, nil
 }
 
-// Choose picks the provider for a new attempt, and says why. A priority list,
-// not a rules engine (plan.md phase 5): health-based failover and method
-// rules extend this when there are two real providers to choose between.
-func (r *Registry) Choose() (Provider, string, error) {
+// Control is an operator's override for one provider (the kill-switch).
+type Control struct {
+	Disabled bool
+	Forced   bool
+	Reason   string
+}
+
+// Health reports a provider's circuit, if it is wrapped in one.
+func (r *Registry) Health(name string) (Health, bool) {
+	p, ok := r.providers[name]
+	if !ok {
+		return Health{}, false
+	}
+	h, ok := p.(interface{ Health() Health })
+	if !ok {
+		return Health{Healthy: true}, true
+	}
+	return h.Health(), true
+}
+
+// Choose picks the provider for a new attempt, and says why. A priority
+// list, not a rules engine (plan.md phase 5):
+//
+//   - a provider an operator forced takes every new attempt;
+//   - otherwise the first by priority that is not disabled and whose circuit
+//     is not open — so an outage fails over on its own;
+//   - if none qualifies, no attempt is made rather than one sent into an
+//     outage.
+//
+// Failover happens here, at attempt creation, never mid-payment: a customer
+// already on one provider's checkout stays there.
+func (r *Registry) Choose(controls map[string]Control) (Provider, string, error) {
 	for _, name := range r.priority {
-		if p, ok := r.providers[name]; ok {
-			return p, "priority: first configured provider", nil
+		if c := controls[name]; c.Forced {
+			if p, ok := r.providers[name]; ok {
+				return p, "forced by operator: " + c.Reason, nil
+			}
 		}
 	}
-	return nil, "", apperrors.New(apperrors.Unavailable, "no payment provider is configured")
+	var skipped []string
+	for _, name := range r.priority {
+		p, ok := r.providers[name]
+		if !ok {
+			continue
+		}
+		if c := controls[name]; c.Disabled {
+			skipped = append(skipped, name+" disabled ("+c.Reason+")")
+			continue
+		}
+		if h, _ := r.Health(name); !h.Healthy {
+			skipped = append(skipped, name+" circuit open")
+			continue
+		}
+		if len(skipped) > 0 {
+			return p, "failover: " + strings.Join(skipped, ", "), nil
+		}
+		return p, "priority: first healthy provider", nil
+	}
+	return nil, "", apperrors.New(apperrors.Unavailable, "no payment provider is available: %s", strings.Join(skipped, ", "))
 }

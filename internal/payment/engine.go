@@ -37,6 +37,7 @@ type Repository interface {
 	SaveOutboxEvent(ctx context.Context, event *dao.OutboxEvent) error
 
 	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
+	ListProviderControls(ctx context.Context) (map[string]provider.Control, error)
 
 	RefundRepository
 	DisputeRepository
@@ -52,6 +53,8 @@ type Config struct {
 	// poller asks the provider directly: the safety net for lost webhooks.
 	PollAfter time.Duration `yaml:"PollAfter"`
 	Mock      MockConfig    `yaml:"Mock"`
+	// Resilience bounds every provider call: timeout, retries, circuit breaker.
+	Resilience provider.ResilienceConfig `yaml:"Resilience"`
 }
 
 type MockConfig struct {
@@ -174,7 +177,11 @@ func (e *Engine) CreateOrderPayment(ctx context.Context, req OrderPaymentRequest
 // happened and that is the answer. A timeout leaves the provider's side
 // unknown, but no checkout reached the customer, so nothing can be paid.
 func (e *Engine) open(ctx context.Context, payment *dao.Payment) (*dao.Payment, *dao.PaymentAttempt, error) {
-	chosen, reason, err := e.providers.Choose()
+	controls, err := e.repo.ListProviderControls(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	chosen, reason, err := e.providers.Choose(controls)
 	if err != nil {
 		return nil, nil, err
 	}

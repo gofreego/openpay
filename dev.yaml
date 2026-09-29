@@ -46,6 +46,14 @@ Service:
     TTL: 30m
     # An open payment untouched this long is checked with its provider.
     PollAfter: 2m
+    # Every provider call: timeout, retries on outages (safe — every mutating
+    # call carries our idempotency id), and a circuit breaker.
+    Resilience:
+      Timeout: 10s
+      Retries: 2
+      Backoff: 200ms
+      FailureThreshold: 5
+      Cooldown: 30s
     # Local development only. The mock moves no money and its checkout page
     # lets anyone mark a payment paid.
     Mock:

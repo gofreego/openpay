@@ -15,6 +15,7 @@ import "proto/openpay/v1/payment.proto";
 import "proto/openpay/v1/order.proto";
 import "proto/openpay/v1/recon.proto";
 import "proto/openpay/v1/withdrawal.proto";
+import "proto/openpay/v1/provider.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -58,6 +59,10 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     {
       name: "Withdrawals"
       description: "Cashing withdrawable wallets out to a bank account or UPI id"
+    },
+    {
+      name: "Providers"
+      description: "Payment provider routing, health and the kill-switch"
     },
     {
       name: "Ledger"
@@ -790,6 +795,31 @@ service OpenPay {
             tags: "Orders"
             summary: "Cancel an order awaiting payment"
             description: "Product backend for its own orders. Cancels the card checkout and releases held wallet shares. If the customer paid first, the order is settled instead and this is refused."
+        };
+    }
+
+    // ---- Providers ----
+
+    rpc ListProviders (ListProvidersRequest) returns (ListProvidersResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/providers"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Providers"
+            summary: "List providers with health and overrides"
+            description: "Central ops: requires openpay:providers:read and openpay:scope:all."
+        };
+    }
+
+    rpc SetProviderOverride (SetProviderOverrideRequest) returns (SetProviderOverrideResponse) {
+        option (google.api.http) = {
+            post: "/openpay/v1/providers/{name}/override"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Providers"
+            summary: "Disable, force, or restore a provider"
+            description: "The kill-switch. Takes effect on the next payment attempt in every process. Central ops: requires openpay:providers:manage and openpay:scope:all; reason required; audited."
         };
     }
 }

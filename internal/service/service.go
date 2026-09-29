@@ -9,6 +9,7 @@ import (
 	"github.com/gofreego/openpay/internal/models/filter"
 	"github.com/gofreego/openpay/internal/order"
 	"github.com/gofreego/openpay/internal/payment"
+	"github.com/gofreego/openpay/internal/provider"
 	"github.com/gofreego/openpay/internal/recon"
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/internal/withdrawal"
@@ -79,6 +80,8 @@ type PaymentRepository interface {
 	MarkProviderEventProcessed(ctx context.Context, id int64) error
 	MarkProviderEventFailed(ctx context.Context, id int64, cause string, retryAt time.Time) error
 	RecordProviderRequest(ctx context.Context, req *dao.ProviderRequest) error
+	ListProviderControls(ctx context.Context) (map[string]provider.Control, error)
+	SetProviderControl(ctx context.Context, name string, c provider.Control, by string) error
 
 	PostJournal(ctx context.Context, journal *dao.Journal) error
 
@@ -306,6 +309,7 @@ type Service struct {
 	recon       *recon.Engine
 	alerts      recon.AlertConfig
 	withdrawals *withdrawal.Engine
+	registry    *provider.Registry
 	openpay_v1.UnimplementedOpenPayServer
 }
 
@@ -324,5 +328,6 @@ func NewService(ctx context.Context, cfg *Config, repo Repository) *Service {
 		alerts: cfg.ReconAlerts,
 		// Connects itself to payments, which hands it payout webhooks.
 		withdrawals: withdrawal.New(repo, registry, wallets, payments, cfg.Withdrawals),
+		registry:    registry,
 	}
 }

@@ -77,6 +77,8 @@ const (
 	OpenPay_GetWithdrawal_FullMethodName           = "/v1.OpenPay/GetWithdrawal"
 	OpenPay_ListWithdrawals_FullMethodName         = "/v1.OpenPay/ListWithdrawals"
 	OpenPay_CancelOrder_FullMethodName             = "/v1.OpenPay/CancelOrder"
+	OpenPay_ListProviders_FullMethodName           = "/v1.OpenPay/ListProviders"
+	OpenPay_SetProviderOverride_FullMethodName     = "/v1.OpenPay/SetProviderOverride"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -145,6 +147,8 @@ type OpenPayClient interface {
 	GetWithdrawal(ctx context.Context, in *GetWithdrawalRequest, opts ...grpc.CallOption) (*GetWithdrawalResponse, error)
 	ListWithdrawals(ctx context.Context, in *ListWithdrawalsRequest, opts ...grpc.CallOption) (*ListWithdrawalsResponse, error)
 	CancelOrder(ctx context.Context, in *CancelOrderRequest, opts ...grpc.CallOption) (*CancelOrderResponse, error)
+	ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error)
+	SetProviderOverride(ctx context.Context, in *SetProviderOverrideRequest, opts ...grpc.CallOption) (*SetProviderOverrideResponse, error)
 }
 
 type openPayClient struct {
@@ -735,6 +739,26 @@ func (c *openPayClient) CancelOrder(ctx context.Context, in *CancelOrderRequest,
 	return out, nil
 }
 
+func (c *openPayClient) ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProvidersResponse)
+	err := c.cc.Invoke(ctx, OpenPay_ListProviders_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *openPayClient) SetProviderOverride(ctx context.Context, in *SetProviderOverrideRequest, opts ...grpc.CallOption) (*SetProviderOverrideResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetProviderOverrideResponse)
+	err := c.cc.Invoke(ctx, OpenPay_SetProviderOverride_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -801,6 +825,8 @@ type OpenPayServer interface {
 	GetWithdrawal(context.Context, *GetWithdrawalRequest) (*GetWithdrawalResponse, error)
 	ListWithdrawals(context.Context, *ListWithdrawalsRequest) (*ListWithdrawalsResponse, error)
 	CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error)
+	ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error)
+	SetProviderOverride(context.Context, *SetProviderOverrideRequest) (*SetProviderOverrideResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -984,6 +1010,12 @@ func (UnimplementedOpenPayServer) ListWithdrawals(context.Context, *ListWithdraw
 }
 func (UnimplementedOpenPayServer) CancelOrder(context.Context, *CancelOrderRequest) (*CancelOrderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelOrder not implemented")
+}
+func (UnimplementedOpenPayServer) ListProviders(context.Context, *ListProvidersRequest) (*ListProvidersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListProviders not implemented")
+}
+func (UnimplementedOpenPayServer) SetProviderOverride(context.Context, *SetProviderOverrideRequest) (*SetProviderOverrideResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetProviderOverride not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -2050,6 +2082,42 @@ func _OpenPay_CancelOrder_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_ListProviders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProvidersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).ListProviders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_ListProviders_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).ListProviders(ctx, req.(*ListProvidersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OpenPay_SetProviderOverride_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetProviderOverrideRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).SetProviderOverride(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_SetProviderOverride_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).SetProviderOverride(ctx, req.(*SetProviderOverrideRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2288,6 +2356,14 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelOrder",
 			Handler:    _OpenPay_CancelOrder_Handler,
+		},
+		{
+			MethodName: "ListProviders",
+			Handler:    _OpenPay_ListProviders_Handler,
+		},
+		{
+			MethodName: "SetProviderOverride",
+			Handler:    _OpenPay_SetProviderOverride_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

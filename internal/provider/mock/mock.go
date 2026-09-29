@@ -41,6 +41,8 @@ type payment struct {
 
 // Provider is the mock PSP.
 type Provider struct {
+	name        string
+	down        bool
 	secret      []byte
 	checkoutURL string
 
@@ -74,7 +76,14 @@ type Provider struct {
 // New returns a mock signing webhooks with secret. checkoutURL is the base of
 // the hosted page a customer is sent to; the payment id is appended.
 func New(secret, checkoutURL string) *Provider {
+	return NewNamed(Name, secret, checkoutURL)
+}
+
+// NewNamed is a mock under another name — a second provider for testing
+// failover between two.
+func NewNamed(name, secret, checkoutURL string) *Provider {
 	return &Provider{
+		name:        name,
 		secret:      []byte(secret),
 		checkoutURL: checkoutURL,
 		payments:    map[string]*payment{},
@@ -88,7 +97,22 @@ func New(secret, checkoutURL string) *Provider {
 	}
 }
 
-func (m *Provider) Name() string { return Name }
+func (m *Provider) Name() string { return m.name }
+
+// SetUnavailable makes every create and fetch fail as an outage would, until
+// switched back.
+func (m *Provider) SetUnavailable(down bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.down = down
+}
+
+func (m *Provider) outage() error {
+	if m.down {
+		return provider.ErrUnavailable("%s: service unavailable", m.name)
+	}
+	return nil
+}
 
 func (m *Provider) Capabilities() provider.Capabilities {
 	m.mu.Lock()
@@ -100,13 +124,16 @@ func (m *Provider) CreatePayment(_ context.Context, req provider.CreateRequest) 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if err := m.outage(); err != nil {
+		return nil, err
+	}
 	if err := m.failNextCreate; err != nil {
 		m.failNextCreate = nil
 		return nil, err
 	}
 	id, ok := m.byAttempt[req.AttemptID]
 	if !ok {
-		id = "mockpay_" + ids.New(ids.Payment)[4:]
+		id = m.name + "pay_" + ids.New(ids.Payment)[4:]
 		m.payments[id] = &payment{
 			Payment: provider.Payment{
 				ProviderPaymentID: id, Status: provider.StatusPending,
@@ -125,6 +152,9 @@ func (m *Provider) CreatePayment(_ context.Context, req provider.CreateRequest) 
 func (m *Provider) FetchPayment(_ context.Context, providerPaymentID string) (*provider.Payment, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if err := m.outage(); err != nil {
+		return nil, err
+	}
 	p, ok := m.payments[providerPaymentID]
 	if !ok {
 		return nil, apperrors.New(apperrors.NotFound, "mock payment %q not found", providerPaymentID)

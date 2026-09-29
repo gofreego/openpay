@@ -40,6 +40,7 @@ type Repository interface {
 	GetLedgerAccountByCode(ctx context.Context, code string) (*dao.LedgerAccount, error)
 	PostJournal(ctx context.Context, journal *dao.Journal) error
 	SaveOutboxEvent(ctx context.Context, event *dao.OutboxEvent) error
+	ListProviderControls(ctx context.Context) (map[string]provider.Control, error)
 }
 
 type Config struct {
@@ -80,8 +81,12 @@ func New(repo Repository, providers *provider.Registry, wallets *wallet.Engine, 
 	return e
 }
 
-func (e *Engine) provider() (provider.Provider, error) {
-	p, _, err := e.providers.Choose()
+func (e *Engine) provider(ctx context.Context) (provider.Provider, error) {
+	controls, err := e.repo.ListProviderControls(ctx)
+	if err != nil {
+		return nil, err
+	}
+	p, _, err := e.providers.Choose(controls)
 	return p, err
 }
 
@@ -90,7 +95,7 @@ func (e *Engine) provider() (provider.Provider, error) {
 // lookup for a UPI id. A destination that fails is recorded as failed, so the
 // attempt is on file, and can never receive money.
 func (e *Engine) AddBeneficiary(ctx context.Context, b *dao.Beneficiary) (*dao.Beneficiary, error) {
-	p, err := e.provider()
+	p, err := e.provider(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +153,7 @@ func (e *Engine) Request(ctx context.Context, req Request) (*dao.Withdrawal, err
 	if err != nil {
 		return nil, err
 	}
-	p, err := e.provider()
+	p, err := e.provider(ctx)
 	if err != nil {
 		return nil, err
 	}
