@@ -12,6 +12,7 @@ import (
 	"github.com/gofreego/openpay/internal/middleware"
 	"github.com/gofreego/openpay/internal/payment"
 	"github.com/gofreego/openpay/internal/provider/mock"
+	"github.com/gofreego/openpay/internal/ratelimit"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 
@@ -63,7 +64,12 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 	// interceptors — so the gateway needs its own copies of the same concerns.
 	mux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(middleware.IncomingHeaderMatcher),
-		runtime.WithMiddlewares(middleware.CallerMiddleware(auth.New(repo))),
+		// Middlewares run in the order listed: authenticate, then count
+		// against that credential's limit.
+		runtime.WithMiddlewares(
+			middleware.CallerMiddleware(auth.New(repo)),
+			middleware.RateLimitMiddleware(ratelimit.New(a.cfg.Server.RateLimit)),
+		),
 		runtime.WithErrorHandler(middleware.ErrorHandler),
 	)
 

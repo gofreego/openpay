@@ -90,6 +90,11 @@ func ErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	if appErr.Code() == apperrors.RateLimited {
+		// Buckets refill continuously, so a second is always enough to get
+		// at least one request through.
+		w.Header().Set("Retry-After", "1")
+	}
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(body); err != nil {
 		logger.Error(ctx, "failed to write error response: %v", err)

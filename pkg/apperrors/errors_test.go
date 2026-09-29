@@ -11,7 +11,7 @@ import (
 func TestEveryCodeMapsToAGRPCCode(t *testing.T) {
 	all := []Code{
 		Internal, InvalidArgument, NotFound, AlreadyExists, PermissionDenied,
-		Unauthenticated, FailedPrecondition, Unavailable,
+		Unauthenticated, FailedPrecondition, Unavailable, RateLimited,
 		InsufficientBalance, IdempotencyKeyConflict, IdempotencyInProgress,
 		LedgerImbalance, CurrencyMismatch, WalletOperationDenied,
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/outbox"
+	"github.com/gofreego/openpay/internal/ratelimit"
 	repo "github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 	"github.com/gofreego/openpay/internal/telemetry"
@@ -33,6 +34,8 @@ type Configuration struct {
 type Server struct {
 	GRPCPort int `yaml:"GRPCPort"`
 	HTTPPort int `yaml:"HTTPPort"`
+	// RateLimit caps each service credential's request rate, per instance.
+	RateLimit ratelimit.Config `yaml:"RateLimit"`
 }
 
 // Worker configures the background job runner. It lives here rather than in

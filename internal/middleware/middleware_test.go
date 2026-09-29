@@ -219,3 +219,46 @@ func TestErrorHandlerHidesInternalDetail(t *testing.T) {
 		t.Errorf("message = %q leaked internal detail", body.Message)
 	}
 }
+
+// denyAll refuses every caller, so the tests below exercise only how each
+// edge reports a refusal.
+type denyAll struct{}
+
+func (denyAll) Allow(appcontext.Caller) error {
+	return apperrors.New(apperrors.RateLimited, "slow down")
+}
+
+func TestRateLimitUnaryInterceptor(t *testing.T) {
+	called := false
+	handler := func(ctx context.Context, req any) (any, error) { called = true; return "ok", nil }
+
+	_, err := RateLimitUnaryInterceptor(denyAll{})(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: "/v1.OpenPay/Post"}, handler)
+	if called {
+		t.Fatal("handler ran for a rate-limited request")
+	}
+	if got := status.Code(err); got != codes.ResourceExhausted {
+		t.Fatalf("code = %v, want ResourceExhausted", got)
+	}
+}
+
+func TestRateLimitMiddleware(t *testing.T) {
+	called := false
+	next := func(w http.ResponseWriter, r *http.Request, _ map[string]string) { called = true }
+
+	rec := httptest.NewRecorder()
+	RateLimitMiddleware(denyAll{})(next)(rec, httptest.NewRequest(http.MethodPost, "/openpay/v1/ledger/journals", nil), nil)
+
+	if called {
+		t.Fatal("handler ran for a rate-limited request")
+	}
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", rec.Code)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("429 without Retry-After")
+	}
+	var body errorBody
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil || body.Code != apperrors.RateLimited {
+		t.Fatalf("body = %+v (%v), want code rate_limited", body, err)
+	}
+}

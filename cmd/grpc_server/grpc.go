@@ -9,6 +9,7 @@ import (
 	"github.com/gofreego/openpay/internal/auth"
 	"github.com/gofreego/openpay/internal/configs"
 	"github.com/gofreego/openpay/internal/middleware"
+	"github.com/gofreego/openpay/internal/ratelimit"
 	"github.com/gofreego/openpay/internal/repository"
 	"github.com/gofreego/openpay/internal/service"
 
@@ -54,6 +55,10 @@ func (a *GRPCServer) Run(ctx context.Context) error {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			middleware.CallerUnaryInterceptor(auth.New(repo)),
+			// Counted before logging and errors so a flood is refused as
+			// cheaply as possible; after the caller, because the limit is per
+			// credential.
+			middleware.RateLimitUnaryInterceptor(ratelimit.New(a.cfg.Server.RateLimit)),
 			middleware.ErrorUnaryInterceptor(),
 		),
 	)

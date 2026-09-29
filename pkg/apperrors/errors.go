@@ -28,6 +28,9 @@ const (
 	Unauthenticated    Code = "unauthenticated"
 	FailedPrecondition Code = "failed_precondition"
 	Unavailable        Code = "unavailable"
+	// RateLimited means the caller sent more than its share; slow down and
+	// retry. Nothing was done.
+	RateLimited Code = "rate_limited"
 
 	// Domain codes. Add one whenever a caller would sensibly handle a failure
 	// differently, rather than overloading a generic code with prose.
@@ -50,6 +53,7 @@ var grpcCodes = map[Code]codes.Code{
 	Unauthenticated:    codes.Unauthenticated,
 	FailedPrecondition: codes.FailedPrecondition,
 	Unavailable:        codes.Unavailable,
+	RateLimited:        codes.ResourceExhausted,
 
 	InsufficientBalance:    codes.FailedPrecondition,
 	IdempotencyKeyConflict: codes.AlreadyExists,
@@ -169,6 +173,8 @@ func codeFromGRPC(c codes.Code) Code {
 		return FailedPrecondition
 	case codes.Unavailable, codes.DeadlineExceeded:
 		return Unavailable
+	case codes.ResourceExhausted:
+		return RateLimited
 	default:
 		return Internal
 	}

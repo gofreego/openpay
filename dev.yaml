@@ -22,6 +22,12 @@ AppNames:
 Server:
   GRPCPort: 8086
   HTTPPort: 8085
+  # Per service credential, per instance. Generous: this stops runaway
+  # callers, it does not meter normal traffic.
+  RateLimit:
+    Default:
+      RequestsPerSecond: 50
+      Burst: 100
 Repository:
   PostgreSQL:
     # `postgresql`, `primary` and `replica` are lowercase because those goutils

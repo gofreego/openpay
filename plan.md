@@ -1281,7 +1281,12 @@ and a forced failure returns the funds to the wallet with a clean audit trail.
 
 - [ ] Security: rate limiting per service credential, request signing (HMAC) option,
       IP allowlist for admin APIs, secret rotation runbook, dependency and container
-      scanning
+      scanning.
+      **Done:** rate limiting per service credential — a token bucket per credential
+      (default plus per-credential overrides, `Server.RateLimit`), applied on both
+      edges after authentication; over the limit is `rate_limited` / HTTP 429 with
+      `Retry-After`, nothing done. Per instance by design (N instances ⇒ up to N×);
+      operators are limited by opengate, not here
 - [ ] PII: column-level encryption for contact details; log redaction verified by test;
       data retention and deletion policy.
       **Done:** bank account numbers sealed with AES-256-GCM (`pkg/fieldcrypt`, key id
