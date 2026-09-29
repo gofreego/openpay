@@ -18,3 +18,23 @@ plugins:
     out: ./
     opt:
       - lang=go
+
+  # TypeScript types for the admin console (plan.md U-D3). Needs
+  # ui/node_modules: run `npm install` in ui/ first.
+  #
+  # The console talks to the grpc-gateway, so the types must match its JSON,
+  # not the binary wire format:
+  #   forceLong=string   int64 is a JSON string — and no amount ever becomes
+  #                      a float (U-D4)
+  #   stringEnums=true   enums arrive as their names, e.g. "PRODUCT_STATUS_ACTIVE"
+  #   useDate=string     timestamps arrive as RFC 3339 strings
+  #   onlyTypes=true     services are hand-written over HTTP (ui/src/services)
+  - plugin: ts_proto
+    path: ../ui/node_modules/.bin/protoc-gen-ts_proto
+    out: ../ui/src/apis/
+    opt:
+      - esModuleInterop=true
+      - forceLong=string
+      - stringEnums=true
+      - useDate=string
+      - onlyTypes=true

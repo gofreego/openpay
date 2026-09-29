@@ -247,3 +247,29 @@ func TestProductsStartWithMainAndBonus(t *testing.T) {
 		t.Errorf("BONUS = %+v, want grantable only, not withdrawable, expiring", bonus)
 	}
 }
+
+// GetMe resolves scope exactly as every other call does: central ops see
+// every product, a product operator only theirs (a stale grant naming no
+// product grants nothing), and a service credential has no console identity.
+func TestGetMe(t *testing.T) {
+	e := setupEstate(t)
+
+	me, err := e.svc.GetMe(central(), &openpay_v1.GetMeRequest{})
+	if err != nil {
+		t.Fatalf("central: %v", err)
+	}
+	if !me.GetScopeAll() || len(me.GetProducts()) != 2 || me.GetUserId() != "op_test" {
+		t.Errorf("central ops = all %t, %d products, user %q; want all, 2, op_test", me.GetScopeAll(), len(me.GetProducts()), me.GetUserId())
+	}
+
+	me, err = e.svc.GetMe(productOps("zshala", "gone"), &openpay_v1.GetMeRequest{})
+	if err != nil {
+		t.Fatalf("product ops: %v", err)
+	}
+	if me.GetScopeAll() || len(me.GetProducts()) != 1 || me.GetProducts()[0].GetCode() != "zshala" {
+		t.Errorf("zshala operator = all %t, products %v; want zshala alone", me.GetScopeAll(), me.GetProducts())
+	}
+
+	_, err = e.svc.GetMe(backend(t, e, e.zshala), &openpay_v1.GetMeRequest{})
+	wantCode(t, "a service credential asking who it is", err, apperrors.PermissionDenied)
+}

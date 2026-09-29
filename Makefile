@@ -25,8 +25,10 @@ migrate:
 
 clean:
 	rm -f application
+	rm -rf ui/dist/assets ui/dist/index.html
 
-docker: build-linux
+# The console is embedded in the binary (main.go), so build it first.
+docker: ui build-linux
 	docker build -t openpay .
 	rm -f application
 
@@ -48,7 +50,23 @@ install:
 	go install github.com/envoyproxy/protoc-gen-validate@latest
 	go install github.com/gofreego/goutils/cmd/sql-migrator@v1.3.8
 
-setup:
+# Generates Go and the console's TypeScript types from the protos in one step,
+# so a proto change that breaks the console breaks its typecheck.
+setup: ui-deps
 	@echo "Compiling proto files..."
 	sh ./api/protoc.sh
 	go mod tidy
+
+# ---- Admin console (ui/) ----
+
+ui-deps:
+	@test -d ui/node_modules || (cd ui && npm ci)
+
+# Builds the console into ui/dist, which the binary embeds and serves at
+# /payments/.
+ui: ui-deps
+	cd ui && npm run build
+
+# What CI runs for the console: typecheck, lint, unit tests, build.
+ui-check: ui-deps
+	cd ui && npm run typecheck && npm run lint && npm test && npm run build

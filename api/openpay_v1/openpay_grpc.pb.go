@@ -84,6 +84,7 @@ const (
 	OpenPay_GetProviderStats_FullMethodName        = "/v1.OpenPay/GetProviderStats"
 	OpenPay_ExportAccountStatement_FullMethodName  = "/v1.OpenPay/ExportAccountStatement"
 	OpenPay_ExportWalletStatement_FullMethodName   = "/v1.OpenPay/ExportWalletStatement"
+	OpenPay_GetMe_FullMethodName                   = "/v1.OpenPay/GetMe"
 )
 
 // OpenPayClient is the client API for OpenPay service.
@@ -158,6 +159,7 @@ type OpenPayClient interface {
 	GetProviderStats(ctx context.Context, in *GetProviderStatsRequest, opts ...grpc.CallOption) (*GetProviderStatsResponse, error)
 	ExportAccountStatement(ctx context.Context, in *ExportAccountStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 	ExportWalletStatement(ctx context.Context, in *ExportWalletStatementRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*GetMeResponse, error)
 }
 
 type openPayClient struct {
@@ -808,6 +810,16 @@ func (c *openPayClient) ExportWalletStatement(ctx context.Context, in *ExportWal
 	return out, nil
 }
 
+func (c *openPayClient) GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*GetMeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMeResponse)
+	err := c.cc.Invoke(ctx, OpenPay_GetMe_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OpenPayServer is the server API for OpenPay service.
 // All implementations must embed UnimplementedOpenPayServer
 // for forward compatibility.
@@ -880,6 +892,7 @@ type OpenPayServer interface {
 	GetProviderStats(context.Context, *GetProviderStatsRequest) (*GetProviderStatsResponse, error)
 	ExportAccountStatement(context.Context, *ExportAccountStatementRequest) (*httpbody.HttpBody, error)
 	ExportWalletStatement(context.Context, *ExportWalletStatementRequest) (*httpbody.HttpBody, error)
+	GetMe(context.Context, *GetMeRequest) (*GetMeResponse, error)
 	mustEmbedUnimplementedOpenPayServer()
 }
 
@@ -1081,6 +1094,9 @@ func (UnimplementedOpenPayServer) ExportAccountStatement(context.Context, *Expor
 }
 func (UnimplementedOpenPayServer) ExportWalletStatement(context.Context, *ExportWalletStatementRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExportWalletStatement not implemented")
+}
+func (UnimplementedOpenPayServer) GetMe(context.Context, *GetMeRequest) (*GetMeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMe not implemented")
 }
 func (UnimplementedOpenPayServer) mustEmbedUnimplementedOpenPayServer() {}
 func (UnimplementedOpenPayServer) testEmbeddedByValue()                 {}
@@ -2255,6 +2271,24 @@ func _OpenPay_ExportWalletStatement_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OpenPay_GetMe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OpenPayServer).GetMe(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OpenPay_GetMe_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OpenPayServer).GetMe(ctx, req.(*GetMeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OpenPay_ServiceDesc is the grpc.ServiceDesc for OpenPay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2517,6 +2551,10 @@ var OpenPay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExportWalletStatement",
 			Handler:    _OpenPay_ExportWalletStatement_Handler,
+		},
+		{
+			MethodName: "GetMe",
+			Handler:    _OpenPay_GetMe_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

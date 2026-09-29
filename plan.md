@@ -1375,39 +1375,50 @@ least once, finance can close a month from OpenPay reports alone.
 **Goal:** an authenticated empty console with the primitives every later screen reuses.
 Copy the `opengate/ui` skeleton rather than starting from `npm create vite`.
 
-- [ ] Bootstrap `ui/` from the `opengate/ui` layout: `src/{apis,components,hooks,pages,services,types,utils}`
-- [ ] `package.json` matching the house stack (React 19, MUI v7, emotion, RRD v7,
+- [x] Bootstrap `ui/` from the `opengate/ui` layout: `src/{apis,components,hooks,pages,services,types,utils}`
+- [x] `package.json` matching the house stack (React 19, MUI v7, emotion, RRD v7,
       `@gofreego/tsutils`, ts-proto in devDeps) + `generate:proto` script
-- [ ] Enable the `ts_proto` plugin in `api/buf.gen.yaml` (U-D3); confirm `make setup`
+- [x] Enable the `ts_proto` plugin in `api/buf.gen.yaml` (U-D3); confirm `make setup`
       regenerates `ui/src/apis/` and that generated output is git-ignored or committed
-      consistently with the other repos
-- [ ] `utils/httpClient.ts` wrapping `@gofreego/tsutils` `HttpClient` with
+      consistently with the other repos. Committed, like opengate. Options differ from
+      opengate's on purpose — `stringEnums`, `useDate=string`, `onlyTypes` — so the types
+      match the gateway's JSON (enum names, RFC 3339 strings) rather than the binary
+      wire format
+- [x] `utils/httpClient.ts` wrapping `@gofreego/tsutils` `HttpClient` with
       `VITE_API_BASE_URL`; interceptor injecting `Idempotency-Key` when supplied
-- [ ] Auth shell: `ThemeProvider` → `NotificationProvider` → `BrowserRouter`, with
+- [x] Auth shell: `ThemeProvider` → `NotificationProvider` → `BrowserRouter`, with
       `ProtectedRoute`, `/login-callback`, `NotFoundPage`, redirect to `VITE_LOGIN_URL`
-- [ ] App layout: persistent sidebar nav, breadcrumb header, **product filter** (an
+- [x] App layout: persistent sidebar nav, breadcrumb header, **product filter** (an
       "All products" default plus per-product narrowing — not a hard tenant switch,
       since ops routinely need the cross-product view), current operator + permissions
-- [ ] **`Money` util + `<Money>` component** (U-D4) with BigInt arithmetic; unit tests
+- [x] **`Money` util + `<Money>` component** (U-D4) with BigInt arithmetic; unit tests
       covering large values, negatives, and zero-padding of minor units
-- [ ] `<DataTable>` wrapper: server-side pagination (matching the backend
+- [x] `<DataTable>` wrapper: server-side pagination (matching the backend
       `limit`/`offset` filter convention), column filters, empty/loading/error states,
       CSV export hook
-- [ ] `<ConfirmAction>` ceremony component (U-D7): amount retype, reason-code select,
+- [x] `<ConfirmAction>` ceremony component (U-D7): amount retype, reason-code select,
       journal preview slot, idempotency key lifecycle
-- [ ] `<StatusChip>` driven by the canonical state machines (D6) so a status renders
+- [x] `<StatusChip>` driven by the canonical state machines (D6) so a status renders
       identically on every screen
-- [ ] Error handling: `extractErrorMessage` + notification toasts; surface the
+- [x] Error handling: `extractErrorMessage` + notification toasts; surface the
       backend's machine-readable `error_code` in a copyable detail line
-- [ ] `usePermissions()` hook gating nav items and actions, **product-scope aware**
+- [x] `usePermissions()` hook gating nav items and actions, **product-scope aware**
       (U-D6): it answers "may this operator do X, on which products?", and the layout's
-      product filter is locked to that set for product-scoped operators
-- [ ] Makefile, Dockerfile, nginx.conf, k8s manifests, `.env` — mirror `opengate/ui`
-- [ ] CI: typecheck, lint, build, unit tests
+      product filter is locked to that set for product-scoped operators. Backed by a new
+      `GET /openpay/v1/me` — the browser never sees opengate's injected headers, so the
+      server reports permissions and the resolved product scope
+- [x] Makefile, Dockerfile, nginx.conf, k8s manifests, `.env` — mirror `opengate/ui`.
+      Resolved as opengate actually does it: the binary embeds `ui/dist` and serves it
+      at `/payments/` (no separate nginx/k8s for the console); `make ui` builds it and
+      `make docker` depends on it; `ui/.env.example` documents the variables
+- [x] CI: typecheck, lint, build, unit tests (`.github/workflows/ci.yml`, plus the Go
+      suite against Postgres); ESLint bans parseFloat/Number()/toFixed/unary + (U-D4)
 
 **Exit criteria:** logging in via OpenAuth lands on an empty dashboard; a protected
 route redirects when the session is cleared; `make setup` regenerates TS types and a
 deliberate proto rename breaks the UI build.
+*Proto-rename check done (renaming `scope_all` broke the typecheck in 5 places). The
+login/redirect checks are deferred to the end-to-end test pass.*
 
 ---
 

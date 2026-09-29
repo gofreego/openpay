@@ -18,6 +18,7 @@ import "proto/openpay/v1/recon.proto";
 import "proto/openpay/v1/withdrawal.proto";
 import "proto/openpay/v1/provider.proto";
 import "proto/openpay/v1/report.proto";
+import "proto/openpay/v1/me.proto";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -872,6 +873,19 @@ service OpenPay {
             tags: "Reports"
             summary: "Download a wallet statement as CSV"
             description: "Oldest first. A period over the row cap is refused, never truncated. Operators need openpay:wallets:read; a product backend may export its own customers' wallets."
+        };
+    }
+
+    // ---- Console ----
+
+    rpc GetMe (GetMeRequest) returns (GetMeResponse) {
+        option (google.api.http) = {
+            get: "/openpay/v1/me"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Products"
+            summary: "Who the calling operator is and what they may reach"
+            description: "Operators only. Permissions and the resolved product scope, for the admin console to shape itself; the server still checks every call."
         };
     }
 }

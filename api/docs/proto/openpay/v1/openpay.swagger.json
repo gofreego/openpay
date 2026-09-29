@@ -890,6 +890,30 @@
         ]
       }
     },
+    "/openpay/v1/me": {
+      "get": {
+        "summary": "Who the calling operator is and what they may reach",
+        "description": "Operators only. Permissions and the resolved product scope, for the admin console to shape itself; the server still checks every call.",
+        "operationId": "OpenPay_GetMe",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Products"
+        ]
+      }
+    },
     "/openpay/v1/orders": {
       "post": {
         "summary": "Create and pay for an order",
@@ -3391,6 +3415,33 @@
       "properties": {
         "account": {
           "$ref": "#/definitions/v1LedgerAccount"
+        }
+      }
+    },
+    "v1GetMeResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The operator's OpenPay permissions, as opengate forwarded them."
+        },
+        "scopeAll": {
+          "type": "boolean",
+          "description": "True for central ops (openpay:scope:all): every product, plus the\nplatform-level screens."
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Product"
+          },
+          "description": "The products this operator may see: every product for central ops,\notherwise those their scope grants that exist."
         }
       }
     },

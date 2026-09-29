@@ -3,7 +3,9 @@ package http_server
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/gofreego/openpay/api/openpay_v1"
 	"github.com/gofreego/openpay/internal/auth"
@@ -31,8 +33,9 @@ const (
 )
 
 type HTTPServer struct {
-	cfg    *configs.Configuration
-	server *http.Server
+	cfg     *configs.Configuration
+	server  *http.Server
+	console fs.FS
 }
 
 func (a *HTTPServer) Name() string {
@@ -45,9 +48,12 @@ func (a *HTTPServer) Shutdown(ctx context.Context) {
 	}
 }
 
-func NewHTTPServer(cfg *configs.Configuration) *HTTPServer {
+// NewHTTPServer serves the API, webhooks, probes and — from console, the
+// built ui/dist — the admin console.
+func NewHTTPServer(cfg *configs.Configuration, console fs.FS) *HTTPServer {
 	return &HTTPServer{
-		cfg: cfg,
+		cfg:     cfg,
+		console: console,
 	}
 }
 
@@ -100,6 +106,11 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 		logger.Warn(ctx, "mock payment provider enabled: checkout at %s — never enable this in production", mockCheckoutPrefix)
 		root.Handle(mockCheckoutPrefix, payment.MockCheckoutHandler(mockCheckoutPrefix, webhookPrefix+mock.Name, mockProvider, webhooks))
 	}
+
+	// The admin console. It calls the API through opengate like any other
+	// operator client; serving it here just keeps it versioned with the API.
+	root.Handle(ConsolePrefix, ConsoleHandler(a.console))
+	root.Handle(strings.TrimSuffix(ConsolePrefix, "/"), ConsoleHandler(a.console))
 
 	root.Handle("/", mux)
 

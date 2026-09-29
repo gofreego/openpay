@@ -1,0 +1,57 @@
+name: CI
+
+# Checks only; OpenPay's deploy pipeline is not decided yet.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    services:
+      # Integration tests need a real Postgres: row locks, SKIP LOCKED and
+      # constraints under contention are what they test.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openpay
+          POSTGRES_PASSWORD: openpay
+          POSTGRES_DB: openpay_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U openpay -d openpay_test"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Migrate the test database
+        run: |
+          go install github.com/gofreego/goutils/cmd/sql-migrator@v1.3.8
+          # sql-migrator waits for a signal once done; stop it after it applies.
+          sql-migrator ./migrator.test.yaml & MIG=$!; sleep 10; kill $MIG || true
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        # -p 1: packages share openpay_test and TRUNCATE it.
+        run: OPENPAY_TEST_POSTGRES=1 go test -race -p 1 ./...
+
+  console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

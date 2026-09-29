@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"embed"
 	"flag"
+	"io/fs"
 	"time"
 
 	"github.com/gofreego/openpay/cmd/grpc_server"
@@ -47,7 +49,7 @@ func main() {
 	for _, appName := range conf.AppNames {
 		switch appName {
 		case constants.HTTP_SERVER:
-			apps = append(apps, http_server.NewHTTPServer(conf))
+			apps = append(apps, http_server.NewHTTPServer(conf, console()))
 		case constants.GRPC_SERVER:
 			apps = append(apps, grpc_server.NewGRPCServer(conf))
 		case constants.WORKER:
@@ -63,6 +65,21 @@ func main() {
 	}
 
 	apputils.GracefulShutdown(ctx, apps...)
+}
+
+// The admin console, built by `make ui` into ui/dist. Only a placeholder is
+// committed, so a binary built without the console still compiles and says
+// so at /payments/ rather than failing to build.
+//
+//go:embed all:ui/dist
+var consoleDist embed.FS
+
+func console() fs.FS {
+	dist, err := fs.Sub(consoleDist, "ui/dist")
+	if err != nil {
+		panic(err) // the path is fixed at compile time
+	}
+	return dist
 }
 
 // flushTelemetry pushes buffered spans and metrics before the process exits.
