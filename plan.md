@@ -1013,7 +1013,10 @@ Two consequences:
       funds, risk, technical) so retries and UX are provider-agnostic
 - [x] Routing: primary/secondary with health-based failover, plus rules on method and
       amount band. Record the chosen provider *and the reason* on every attempt.
-      Keep it a priority list, not a rules engine — two providers do not justify one
+      Keep it a priority list, not a rules engine — two providers do not justify one.
+      **Done:** priority + health-based failover + the reason on every attempt.
+      **Not built:** method/amount-band rules — they only mean something once two real
+      providers differ in what they are good at
 - [x] **Failover happens at attempt creation, never mid-payment.** Once a customer is on
       Razorpay's hosted checkout, that attempt lives and dies there; Cashfree picks up
       the *next* attempt. Design the retry UX around a fresh attempt on the healthy
