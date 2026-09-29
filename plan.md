@@ -703,31 +703,31 @@ to OpenPay.
       if a real need to loosen a flag on an unused type appears
 - [x] Seed the two canonical types per product so the distinction is the default path:
       `MAIN` (fundable, closed-loop) and `BONUS` (grantable, expiring, non-withdrawable).
-      Created in `CreateProduct`'s transaction. BONUS: fixed expiry, 365 days.
+      Created in `CreateProduct`'s transaction. BONUS: rolling expiry, 365 days
+      (fixed expiry needs per-credit lots — see Phase 3).
       Both `refundable_to_source`, so a refund returns to the balance that paid —
       promotional credit can never become real money through a refund. Products
       created before this change are not backfilled
-- [ ] `fee_policies` table (D12): mode `ABSORBED | DEDUCTED | PASSED_ON` keyed by
+- [ ] **Deliberately deferred (D12)** — `fee_policies` table: mode `ABSORBED | DEDUCTED | PASSED_ON` keyed by
       `(product_id, purpose)` with a platform default row; resolution is a lookup with a
       documented precedence, not a rules engine.
       **Deferred to Phase 4**, where payments first consume it — config with no
       consumer cannot be verified, and `ABSORBED` is the launch default anyway (Q2)
-- [ ] `PASSED_ON` is compliance-gated the same way `withdrawable` is (surcharging
+- [ ] **Deferred with fee policies** — `PASSED_ON` is compliance-gated the same way `withdrawable` is (surcharging
       restrictions) — elevated permission plus a recorded approval
 - [x] `customers` carries **no `product_id`** — one row per person, platform-wide, keyed
       by `external_ref` (the OpenAuth user id) UNIQUE. Upsert on it; idempotent by
       construction
 - [x] `merged_into_customer_id` nullable self-reference for the merge tombstone; every
       customer lookup follows it so a merged id keeps resolving to the survivor
-- [ ] `customer_id` is **nullable** on payments and orders — a one-off guest purchase
+- [x] `customer_id` is **nullable** on payments and orders — a one-off guest purchase
       needs no customer record; anything holding a balance does.
-      Lands with those tables (Phases 4 and 7)
-- [ ] **Product-scoped wallet reads** (D8): a service credential resolves to one product,
+      Landed with those tables; a guest card order is tested in Phase 7
+- [x] **Product-scoped wallet reads** (D8): a service credential resolves to one product,
       and any wallet listing for a customer returns that product's wallets plus
       `PLATFORM`-scoped ones — never another product's. Cover this with an explicit
       test, since it is the one place a shared customer can leak data.
-      `ListWalletTypes` already returns product + `PLATFORM` types; the wallet listing
-      itself lands in Phase 3
+      Done in Phase 3 (`TestProductBackendSeesOnlyItsOwnWallets`)
 - [x] Customer merge (design now, implement when first needed): transfer balances **by
       journal** not by `UPDATE`, leave the losing record as a resolving tombstone rather
       than deleting it, and make the whole operation auditable and reversible.
@@ -959,7 +959,7 @@ before any real vendor is involved.
       correct terminal state; webhook lost entirely → poller recovers. Also: decline
       then late success, amount mismatch, refused credit, provider timeout, expiry,
       forged signature, webhook-before-commit retried, webhook racing the poller
-- [ ] `fee_policies` (deferred from Phase 1): only `ABSORBED` works without a rate
+- [ ] **Deliberately deferred (D12)** — `fee_policies` (deferred from Phase 1): only `ABSORBED` works without a rate
       card, and D12 says skip the rate card until a product needs `DEDUCTED` or
       `PASSED_ON`. A table that can hold one value is config nobody can use; it
       arrives with the rate card in Phase 5. Every top-up is `ABSORBED` meanwhile
@@ -996,13 +996,13 @@ Two consequences:
 - [ ] Confirm both cover the needed rails, and note each one's payouts product
       (RazorpayX / Cashfree Payouts) — separate onboarding, relevant only if Q1 later
       puts Phase 9 in scope
-- [ ] Keep the mock provider wired in CI as a first-class implementation, not test
+- [x] Keep the mock provider wired in CI as a first-class implementation, not test
       scaffolding — if an interface change only makes sense for a real provider,
       the abstraction has leaked
 - [ ] Credential storage: **one credential set per provider, platform-wide** (D8) —
       envelope encryption (KMS/AES-GCM DEK); never logged, never returned by any API,
       redacted in the request log
-- [ ] Payment description / statement descriptor carries the product name, so a customer
+- [x] Payment description / statement descriptor carries the product name, so a customer
       recognises the charge and support can attribute it without a lookup
 - [ ] **Rate card** per provider/method/amount band, versioned with effective dates —
       needed only if any product uses `DEDUCTED` or `PASSED_ON` (D12). Skip it entirely
@@ -1078,8 +1078,9 @@ special-casing.
       A disputed payment cannot be refunded; a refunded one can still be disputed.
       Evidence is central-ops only; the disputes queue is ordered by evidence deadline;
       a poller covers lost dispute webhooks
-- [ ] Reconciliation of refund/dispute fees — **Phase 8**: fees exist only in
-      settlement reports
+- [x] Reconciliation of refund/dispute fees — **Phase 8**: fees exist only in
+      settlement reports. Refund and chargeback settlement lines are matched and their
+      fees booked per product like any other line
 - [x] Tests: refund of a wallet-funded purchase; partial refunds summing to the whole;
       refund arriving after a dispute.
       Partial refunds summing to the whole, concurrent over-refund, spent top-up,
