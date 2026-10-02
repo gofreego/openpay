@@ -4,6 +4,7 @@ import { ConsoleProvider } from './hooks'
 import { ConsoleLayout } from './layout/ConsoleLayout'
 import { Shell } from './layout/Shell'
 import { authService, sessionManager } from './services'
+import { DEV_OPERATOR } from './utils/httpClient'
 import { DashboardPage } from './pages/dashboard'
 import { ProductsPage } from './pages/catalog/ProductsPage'
 import { ProductDetailPage } from './pages/catalog/ProductDetailPage'
@@ -28,6 +29,7 @@ import { ReconPage } from './pages/recon/ReconPage'
 import { WithdrawalsPage, WithdrawalDetailPage } from './pages/withdrawals/WithdrawalsPage'
 import { ReportsPage } from './pages/reports/ReportsPage'
 import { AuditLogPage } from './pages/audit/AuditLogPage'
+import { SettingsPage } from './pages/settings/SettingsPage'
 
 // The console lives under /payments/ (vite.config.ts base). OpenAuth sends
 // the operator back to the callback with a login token.
@@ -41,8 +43,10 @@ const CALLBACK = '/login-callback'
 const SKIP_LOGIN = import.meta.env.DEV && import.meta.env.VITE_DEV_SKIP_LOGIN === 'true'
 
 // Restores a stored session's Authorization header before anything renders,
-// so the first request already carries it.
-authService.initializeAuth()
+// so the first request already carries it. Not when standing in for opengate:
+// opengate consumes the OpenAuth token, and OpenPay reached directly would
+// take it for a service credential and reject it.
+if (!DEV_OPERATOR) authService.initializeAuth()
 
 function App() {
   // The operator (GET /me) is loaded above the sidebar, so navigation can be
@@ -92,6 +96,7 @@ function App() {
                 <Route path="withdrawals/:id" element={<WithdrawalDetailPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="audit" element={<AuditLogPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>

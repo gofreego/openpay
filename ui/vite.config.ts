@@ -15,18 +15,13 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // Local development without opengate: proxy the API to a local
-      // OpenPay and stand in for opengate by injecting the operator headers
-      // from .env.development.local. Dev server only — a production build
-      // talks to opengate, which alone may set these headers.
+      // OpenPay. The operator headers come from the client itself
+      // (VITE_DEV_USER_ID / VITE_DEV_USER_PERMS, see utils/httpClient.ts).
       proxy: env.DEV_OPENPAY_URL
         ? {
             '/openpay/v1': {
               target: env.DEV_OPENPAY_URL,
               changeOrigin: true,
-              headers: {
-                'x-user-id': env.DEV_USER_ID ?? 'dev-operator',
-                'x-user-perms': env.DEV_USER_PERMS ?? '',
-              },
             },
           }
         : undefined,

@@ -21,7 +21,9 @@ export function WalletTypesPage() {
   const { products, selectedProduct } = useConsole()
   const permissions = usePermissions()
   const productId = params.get('product') ?? (selectedProduct === 'all' ? '' : selectedProduct)
-  const types = useAsync(() => walletTypeService.list(productId || undefined), [productId])
+  // The API lists one product's types (plus the platform-wide ones), so
+  // "All products" asks the operator to pick one rather than sending none.
+  const types = useAsync(() => productId ? walletTypeService.list(productId) : Promise.resolve(null), [productId])
   const [creating, setCreating] = useState(false)
   const productName = (id: string) => products.find((p) => p.id === id)?.code ?? id
 
@@ -34,6 +36,9 @@ export function WalletTypesPage() {
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)}>New wallet type</Button>
         )}
       />
+      {!productId ? (
+        <Alert severity="info">Choose a product in the product picker to see its wallet types, alongside the platform-wide ones.</Alert>
+      ) : (
       <DataTable<WalletType>
         rows={types.data?.walletTypes ?? []}
         rowKey={(t) => t.id}
@@ -52,6 +57,7 @@ export function WalletTypesPage() {
           { key: 'status', header: 'Status', render: (t) => <StatusChip status={t.status} /> },
         ]}
       />
+      )}
       <CreateWalletType open={creating} onClose={() => setCreating(false)} onCreated={(t) => navigate(`/wallet-types/${t.id}`)} defaultProduct={productId} />
     </>
   )

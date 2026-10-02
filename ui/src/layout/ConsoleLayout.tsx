@@ -16,7 +16,9 @@ import OutboxIcon from '@mui/icons-material/Outbox'
 import RouterIcon from '@mui/icons-material/Router'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import HistoryIcon from '@mui/icons-material/History'
+import SettingsIcon from '@mui/icons-material/Settings'
 import { Perm, usePermissions, type Permissions } from '../hooks'
+import { SidebarFooter, SidebarHeader } from './Sidebar'
 
 interface NavItem { id: string; label: string; path: string; icon: ReactElement; show: (p: Permissions) => boolean }
 
@@ -39,10 +41,11 @@ const NAV: NavItem[] = [
   { id: 'products', label: 'Products', path: '/products', icon: <StorefrontIcon />, show: (p) => p.can(Perm.productsRead) },
   { id: 'wallet-types', label: 'Wallet types', path: '/wallet-types', icon: <CategoryIcon />, show: (p) => p.can(Perm.walletTypesRead) },
   { id: 'audit', label: 'Audit log', path: '/audit', icon: <HistoryIcon />, show: (p) => p.can(Perm.auditRead) },
+  { id: 'settings', label: 'Settings', path: '/settings', icon: <SettingsIcon />, show: () => true },
 ]
 
 export function ConsoleLayout() {
   const permissions = usePermissions()
   const menuItems = NAV.filter((item) => item.show(permissions)).map(({ id, label, path, icon }) => ({ id, label, path, icon }))
-  return <SidebarLayout menuItems={menuItems} isRouter={true} isBrowserRouter={false} style={{ height: '100vh' }} />
+  return <SidebarLayout menuItems={menuItems} isRouter={true} isBrowserRouter={false} style={{ height: '100vh' }} header={<SidebarHeader />} footer={<SidebarFooter />} />
 }

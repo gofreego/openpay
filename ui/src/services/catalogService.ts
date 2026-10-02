@@ -23,7 +23,7 @@ export const productService = {
 }
 
 export const walletTypeService = {
-  list: (productId?: string) => get<ListWalletTypesResponse>('/wallet-types', { product_id: productId }),
+  list: (productId: string) => get<ListWalletTypesResponse>('/wallet-types', { product_id: productId }),
   get: (id: string) => get<GetWalletTypeResponse>(`/wallet-types/${enc(id)}`),
   create: (body: CreateWalletTypeRequest, key: string) => post<CreateWalletTypeResponse>('/wallet-types', body, key),
   update: (id: string, body: Omit<UpdateWalletTypeRequest, 'id'>, key: string) =>
@@ -31,7 +31,7 @@ export const walletTypeService = {
 }
 
 export const credentialService = {
-  list: (productId?: string) => get<ListServiceCredentialsResponse>('/credentials', { product_id: productId }),
+  list: (productId: string) => get<ListServiceCredentialsResponse>('/credentials', { product_id: productId }),
   create: (productId: string, name: string, key: string) =>
     post<CreateServiceCredentialResponse>('/credentials', { productId, name }, key),
   revoke: (id: string, key: string) => post<RevokeServiceCredentialResponse>(`/credentials/${enc(id)}/revoke`, {}, key),

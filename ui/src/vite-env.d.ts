@@ -7,6 +7,10 @@ interface ImportMetaEnv {
   readonly VITE_LOGIN_URL: string
   /** Development only: skip the OpenAuth session check (see vite.config.ts). */
   readonly VITE_DEV_SKIP_LOGIN?: string
+  /** Development only: operator id sent as x-user-id in opengate's place. */
+  readonly VITE_DEV_USER_ID?: string
+  /** Development only: comma-separated permissions sent as x-user-perms. */
+  readonly VITE_DEV_USER_PERMS?: string
 }
 
 interface ImportMeta {
