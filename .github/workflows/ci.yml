@@ -27,6 +27,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Stand in for the console build
+        # main.go embeds ui/dist, which must exist to compile. No test needs
+        # the real console (they use fstest), and only the Docker image ships,
+        # which builds and embeds it for real — so a placeholder is enough
+        # and this job need not wait for the console job.
+        run: mkdir -p ui/dist && touch ui/dist/.gitkeep
       - name: Migrate the test database
         run: |
           go install github.com/gofreego/goutils/cmd/sql-migrator@v1.3.8

@@ -1,6 +1,9 @@
+# The binary embeds the console (main.go: go:embed ui/dist), so build it first.
 build: clean
+	$(MAKE) ui
 	go build -o application .
 build-linux: clean
+	$(MAKE) ui
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o application .
 run:
 	go run main.go
