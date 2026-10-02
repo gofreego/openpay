@@ -20,7 +20,7 @@ export function RefundsPage() {
 
   return (
     <>
-      <PageHeader title="Refunds" subtitle="Money going back to cards and banks. Initiated and pending ones are still with the provider." />
+      <PageHeader title="Refunds" help="refunds" subtitle="Money going back to cards and banks. Initiated and pending ones are still with the provider." />
       <DataTable<Refund>
         rows={refunds.data?.refunds ?? []}
         rowKey={(r) => r.id}

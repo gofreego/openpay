@@ -42,7 +42,7 @@ export function ProvidersPage() {
 
   return (
     <>
-      <PageHeader title="Providers" subtitle="Health, routing and the kill-switch. Credentials live in the secret store and are never shown here." />
+      <PageHeader title="Providers" help="providers" subtitle="Health, routing and the kill-switch. Credentials live in the secret store and are never shown here." />
       {providers.error && <ApiErrorAlert error={providers.error} />}
       {list.length > 0 && (traffic
         ? <Alert severity="info" sx={{ mb: 2 }}>New payments go to <b>{traffic.name}</b> — {traffic.why}.</Alert>

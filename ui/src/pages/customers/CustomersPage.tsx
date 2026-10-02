@@ -40,7 +40,7 @@ export function CustomersPage() {
 
   return (
     <>
-      <PageHeader title="Customers" subtitle="One person across every product, identified by their OpenAuth account." />
+      <PageHeader title="Customers" help="customers" subtitle="One person across every product, identified by their OpenAuth account." />
       <Paper variant="outlined" sx={{ p: 3, maxWidth: 640 }}>
         <Typography sx={{ mb: 2 }}>Look up by OpenAuth user id or OpenPay customer id (cus_…), or paste any other OpenPay id (pay_, ord_, wlt_ …) to open it.</Typography>
         <Box component="form" sx={{ display: 'flex', gap: 2 }} onSubmit={(e) => { e.preventDefault(); void search() }}>

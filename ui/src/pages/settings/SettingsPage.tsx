@@ -21,7 +21,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Manage your preferences and customize your workspace." />
+      <PageHeader title="Settings" help="settings" subtitle="Manage your preferences and customize your workspace." />
 
       <Box sx={{ mt: 4 }}>
         <Typography variant="h5" fontWeight="600" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>

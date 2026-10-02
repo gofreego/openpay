@@ -18,7 +18,7 @@ export function AuditLogPage() {
 
   return (
     <>
-      <PageHeader title="Audit log" subtitle="Every recorded change: who, what, and the state before and after." />
+      <PageHeader title="Audit log" help="audit" subtitle="Every recorded change: who, what, and the state before and after." />
       <DataTable<AuditEntry>
         rows={page.data?.entries ?? []}
         rowKey={(e) => e.id}

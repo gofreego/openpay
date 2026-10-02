@@ -31,6 +31,7 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader
+        help="products"
         title="Products"
         subtitle="Our own apps. Every wallet, order and rupee of revenue belongs to one."
         action={permissions.canPlatform(Perm.productsWrite) && (

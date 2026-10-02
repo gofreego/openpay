@@ -20,7 +20,7 @@ export function DisputesPage() {
   const disputes = useAsync(() => disputeService.list({ status: status || undefined, limit: 100 }), [status])
   return (
     <>
-      <PageHeader title="Disputes" subtitle="Chargebacks. Evidence must reach the network before its due date or the dispute is lost by default." />
+      <PageHeader title="Disputes" help="disputes" subtitle="Chargebacks. Evidence must reach the network before its due date or the dispute is lost by default." />
       <DataTable<Dispute>
         rows={disputes.data?.disputes ?? []}
         rowKey={(d) => d.id}

@@ -20,7 +20,7 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHeader title="Orders" subtitle="Purchases, paid from wallets, the card, or both." />
+      <PageHeader title="Orders" help="orders" subtitle="Purchases, paid from wallets, the card, or both." />
       <DataTable<Order>
         rows={orders.data?.orders ?? []}
         rowKey={(o) => o.id}

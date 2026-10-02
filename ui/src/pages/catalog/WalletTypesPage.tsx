@@ -30,6 +30,7 @@ export function WalletTypesPage() {
   return (
     <>
       <PageHeader
+        help="wallet-types"
         title="Wallet types"
         subtitle="The rules a balance lives under: who may fund, spend, move or cash it out."
         action={permissions.canPlatform(Perm.walletTypesWrite) && (

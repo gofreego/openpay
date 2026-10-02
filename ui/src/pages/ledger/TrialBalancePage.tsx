@@ -20,7 +20,7 @@ export function TrialBalancePage() {
 
   return (
     <>
-      <PageHeader title="Trial balance" subtitle={`Every account's debits and credits${tb.data?.asOf ? ` as of ${dateTime(tb.data.asOf)}` : ''}. Each currency must net to zero.`} />
+      <PageHeader title="Trial balance" help="trial-balance" subtitle={`Every account's debits and credits${tb.data?.asOf ? ` as of ${dateTime(tb.data.asOf)}` : ''}. Each currency must net to zero.`} />
       <LedgerCheckBanner />
       {tb.data?.totals.map((t) => M.parse(t.difference) !== 0n && (
         <Alert key={t.currency} severity="error" sx={{ mb: 2 }}>

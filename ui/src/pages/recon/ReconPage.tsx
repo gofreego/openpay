@@ -45,7 +45,7 @@ export function ReconPage() {
 
   return (
     <>
-      <PageHeader title="Reconciliation" subtitle="Provider settlements matched to our ledger. Suspense should trend to zero; every break needs a decision."
+      <PageHeader title="Reconciliation" help="recon" subtitle="Provider settlements matched to our ledger. Suspense should trend to zero; every break needs a decision."
         action={permissions.canPlatform(Perm.reconManage) && <Button variant="contained" disabled={running} onClick={() => void run()}>{running ? 'Running…' : 'Run cycle now'}</Button>} />
       {summary.error && <ApiErrorAlert error={summary.error} />}
       {runError && <ApiErrorAlert error={runError} title="Cycle failed" />}

@@ -57,7 +57,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="OpenPay" subtitle={`Health right now${permissions.scopeAll && !productId ? ', across every product' : ''}.`} />
+      <PageHeader title="OpenPay" help="dashboard" subtitle={`Health right now${permissions.scopeAll && !productId ? ', across every product' : ''}.`} />
       <Grid container spacing={2}>
         {(stats.data?.providers ?? []).map((s) => {
           const finished = ['captured', 'failed', 'expired', 'cancelled'].reduce((n, k) => n + Number.parseInt(s[k as 'captured'], 10), 0)

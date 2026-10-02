@@ -25,7 +25,7 @@ export function AccountsPage() {
 
   return (
     <>
-      <PageHeader title="Ledger accounts" subtitle="Read-only. Every balance is the sum of its postings; nothing here can be edited." />
+      <PageHeader title="Ledger accounts" help="ledger-accounts" subtitle="Read-only. Every balance is the sum of its postings; nothing here can be edited." />
       <LedgerCheckBanner />
       <DataTable<LedgerAccount>
         rows={accounts.data?.accounts ?? []}

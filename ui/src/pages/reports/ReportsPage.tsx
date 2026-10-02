@@ -26,7 +26,7 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" subtitle="Read straight off the ledger and payment records, so they agree with every statement." />
+      <PageHeader title="Reports" help="reports" subtitle="Read straight off the ledger and payment records, so they agree with every statement." />
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <TextField size="small" type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} InputLabelProps={{ shrink: true }} />
         <TextField size="small" type="date" label="To (inclusive)" value={to} onChange={(e) => setTo(e.target.value)} InputLabelProps={{ shrink: true }} />

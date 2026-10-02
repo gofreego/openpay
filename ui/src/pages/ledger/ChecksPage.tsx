@@ -29,7 +29,7 @@ export function ChecksPage() {
 
   return (
     <>
-      <PageHeader title="Ledger checks" subtitle="The invariants: every journal balances, every balance equals its postings. They run daily and at startup."
+      <PageHeader title="Ledger checks" help="ledger-checks" subtitle="The invariants: every journal balances, every balance equals its postings. They run daily and at startup."
         action={permissions.can(Perm.ledgerCheck) && <Button variant="contained" disabled={running} onClick={() => void run()}>{running ? 'Checking…' : 'Run now'}</Button>} />
       {error && <Box sx={{ mb: 2 }}><ApiErrorAlert error={error} /></Box>}
       <DataTable<LedgerCheckRun>

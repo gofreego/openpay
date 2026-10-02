@@ -44,7 +44,7 @@ export function PaymentsPage() {
   const rows = payments.data?.payments ?? []
   return (
     <>
-      <PageHeader title="Payments" subtitle="Every checkout, and where its money went." />
+      <PageHeader title="Payments" help="payments" subtitle="Every checkout, and where its money went." />
       <DataTable<Payment>
         rows={rows}
         rowKey={(p) => p.id}

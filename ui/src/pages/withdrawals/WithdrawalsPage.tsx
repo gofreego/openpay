@@ -14,7 +14,7 @@ export function WithdrawalsPage() {
   const withdrawals = useAsync(() => withdrawalService.list({ status: status || undefined, limit: 100 }), [status])
   return (
     <>
-      <PageHeader title="Withdrawals" subtitle="Cash-outs to customers' banks. Above a wallet type's threshold, a second person approves before anything is sent." />
+      <PageHeader title="Withdrawals" help="withdrawals" subtitle="Cash-outs to customers' banks. Above a wallet type's threshold, a second person approves before anything is sent." />
       <DataTable<Withdrawal>
         rows={withdrawals.data?.withdrawals ?? []}
         rowKey={(x) => x.id}

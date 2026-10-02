@@ -1,4 +1,5 @@
 import { LoginCallbackPage, NotFoundPage, NotificationProvider, ProtectedRoute, ThemeProvider } from '@gofreego/tsutils'
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ConsoleProvider } from './hooks'
 import { ConsoleLayout } from './layout/ConsoleLayout'
@@ -33,6 +34,11 @@ import { SettingsPage } from './pages/settings/SettingsPage'
 
 // The console lives under /payments/ (vite.config.ts base). OpenAuth sends
 // the operator back to the callback with a login token.
+// Guides render markdown with syntax highlighting, which is heavy and only
+// needed when someone opens one.
+const HelpPage = lazy(() => import('./pages/help/HelpPage').then((m) => ({ default: m.HelpPage })))
+const HelpIndex = lazy(() => import('./pages/help/HelpPage').then((m) => ({ default: m.HelpIndex })))
+
 const BASE = '/payments'
 const LOGIN_URL = import.meta.env.VITE_LOGIN_URL
 const CALLBACK = '/login-callback'
@@ -97,6 +103,8 @@ function App() {
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="audit" element={<AuditLogPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="help" element={<Suspense><HelpIndex /></Suspense>} />
+                <Route path="help/:slug" element={<Suspense><HelpPage /></Suspense>} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>
