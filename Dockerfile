@@ -9,7 +9,7 @@ RUN npm ci
 # Vite bakes these into the bundle at build time. Defaults are production;
 # override with --build-arg for another environment.
 ARG VITE_API_BASE_URL=https://api.bappaapp.com
-ARG VITE_LOGIN_URL=https://admin.bappaapp.com/openauth/admin/v2/login
+ARG VITE_LOGIN_URL=https://admin.bappaapp.com/openauth/admin/login
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
     VITE_LOGIN_URL=$VITE_LOGIN_URL
 
