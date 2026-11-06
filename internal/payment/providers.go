@@ -1,10 +1,14 @@
 package payment
 
 import (
+	"context"
 	"sync"
 
 	"github.com/gofreego/openpay/internal/provider"
 	"github.com/gofreego/openpay/internal/provider/mock"
+	"github.com/gofreego/openpay/internal/provider/razorpay"
+
+	"github.com/gofreego/goutils/logger"
 )
 
 var (
@@ -27,6 +31,16 @@ func Providers(cfg Config) (*provider.Registry, *mock.Provider) {
 			mockProvider = mock.New(cfg.Mock.WebhookSecret, cfg.Mock.CheckoutURL)
 			// Wrapped like any real provider: the mock is first-class.
 			all = append(all, provider.NewResilient(mockProvider, cfg.Resilience))
+		}
+		if cfg.Razorpay.Enabled {
+			rp, err := razorpay.New(cfg.Razorpay)
+			if err != nil {
+				// Misconfigured: left out, so payments fail over or report no
+				// provider rather than going to a provider that can't work.
+				logger.Error(context.Background(), "razorpay provider not started: %v", err)
+			} else {
+				all = append(all, provider.NewResilient(rp, cfg.Resilience))
+			}
 		}
 		registry = provider.NewRegistry(cfg.Providers, all...)
 	})

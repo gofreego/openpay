@@ -75,6 +75,16 @@ Service:
       Enabled: true
       WebhookSecret: dev-mock-webhook-secret
       CheckoutURL: http://localhost:8085/openpay/v1/mock-provider/checkout/
+    # Real payments on Razorpay's hosted Payment Link page. Add "razorpay" to
+    # Providers to use it. Test-mode keys (rzp_test_…) move no money. Point
+    # Razorpay's webhook at /openpay/v1/webhooks/razorpay with the events
+    # payment_link.paid, payment_link.cancelled, payment_link.expired and
+    # refund.processed, refund.failed.
+    Razorpay:
+      Enabled: false
+      KeyID: ""
+      KeySecret: ""      # secret
+      WebhookSecret: ""  # secret
   Recon:
     # The bank account settlements land in (a Ledger.Banks entry).
     Bank: hdfc

@@ -8,6 +8,7 @@ import (
 	"github.com/gofreego/openpay/internal/ledger"
 	"github.com/gofreego/openpay/internal/models/dao"
 	"github.com/gofreego/openpay/internal/provider"
+	"github.com/gofreego/openpay/internal/provider/razorpay"
 	"github.com/gofreego/openpay/internal/wallet"
 	"github.com/gofreego/openpay/pkg/apperrors"
 	"github.com/gofreego/openpay/pkg/ids"
@@ -53,6 +54,8 @@ type Config struct {
 	// poller asks the provider directly: the safety net for lost webhooks.
 	PollAfter time.Duration `yaml:"PollAfter"`
 	Mock      MockConfig    `yaml:"Mock"`
+	// Razorpay takes real payments, on its hosted Payment Link page.
+	Razorpay razorpay.Config `yaml:"Razorpay"`
 	// Resilience bounds every provider call: timeout, retries, circuit breaker.
 	Resilience provider.ResilienceConfig `yaml:"Resilience"`
 }

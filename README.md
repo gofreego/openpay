@@ -13,7 +13,7 @@ double-entry journal in PostgreSQL.
   idempotent on an external id, with invariant checks that run on a schedule.
 - **Wallets** — per-product and platform wallet types with capabilities
   (fundable, grantable, transferable, withdrawable), limits, holds and expiry.
-- **Payments** — provider-agnostic (a mock today; Razorpay/Cashfree next),
+- **Payments** — provider-agnostic (Razorpay Payment Links, and a mock for development; Cashfree next),
   webhooks treated as hints, a poller as the safety net, failover and a
   kill-switch.
 - **Orders, refunds, disputes, settlement reconciliation, withdrawals,
