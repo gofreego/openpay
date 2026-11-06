@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: openpay
-          image: ghcr.io/gofreego/openpay:sha-627a2b5
+          image: ghcr.io/gofreego/openpay:sha-1182dc2
           imagePullPolicy: IfNotPresent
           command:
             - /app/application
