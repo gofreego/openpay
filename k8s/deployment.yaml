@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openpay
+  labels:
+    app: openpay
+spec:
+  # One replica: the worker's jobs are safe to run in several (they claim
+  # work with SKIP LOCKED), but the process runs HTTP, gRPC and the worker
+  # together, and one is plenty for now.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openpay
+  template:
+    metadata:
+      labels:
+        app: openpay
+    spec:
+      containers:
+        - name: openpay
+          image: ghcr.io/gofreego/openpay:sha-627a2b5
+          imagePullPolicy: IfNotPresent
+          command:
+            - /app/application
+          args:
+            - -env=prod
+            - -path=/etc/openpay/config
+          ports:
+            - name: http
+              containerPort: 8085
+            - name: grpc
+              containerPort: 8086
+          volumeMounts:
+            - name: config
+              mountPath: /etc/openpay/config
+              readOnly: true
+          readinessProbe:
+            # Checks the database too: a pod that can't reach it leaves
+            # rotation without being restarted.
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: config
+          secret:
+            # Created out of band from the deployment's private config repo
+            # (for zshala: infra's openpay-config-secret role, from
+            # configs-prod). Holds database, encryption and provider secrets.
+            secretName: openpay-config
