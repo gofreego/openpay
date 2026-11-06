@@ -8,7 +8,7 @@ on:
     branches: [master]
     tags: ['v*']
     paths-ignore:
-      - "k8s/**
+      - "k8s/**"
   pull_request:
 
 permissions:
