@@ -36,7 +36,17 @@ type Server struct {
 	HTTPPort int `yaml:"HTTPPort"`
 	// RateLimit caps each service credential's request rate, per instance.
 	RateLimit ratelimit.Config `yaml:"RateLimit"`
+	// CORS headers on HTTP answers. On unless switched off: turn it off behind
+	// a gateway that adds its own, or browsers see them twice and refuse.
+	CORS CORS `yaml:"CORS"`
 }
+
+type CORS struct {
+	Enabled *bool `yaml:"Enabled"`
+}
+
+// On reports whether CORS headers are added; true when not configured.
+func (c CORS) On() bool { return c.Enabled == nil || *c.Enabled }
 
 // Worker configures the background job runner. It lives here rather than in
 // cmd/worker because cmd packages import configs, not the other way round.

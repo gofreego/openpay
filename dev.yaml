@@ -28,6 +28,10 @@ Server:
     Default:
       RequestsPerSecond: 50
       Burst: 100
+  # CORS headers on HTTP answers; on unless switched off. Switch it off behind a
+  # gateway that adds its own (opengate does), or browsers see them twice.
+  CORS:
+    Enabled: true
 Repository:
   PostgreSQL:
     # `postgresql`, `primary` and `replica` are lowercase because those goutils

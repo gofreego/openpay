@@ -117,8 +117,12 @@ func (a *HTTPServer) Run(ctx context.Context) error {
 	// otelhttp is where HTTP spans come from. The gRPC server gets the
 	// equivalent from otelgrpc; this path needs its own because the gateway
 	// calls the service in-process rather than over gRPC.
+	var served http.Handler = root
+	if a.cfg.Server.CORS.On() {
+		served = api.CORSMiddleware(root)
+	}
 	handler := otelhttp.NewHandler(
-		logger.WithRequestMiddleware(logger.WithRequestTimeMiddleware(api.CORSMiddleware(root))),
+		logger.WithRequestMiddleware(logger.WithRequestTimeMiddleware(served)),
 		"openpay.http",
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 			return r.Method + " " + r.URL.Path
